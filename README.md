@@ -13,9 +13,21 @@ figures/        Structured transcriptions of the EpiHack reference figures
   ├── 02-minimum-key-data-parameters.md
   ├── 03-outbreak-timeliness-metrics.md
   ├── 04-designing-launching-participatory-surveillance.md
-  └── index.html              -- combined HTML rendering of all four figures
+  ├── 05-design-worksheet-template.md      -- breakout-session worksheet
+  └── index.html                            -- combined HTML rendering
+worksheets/     Completed design worksheets from EpiHack breakouts
+  ├── 01-animal-health-events.md
+  └── 02-desert-wildlife-interface.md
+notes/
+  └── world-cafe/             -- World Café breakout cards
+      ├── README.md
+      ├── q4-heat.md
+      ├── q4-unhoused.md
+      └── q4-information-flow.md
 schema/
-  └── knowledge_graph.sql     -- DuckLake/DuckDB seed for the knowledge graph
+  ├── knowledge_graph.sql     -- core graph (frameworks)
+  ├── system_designs.sql      -- worksheet template, focus areas, designs
+  └── world_cafe.sql          -- World Café Q4 cards + engagement tactics
 ```
 
 The Markdown files use YAML frontmatter and explicit `subject | predicate |
@@ -69,6 +81,8 @@ ATTACH 'ducklake:postgres:dbname=epihack host=localhost user=epihack'
 
 USE epihack;
 .read schema/knowledge_graph.sql
+.read schema/system_designs.sql
+.read schema/world_cafe.sql
 ```
 
 After loading, the graph is queryable in plain SQL. Examples:
@@ -87,6 +101,20 @@ FROM   kg.node n
 JOIN   kg.property p ON p.node_id = n.node_id AND p.key = 'ordinal'
 WHERE  n.node_type = 'milestone'
 ORDER  BY p.value_num;
+
+-- Wide summary of completed system designs
+SELECT * FROM kg.v_design_summary;
+
+-- Which focus areas does each design target?
+SELECT d.label AS design, f.label AS focus_area
+FROM   kg.edge e
+JOIN   kg.node d ON d.node_id = e.subject_id
+JOIN   kg.node f ON f.node_id = e.object_id
+WHERE  e.predicate = 'targetsFocusArea'
+ORDER  BY design, focus_area;
+
+-- All World Café Q4 engagement tactics, grouped by card
+SELECT * FROM kg.v_engagement_tactics ORDER BY card, tactic;
 
 -- Lifecycle chain via recursive CTE
 WITH RECURSIVE chain AS (
