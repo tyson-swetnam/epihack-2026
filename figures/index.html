@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>EpiHack Arizona 2026 — Figures</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  :root {
+    --general:   #5BA3D0;
+    --human:     #1F3A93;
+    --exposure:  #E84A7A;
+    --auxiliary: #E6C36A;
+    --environment:#4CAF50;
+    --livestock: #C2185B;
+    --wildlife:  #6A1B9A;
+    --predict:   #E6A038;
+    --prevent:   #E6A038;
+    --detect:    #E84A2B;
+    --notify:    #E84A2B;
+    --verify:    #C0392B;
+    --respond:   #C0392B;
+    --start:     #2C3E50;
+    --aar:       #2C3E50;
+  }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    max-width: 1100px;
+    margin: 2rem auto;
+    padding: 0 1.25rem;
+    color: #1a1a1a;
+    line-height: 1.5;
+  }
+  h1 { border-bottom: 3px solid #1F3A93; padding-bottom: .35rem; }
+  h2 { margin-top: 2.5rem; color: #1F3A93; }
+  h3 { margin-top: 1.5rem; }
+  blockquote {
+    border-left: 4px solid #1F3A93;
+    background: #f4f6fb;
+    margin: 1rem 0;
+    padding: .75rem 1rem;
+    font-style: italic;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1rem 0;
+    font-size: .95rem;
+  }
+  th, td {
+    border: 1px solid #ddd;
+    padding: .5rem .75rem;
+    text-align: left;
+    vertical-align: top;
+  }
+  th { background: #f0f3f8; }
+  .legend-chip {
+    display: inline-block;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    margin-right: .4rem;
+    vertical-align: middle;
+  }
+  .category-block {
+    border-left: 6px solid var(--c, #999);
+    background: #fafbfd;
+    padding: .75rem 1rem;
+    margin: .75rem 0;
+    border-radius: 0 6px 6px 0;
+  }
+  .category-block h3 { margin-top: 0; }
+  .category-block ul { margin: .25rem 0 .25rem 1.2rem; }
+  .milestone {
+    display: grid;
+    grid-template-columns: 2rem 1fr;
+    gap: .5rem 1rem;
+    align-items: start;
+    padding: .6rem .75rem;
+    border-radius: 4px;
+    margin: .35rem 0;
+    color: #fff;
+  }
+  .milestone .num { font-weight: bold; }
+  .milestone .body { color: #fff; }
+  .lifecycle {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: .75rem;
+    margin: 1rem 0;
+  }
+  .step {
+    border: 2px solid #1F3A93;
+    border-radius: 8px;
+    padding: .75rem;
+    background: #fff;
+    position: relative;
+  }
+  .step .num {
+    position: absolute;
+    top: -.6rem; right: -.6rem;
+    background: #C0392B;
+    color: #fff;
+    width: 1.75rem; height: 1.75rem;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: .85rem;
+  }
+  .step .phase {
+    font-size: .75rem;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    margin-top: .35rem;
+  }
+  .mission {
+    background: linear-gradient(135deg, #1F3A93 0%, #C0392B 100%);
+    color: #fff;
+    padding: 2rem;
+    border-radius: 10px;
+    font-size: 1.25rem;
+    text-align: center;
+    margin: 1.5rem 0;
+  }
+  footer {
+    margin-top: 4rem;
+    padding-top: 1rem;
+    border-top: 1px solid #ddd;
+    color: #666;
+    font-size: .85rem;
+  }
+</style>
+</head>
+<body>
+
+<h1>EpiHack Arizona 2026 &mdash; Figures</h1>
+<p>
+Reference frameworks from
+<a href="https://endingpandemicsacademy.arizona.edu/trainings-events/epihack-arizona">
+EpiHack Arizona</a> (Ending Pandemics Academy &middot; University of Arizona
+Global Health Institute), converted from poster figures into structured
+content suitable for ingestion into a DuckLake / DuckDB / Postgres knowledge
+graph.
+</p>
+
+<!-- ============================================================= -->
+<h2 id="fig-01">Figure 1 &mdash; Purpose for a One Health Participatory System</h2>
+
+<div class="mission">
+  To detect the earliest signal of a potential epidemic or pandemic threat
+  emanating from <strong>humans</strong>, <strong>animals</strong> or the
+  <strong>environment</strong> by directly engaging the
+  <strong>community</strong>.
+</div>
+
+<!-- ============================================================= -->
+<h2 id="fig-02">Figure 2 &mdash; Minimum Set of Key Data Parameters</h2>
+
+<p>A radial schema of the minimum data parameters for One Health
+participatory surveillance, organized into eight color-coded classes.</p>
+
+<table>
+<thead><tr><th>Legend</th><th>Category</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><span class="legend-chip" style="background:var(--general)"></span></td><td>General</td><td>Demographic and contact attributes</td></tr>
+<tr><td><span class="legend-chip" style="background:var(--human)"></span></td><td>Human</td><td>Symptoms and clinical signs</td></tr>
+<tr><td><span class="legend-chip" style="background:var(--human);border:2px solid #C0392B"></span></td><td>Severity markers</td><td>Severe-disease indicators within Human</td></tr>
+<tr><td><span class="legend-chip" style="background:var(--exposure)"></span></td><td>Exposure</td><td>Risk-exposure events</td></tr>
+<tr><td><span class="legend-chip" style="background:var(--auxiliary)"></span></td><td>Auxiliary</td><td>Supporting evidence (signals, images, lab)</td></tr>
+<tr><td><span class="legend-chip" style="background:var(--environment)"></span></td><td>Environmental</td><td>Environment / vector signals</td></tr>
+<tr><td><span class="legend-chip" style="background:var(--livestock)"></span></td><td>Livestock</td><td>Domestic-animal incident attributes</td></tr>
+<tr><td><span class="legend-chip" style="background:var(--wildlife)"></span></td><td>Wildlife</td><td>Wildlife incident attributes</td></tr>
+</tbody>
+</table>
+
+<div class="category-block" style="--c: var(--general)">
+<h3>General</h3>
+<ul>
+<li>Age</li><li>Sex</li><li>Email</li><li>Unique ID</li><li>Occupation</li>
+<li>Date of report</li><li>Postal code</li><li>Phone number</li>
+<li>Household member ID</li><li>Geographical coordinates</li>
+</ul>
+</div>
+
+<div class="category-block" style="--c: var(--human)">
+<h3>Human (symptoms / clinical)</h3>
+<ul>
+<li>No symptoms</li><li>Symptoms</li><li>Date of illness</li>
+<li>Cough / congestion</li><li>Nausea / vomiting</li>
+<li>Difficulty breathing</li><li>Sore throat</li><li>Rash</li>
+<li>Fever</li><li>Chills</li><li>Diarrhea</li>
+<li><em>Bleeding from body openings</em> &mdash; severity marker</li>
+<li>Red eyes</li><li>Muscle or body aches and pains</li>
+<li><em>Discolored or bloody urine</em> &mdash; severity marker</li>
+<li>Loss of smell or taste</li>
+<li><em>Yellow skin / yellow eyes</em> &mdash; severity marker</li>
+<li>Absent from work</li><li>Absent from school</li>
+<li>Did you seek health care or treatment</li>
+</ul>
+</div>
+
+<div class="category-block" style="--c: var(--exposure)">
+<h3>Exposure</h3>
+<ul>
+<li>Attending a recent mass gathering</li>
+<li>Tick or insect bite</li>
+<li>Animal bite</li>
+<li>History of travel</li>
+<li>Contact with live animals</li>
+<li>Contact with dead or sick animals</li>
+<li>Contact with sick individual / confirmed case</li>
+</ul>
+</div>
+
+<div class="category-block" style="--c: var(--auxiliary)">
+<h3>Auxiliary</h3>
+<ul>
+<li>Digital biomarker signal</li>
+<li>Photo</li>
+<li>Diagnostic / lab confirmation</li>
+</ul>
+</div>
+
+<div class="category-block" style="--c: var(--environment)">
+<h3>Environmental</h3>
+<ul>
+<li>Date of environmental incident</li>
+<li>Location of vector spotting</li>
+<li>Unusual presence of vectors</li>
+<li>Density or number of vectors</li>
+<li>Flooding</li>
+<li>Water contamination</li>
+</ul>
+</div>
+
+<div class="category-block" style="--c: var(--livestock)">
+<h3>Livestock</h3>
+<ul>
+<li>Date of livestock incident</li>
+<li>Location of livestock incident</li>
+<li>Number of sick animals</li>
+<li>Number of dead animals</li>
+<li>Species</li>
+</ul>
+</div>
+
+<div class="category-block" style="--c: var(--wildlife)">
+<h3>Wildlife</h3>
+<ul>
+<li>Date of wildlife incident</li>
+<li>Location of wildlife incident</li>
+<li>Species</li>
+<li>Number of dead animals</li>
+</ul>
+</div>
+
+<!-- ============================================================= -->
+<h2 id="fig-03">Figure 3 &mdash; Outbreak Timeliness Metrics</h2>
+
+<blockquote>
+Timeliness metrics are the time intervals measured between two respective
+outbreak milestones. Each milestone represents the date of key outbreak
+activities. Milestones can apply to individual sectors or to a coordinated
+One Health approach, integrating environmental, animal, and human health.
+</blockquote>
+
+<div class="milestone" style="background: var(--predict)"><span class="num">1</span><div><strong>Predict</strong><div class="body">Date a reliable and valid predictive alert of a potential outbreak is available (e.g. increased rainfall leading to greater density of mosquitoes capable of disease transmission).</div></div></div>
+<div class="milestone" style="background: var(--prevent)"><span class="num">2</span><div><strong>Prevent</strong><div class="body">Date enhanced surveillance or other intervention is initiated in response to a predictive alert (e.g. mass vaccination in livestock; mosquito abatement).</div></div></div>
+<div class="milestone" style="background: var(--detect)"><span class="num">3</span><div><strong>Detect</strong><div class="body">Date symptom onset, death, or other evidence of pathogen circulation is observed or suspected in human(s) or animal(s).</div></div></div>
+<div class="milestone" style="background: var(--notify)"><span class="num">4</span><div><strong>Notify</strong><div class="body">Date an outbreak in humans or animals is officially reported to relevant authorities (e.g. local to national; national to international; cross-sector).</div></div></div>
+<div class="milestone" style="background: var(--verify)"><span class="num">5</span><div><strong>Verify</strong><div class="body">Date outbreak is confirmed by field investigation or other valid method.</div></div></div>
+<div class="milestone" style="background: var(--verify)"><span class="num">6</span><div><strong>Diagnostic Test / Lab Confirmation</strong><div class="body">Date outbreak is confirmed by diagnostic or laboratory test in an epidemiologically-linked human or animal.</div></div></div>
+<div class="milestone" style="background: var(--respond)"><span class="num">7</span><div><strong>Respond</strong><div class="body">Date an intervention to control or manage the outbreak is initiated by a responsible authority (e.g. mass vaccination; quarantine).</div></div></div>
+<div class="milestone" style="background: var(--respond)"><span class="num">8</span><div><strong>Public Communication</strong><div class="body">Date of official release of information to the public by a responsible authority.</div></div></div>
+<div class="milestone" style="background: var(--start)"><span class="num">9</span><div><strong>Outbreak Start</strong><div class="body">Date symptom onset or death occurs in the earliest epidemiologically-linked human or animal (often identified retrospectively or estimated based on available evidence).</div></div></div>
+<div class="milestone" style="background: var(--start)"><span class="num">10</span><div><strong>Outbreak End</strong><div class="body">Date outbreak is declared closed by a responsible authority.</div></div></div>
+<div class="milestone" style="background: var(--aar)"><span class="num">11</span><div><strong>After Action Review</strong><div class="body">Date after action review is jointly conducted by relevant One Health authorities.</div></div></div>
+
+<p><small><em>The sequence of milestones may vary by outbreak. A single
+action may represent more than one milestone. The After Action Review
+milestone is included to inspire the necessary collaborations among
+sectors for operationalizing One Health.</em></small></p>
+
+<!-- ============================================================= -->
+<h2 id="fig-04">Figure 4 &mdash; Designing &amp; Launching Participatory Surveillance</h2>
+
+<p>A 12-step lifecycle for designing, launching, and sustaining a
+participatory surveillance system.</p>
+
+<div class="lifecycle">
+  <div class="step"><span class="num">1</span><strong>Assess Needs of Community</strong><div class="phase">Design</div></div>
+  <div class="step"><span class="num">2</span><strong>Determine Purpose of System</strong><div class="phase">Design</div></div>
+  <div class="step"><span class="num">3</span><strong>Identify Stakeholders</strong><div class="phase">Design</div></div>
+  <div class="step"><span class="num">4</span><strong>Ascertain Resources</strong><div class="phase">Design</div></div>
+  <div class="step"><span class="num">5</span><strong>Co-Design System</strong><div class="phase">Design</div></div>
+  <div class="step"><span class="num">6</span><strong>Test Prototypes &amp; Finalize Product</strong><div class="phase">Build</div></div>
+  <div class="step"><span class="num">7</span><strong>Launch the System</strong><div class="phase">Launch</div></div>
+  <div class="step"><span class="num">8</span><strong>Validate Data</strong><div class="phase">Operate</div></div>
+  <div class="step"><span class="num">9</span><strong>Create Awareness Campaigns</strong><div class="phase">Operate</div></div>
+  <div class="step"><span class="num">10</span><strong>Train Recruiters</strong><div class="phase">Operate</div></div>
+  <div class="step"><span class="num">11</span><strong>Incentivize &amp; Retain Users</strong><div class="phase">Operate</div></div>
+  <div class="step"><span class="num">12</span><strong>Monitor, Evaluate &amp; Adapt System</strong><div class="phase">Operate</div></div>
+</div>
+
+<footer>
+<p>
+Source figures: Ending Pandemics Academy &middot; The University of Arizona,
+Mel &amp; Enid Zuckerman College of Public Health &middot; Global Health
+Institute. Transcribed for EpiHack Arizona 2026.
+</p>
+</footer>
+
+</body>
+</html>
