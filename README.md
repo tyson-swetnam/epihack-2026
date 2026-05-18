@@ -1,3 +1,7 @@
+---
+title: EpiHack Arizona 2026
+---
+
 # epihack-2026
 
 EpiHack AZ 2026 &mdash; a working repository for the
