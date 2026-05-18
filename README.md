@@ -13,6 +13,13 @@ Global Health Institute.
 
 ```
 index.html      Top-level site landing page (linked from GitHub Pages)
+map/            MapLibre GL map of AZ pinning counties, tribes, NEON
+                sites, agency HQs, federal lands, and outbreaks; each
+                feature carries a kg_node_id round-trippable to the
+                DuckLake graph.
+graph/          Cytoscape.js pathogen knowledge graph (16 pathogens with
+                their vectors, reservoirs, focus areas, and surveilling
+                agencies).
 figures/        Structured transcriptions of the EpiHack reference figures
   ├── 01-purpose-one-health-participatory-system.md
   ├── 02-minimum-key-data-parameters.md

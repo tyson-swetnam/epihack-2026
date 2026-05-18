@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Pathogen Knowledge Graph — EpiHack Arizona 2026</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    margin: 0;
+    color: #1a1a1a;
+  }
+  header {
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid #d8dde6;
+    background: #fff;
+  }
+  header h1 {
+    margin: 0 0 .25rem 0;
+    font-size: 1.3rem;
+    color: #1F3A93;
+  }
+  header p { margin: 0; color: #555; font-size: .9rem; }
+  header a { color: #1F3A93; }
+  #cy {
+    position: absolute;
+    top: 92px;
+    bottom: 0; left: 0; right: 320px;
+    background: #f7f8fb;
+  }
+  #side {
+    position: absolute;
+    top: 92px;
+    right: 0;
+    bottom: 0;
+    width: 320px;
+    background: #fff;
+    border-left: 1px solid #d8dde6;
+    overflow-y: auto;
+    padding: 1rem 1.1rem;
+    box-sizing: border-box;
+    font-size: .9rem;
+  }
+  #side h2 {
+    margin: 0 0 .5rem 0;
+    font-size: 1.05rem;
+    color: #1F3A93;
+  }
+  #side h3 {
+    margin: 1.25rem 0 .35rem 0;
+    font-size: .82rem;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    color: #555;
+  }
+  .legend-row {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    padding: 3px 0;
+  }
+  .legend-row .swatch {
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    border: 2px solid #fff;
+    box-shadow: 0 0 0 1px #555;
+  }
+  .legend-row .swatch.diamond { border-radius: 0; transform: rotate(45deg); box-shadow: 0 0 0 1px #444; }
+  .legend-row .swatch.square  { border-radius: 3px; }
+  .legend-row .swatch.hex     { border-radius: 0; clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%); }
+  #detail {
+    margin-top: 1rem;
+    padding: .75rem .85rem;
+    background: #f4f6fb;
+    border-left: 4px solid #1F3A93;
+    border-radius: 0 4px 4px 0;
+    min-height: 4rem;
+  }
+  #detail .title { font-weight: 600; margin-bottom: .25rem; }
+  #detail .kv  { font-size: .82rem; color: #555; margin-top: .2rem; }
+  #detail code { background: #e9edf6; padding: 1px 5px; border-radius: 3px; font-size: .8em; }
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .3rem;
+    margin-top: .5rem;
+  }
+  .controls button {
+    padding: 3px 8px;
+    background: #fff;
+    border: 1px solid #c4cad6;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: .8rem;
+  }
+  .controls button:hover { background: #eef1f7; }
+  .controls button.active { background: #1F3A93; color: #fff; border-color: #1F3A93; }
+  .empty { color: #888; font-style: italic; font-size: .85rem; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Pathogen Knowledge Graph</h1>
+  <p>
+    <a href="../index.html">&laquo; EpiHack AZ 2026</a> &middot; Pathogens
+    with their vectors, reservoirs, focus areas, and surveilling agencies.
+    Mirrors a subset of <a href="../schema/deep/pathogens.sql">schema/deep/pathogens.sql</a>
+    and is round-trippable to the DuckLake graph (every Cytoscape node ID
+    matches its <code>kg_node_id</code>).
+  </p>
+</header>
+
+<div id="cy"></div>
+
+<aside id="side">
+  <h2>Legend</h2>
+
+  <h3>Node kinds</h3>
+  <div class="legend-row"><span class="swatch"          style="background:#C0392B"></span>Pathogen</div>
+  <div class="legend-row"><span class="swatch diamond"  style="background:#E84A2B"></span>Vector (mosquito / tick / flea)</div>
+  <div class="legend-row"><span class="swatch hex"      style="background:#6A1B9A"></span>Reservoir host</div>
+  <div class="legend-row"><span class="swatch square"   style="background:#1F3A93"></span>Surveilling resource</div>
+  <div class="legend-row"><span class="swatch"          style="background:#4CAF50"></span>Focus area</div>
+
+  <h3>Filter pathogens by class</h3>
+  <div class="controls" id="pclass-filter">
+    <button data-class="*"         class="active">All</button>
+    <button data-class="virus">Viruses</button>
+    <button data-class="bacterium">Bacteria</button>
+    <button data-class="parasite">Parasites</button>
+    <button data-class="fungus">Fungi</button>
+    <button data-class="prion">Prions</button>
+  </div>
+
+  <h3>Layout</h3>
+  <div class="controls" id="layout-controls">
+    <button data-layout="cose"    class="active">Force</button>
+    <button data-layout="concentric">Concentric</button>
+    <button data-layout="breadthfirst">Tree</button>
+    <button data-layout="circle">Circle</button>
+  </div>
+
+  <h3>Selected</h3>
+  <div id="detail"><div class="empty">Click any node to see details.</div></div>
+</aside>
+
+<script src="https://unpkg.com/cytoscape@3.30.2/dist/cytoscape.min.js"></script>
+<script src="data.js"></script>
+<script>
+  const graph = window.EPIHACK_GRAPH;
+
+  const cy = cytoscape({
+    container: document.getElementById('cy'),
+    elements: [...graph.nodes, ...graph.edges],
+    layout: { name: 'cose', animate: false, idealEdgeLength: 110, nodeRepulsion: 9000, padding: 30 },
+    style: [
+      {
+        selector: 'node',
+        style: {
+          'label': 'data(label)',
+          'font-size': 11,
+          'color': '#222',
+          'text-outline-color': '#fff',
+          'text-outline-width': 2,
+          'text-valign': 'bottom',
+          'text-margin-y': 5,
+          'text-wrap': 'wrap',
+          'text-max-width': 110,
+          'width': 26, 'height': 26,
+          'background-color': '#888',
+          'border-width': 2,
+          'border-color': '#fff',
+          'overlay-padding': 6
+        }
+      },
+      { selector: 'node[kind = "pathogen"]',
+        style: { 'background-color': '#C0392B', 'width': 36, 'height': 36, 'shape': 'ellipse', 'border-color': '#7a1e10' } },
+      { selector: 'node[kind = "pathogen"][pclass = "virus"]',
+        style: { 'background-color': '#C0392B' } },
+      { selector: 'node[kind = "pathogen"][pclass = "bacterium"]',
+        style: { 'background-color': '#1F6FB0' } },
+      { selector: 'node[kind = "pathogen"][pclass = "fungus"]',
+        style: { 'background-color': '#E6A038' } },
+      { selector: 'node[kind = "pathogen"][pclass = "prion"]',
+        style: { 'background-color': '#2C3E50' } },
+      { selector: 'node[kind = "pathogen"][pclass = "parasite"]',
+        style: { 'background-color': '#7B1FA2' } },
+
+      { selector: 'node[kind = "vector"]',
+        style: { 'background-color': '#E84A2B', 'shape': 'diamond', 'width': 24, 'height': 24, 'border-color': '#7a2914' } },
+
+      { selector: 'node[kind = "reservoir"]',
+        style: { 'background-color': '#6A1B9A', 'shape': 'hexagon', 'width': 22, 'height': 22, 'border-color': '#371049' } },
+
+      { selector: 'node[kind = "resource"]',
+        style: { 'background-color': '#1F3A93', 'shape': 'round-rectangle', 'width': 24, 'height': 18, 'border-color': '#0e1f54' } },
+
+      { selector: 'node[kind = "focus"]',
+        style: { 'background-color': '#4CAF50', 'shape': 'triangle', 'width': 22, 'height': 22, 'border-color': '#1d5c20' } },
+
+      {
+        selector: 'edge',
+        style: {
+          'curve-style': 'bezier',
+          'width': 1.5,
+          'line-color': '#bbb',
+          'target-arrow-color': '#bbb',
+          'target-arrow-shape': 'triangle',
+          'arrow-scale': 0.9,
+          'opacity': 0.7
+        }
+      },
+      { selector: 'edge[predicate = "transmittedBy"]',     style: { 'line-color': '#E84A2B', 'target-arrow-color': '#E84A2B' } },
+      { selector: 'edge[predicate = "reservoirIn"]',        style: { 'line-color': '#6A1B9A', 'target-arrow-color': '#6A1B9A' } },
+      { selector: 'edge[predicate = "surveilledBy"]',       style: { 'line-color': '#1F3A93', 'target-arrow-color': '#1F3A93', 'line-style': 'dashed' } },
+      { selector: 'edge[predicate = "targetsFocusArea"]',   style: { 'line-color': '#4CAF50', 'target-arrow-color': '#4CAF50' } },
+
+      { selector: '.faded', style: { 'opacity': 0.12 } },
+      { selector: '.highlight', style: { 'opacity': 1, 'z-index': 99 } },
+      { selector: 'node:selected', style: { 'border-color': '#000', 'border-width': 3 } }
+    ]
+  });
+
+  // ---- detail panel on click ----
+  const detail = document.getElementById('detail');
+  cy.on('tap', 'node', (e) => {
+    const n = e.target;
+    const d = n.data();
+    let html = `<div class="title">${d.label}</div>`;
+    html += `<div class="kv"><code>${d.id}</code></div>`;
+    html += `<div class="kv">Kind: ${d.kind}</div>`;
+    if (d.pclass)     html += `<div class="kv">Class: ${d.pclass}</div>`;
+    if (d.vclass)     html += `<div class="kv">Vector type: ${d.vclass}</div>`;
+    if (d.icd10)      html += `<div class="kv">ICD-10: <code>${d.icd10}</code></div>`;
+    if (d.notifiable !== undefined) html += `<div class="kv">Nationally notifiable: ${d.notifiable ? 'yes' : 'no'}</div>`;
+    if (d.jur)        html += `<div class="kv">Jurisdiction: ${d.jur}</div>`;
+
+    const inE  = n.incomers('edge');
+    const outE = n.outgoers('edge');
+    html += `<div class="kv" style="margin-top:.5rem">→ ${outE.length} outgoing &middot; ← ${inE.length} incoming</div>`;
+    detail.innerHTML = html;
+
+    // highlight neighborhood
+    cy.elements().addClass('faded');
+    n.closedNeighborhood().removeClass('faded').addClass('highlight');
+  });
+  cy.on('tap', (e) => {
+    if (e.target === cy) {
+      cy.elements().removeClass('faded').removeClass('highlight');
+      detail.innerHTML = '<div class="empty">Click any node to see details.</div>';
+    }
+  });
+
+  // ---- pathogen-class filter ----
+  document.querySelectorAll('#pclass-filter button').forEach(b => {
+    b.addEventListener('click', () => {
+      document.querySelectorAll('#pclass-filter button').forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+      const cls = b.dataset.class;
+      if (cls === '*') {
+        cy.elements().style('display', 'element');
+      } else {
+        cy.nodes('[kind = "pathogen"]').forEach(p => {
+          const show = p.data('pclass') === cls;
+          p.style('display', show ? 'element' : 'none');
+          p.connectedEdges().style('display', show ? 'element' : 'none');
+          p.neighborhood('node').forEach(neighbor => {
+            // show neighbors that have at least one visible pathogen in their neighborhood
+            const anyVisible = neighbor.connectedEdges().some(ed => ed.style('display') !== 'none');
+            neighbor.style('display', anyVisible ? 'element' : 'none');
+          });
+        });
+      }
+    });
+  });
+
+  // ---- layout switcher ----
+  document.querySelectorAll('#layout-controls button').forEach(b => {
+    b.addEventListener('click', () => {
+      document.querySelectorAll('#layout-controls button').forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+      cy.layout({
+        name: b.dataset.layout,
+        animate: true,
+        animationDuration: 400,
+        idealEdgeLength: 110,
+        nodeRepulsion: 9000,
+        padding: 30,
+        concentric: (n) => n.data('kind') === 'pathogen' ? 3
+                         : n.data('kind') === 'focus'    ? 2 : 1,
+        levelWidth: () => 1
+      }).run();
+    });
+  });
+</script>
+
+</body>
+</html>
