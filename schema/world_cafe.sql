@@ -67,8 +67,8 @@ INSERT INTO kg.node (node_id, node_type, label, description, source_fig) VALUES
   -- Heat
   ('tactic.heat.community_event',   'engagement_tactic', 'Community Event → outreach',
      'Use community events as the on-ramp for outreach activities.', 'note-wc-q4-heat'),
-  ('tactic.heat.train_the_trainer', 'engagement_tactic', 'Train-the-Trainer (Region 9)',
-     'Long-running train-the-trainer program through Western Regional Public Health (HHS Region 9).', 'note-wc-q4-heat'),
+  ('tactic.heat.train_the_trainer', 'engagement_tactic', 'Train-the-Trainer (Region 9, 12-year-old program)',
+     'Train-the-trainer program through Western Regional Public Health (HHS Region 9); the program is 12 years old.', 'note-wc-q4-heat'),
   ('tactic.heat.media',             'engagement_tactic', 'Speak to media → syndication',
      'Single media appearance scaled through viral or national syndication.', 'note-wc-q4-heat'),
   ('tactic.heat.network_dissemination','engagement_tactic','Disseminate via existing networks (FFA)',
@@ -93,8 +93,8 @@ INSERT INTO kg.node (node_id, node_type, label, description, source_fig) VALUES
      'County political engagement unlocks downstream channels.', 'note-wc-q4-information-flow'),
   ('tactic.if.geo_alerts',          'engagement_tactic', 'Geolocated emergency health alerts',
      'Emergency health alerts targeted by geolocation.', 'note-wc-q4-information-flow'),
-  ('tactic.if.emr_epic_tmc',        'engagement_tactic', 'EMR messaging (Epic at TMC)',
-     'Embed messaging in the EMR — Epic at Tucson Medical Center as the example.', 'note-wc-q4-information-flow'),
+  ('tactic.if.emr_epic_tmc',        'engagement_tactic', 'EMR messaging (Epic in collaboration with TMC)',
+     'Embed messaging in the EMR — Epic EMRs in collaboration with Tucson Medical Center.', 'note-wc-q4-information-flow'),
   ('tactic.if.dating_apps_sti',     'engagement_tactic', 'Dating apps ↔ STI services (exploratory)',
      'Partnership between dating apps and STI testing/treatment services; flagged as exploratory on the original card.', 'note-wc-q4-information-flow')
 ON CONFLICT DO NOTHING;

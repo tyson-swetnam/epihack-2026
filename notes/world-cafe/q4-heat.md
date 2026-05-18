@@ -17,8 +17,9 @@ really successful?*
 
 - **Community Event → outreach.** Use community events as the on-ramp for
   outreach activities.
-- **Train the Trainer → Western Regional Public Health, 12 years old
-  (Region 9).** A long-running train-the-trainer program in HHS Region 9.
+- **Train the Trainer → Western Regional Public Health (HHS Region 9), a
+  12-year-old program.** A long-running (12 years) train-the-trainer
+  program in HHS Region 9.
 - **Speak to media → viral or national syndication.** A single well-placed
   media appearance can scale through national syndication.
 - **Disseminate through other networks, e.g. FFA.** Lean on existing

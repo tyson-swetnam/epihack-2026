@@ -23,8 +23,9 @@ really successful?*
   unlocks downstream channels.
 - **Emergency health alerts → geolocation.** Geo-targeted emergency health
   alerts.
-- **EMR (Epic) with TMC.** Embed messaging in the electronic medical record
-  — Epic at Tucson Medical Center as the example.
+- **EMR (Epic) in collaboration with TMC.** Embed messaging in the
+  electronic medical record — Epic EMRs in collaboration with Tucson
+  Medical Center.
 - **Dating apps → STI services (??).** Partnership between dating apps and
   STI testing/treatment services (noted as exploratory; the "??" in the
   original card flags uncertainty).
