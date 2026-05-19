@@ -9,6 +9,66 @@ EpiHack AZ 2026 &mdash; a working repository for the
 event hosted by the Ending Pandemics Academy and the University of Arizona
 Global Health Institute.
 
+## A living database for ending pandemics
+
+This repository is an experiment in building a **living knowledge graph
+for One Health surveillance**. Three pieces of infrastructure do the
+heavy lifting:
+
+| Layer | Role | What it lets us do |
+|---|---|---|
+| **[Claude Code](https://claude.com/product/claude-code)** | Agentic authoring | Drafts the schema, runs parallel sub-agents to research AZ counties / tribes / pathogens / outbreaks / datasets / standards, keeps the prose docs in sync with the SQL seeds, and opens pull requests against this repo. Every commit message in `git log` describes a Claude-led change. |
+| **GitHub** | Source of truth + review surface | Every change &mdash; new content, schema, MCP code, visualizations &mdash; lands as a pull request; humans review and merge. Versioned snapshots of upstream specs (e.g. `mcp/vectorsurv/openapi/`) make API drift a `git diff` away. The site itself is served via GitHub Pages with Jekyll. |
+| **[DuckLake](https://ducklake.select/) (Postgres + [DuckDB](https://duckdb.org/))** | Queryable knowledge graph | A property-graph (`kg.node`, `kg.edge`, `kg.property`) seeded from version-controlled SQL; Postgres holds the DuckLake catalog (time-travel, branches, ACID), DuckDB is the query engine. Joins Parquet + Postgres + CSV in a single SQL statement; works on a laptop and at hack-day scale. |
+
+What makes it *living* rather than a static snapshot:
+
+- **New AZ data sources land via PR.** A sub-agent does the research,
+  drafts a `schema/deep/*.sql` seed, and opens a PR. Reviewers (humans
+  or other agents) merge. The next `.read` rebuilds the graph.
+- **Upstream API drift is detected, not silently swallowed.** The
+  `mcp/vectorsurv/openapi/` directory holds versioned snapshots; a
+  `git diff` between two snapshots is the changelog the MCP client
+  reacts to.
+- **MCP servers stream live agency data into the same graph.**
+  The included [`vectorsurv-mcp`](./mcp/vectorsurv/) exposes the
+  national mosquito- and tick-surveillance API as MCP tools (sites,
+  collections, pools, vector-index calculations, human / equine
+  arbovirus case counts). An LLM client can query VectorSurv and
+  drop the results into the same DuckLake graph.
+- **The visualizations are knowledge-graph-aware.** Every pin on the
+  [map](./map/) and every node in the
+  [pathogen graph](./graph/) carries a `kg_node_id` that round-trips
+  to the SQL graph. Click a feature, get the canonical node back.
+
+## Site roadmap
+
+Everything in this repository is also a page on the published site at
+<https://tyson-swetnam.github.io/epihack-2026/>.
+
+### Reference frameworks
+- [Top-level landing page](./index.html) &mdash; entry point with cards to every section.
+- [Figures](./figures/) &mdash; the four EpiHack reference posters plus the breakout-session worksheet, transcribed into structured Markdown with explicit RDF-style triples.
+
+### Focus groups
+- [Wildlife &amp; Vector-Borne Diseases](./wildlife/) &mdash; four guiding questions, a 30+ resource catalog spanning state / county / tribal / federal / academic / citizen-science, plus a draft participatory-surveillance system design.
+- [Heat](./heat/) &mdash; four guiding questions, vulnerable populations, and a 30+ heat-resource catalog (ADHS, MAG HRN, Phoenix OHRM, UA Heat Resilience Initiative, NWS HeatRisk, 211 Arizona).
+
+### Interactive viewers
+- [Map](./map/) &mdash; MapLibre GL map of Arizona surfacing the geospatial slice of the knowledge graph: 15 counties, 22 tribal nations, NEON Domain 14 sites, agency HQs by jurisdiction, federal-land units, and historical outbreak locations. Mobile-responsive with a collapsible panel.
+- [Pathogen knowledge graph](./graph/) &mdash; Cytoscape.js node-edge viewer for the 16 pathogens with their vectors, reservoirs, focus areas, and surveilling agencies. Color- and shape-coded; filter by pathogen class; switch layouts.
+
+### MCP servers (live data ingestion for LLMs)
+- [`vectorsurv-mcp`](./mcp/vectorsurv/) &mdash; Python MCP server wrapping the [VectorSurv](https://vectorsurv.org/) API ([spec v1.0.44](./mcp/vectorsurv/openapi/)). Exposes 13 tools including `vectorsurv_agency_region_intersect` (the fastest way to enumerate AZ agencies), `vectorsurv_get_pools`, `vectorsurv_pools_are_positive`, `vectorsurv_get_case_counts`, and client-side abundance / infection-rate / vector-index calculators.
+
+### Knowledge-graph SQL
+- [`schema/`](./schema/) &mdash; core graph (frameworks) plus worksheet template, focus areas, designs, World Café cards, and the two focus-group seeds.
+- [`schema/deep/`](./schema/deep/) &mdash; sub-agent deep-research seeds: all 15 AZ counties, all 22 federally recognized AZ tribes, pathogens (with vectors / reservoirs / ICD-10), historical AZ outbreaks (with Figure 3 milestone dates), datasets &amp; APIs (NEON DPs, WHISPers, NWS, GBIF, iNat), interop standards (FHIR, OMOP, ICD-10, Darwin Core), MCP servers.
+
+### Breakout artifacts
+- [Worksheets](./worksheets/) &mdash; completed design worksheets from EpiHack breakouts.
+- [World Café notes](./notes/world-cafe/) &mdash; Q4 cards transcribed from Heat, Unhoused, and Information Flow breakouts.
+
 ## Contents
 
 ```
