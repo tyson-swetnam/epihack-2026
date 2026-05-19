@@ -1,6 +1,9 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
 
+import { AuthProvider } from '@/components/AuthProvider';
+import { AuthBadge } from '@/components/AuthBadge';
+
 export const metadata: Metadata = {
   title: 'AZ One Health Sentinel',
   description:
@@ -24,17 +27,22 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <header className="app-header">
-          <div className="crumbs">
-            <a href="/epihack-2026/index.html">&laquo; EpiHack AZ 2026</a>
-          </div>
-          <h1>AZ One Health Sentinel</h1>
-        </header>
-        <main className="container">{children}</main>
-        <footer className="app-footer">
-          Source: Ending Pandemics Academy · University of Arizona Mel &amp;
-          Enid Zuckerman College of Public Health · Global Health Institute.
-        </footer>
+        <AuthProvider>
+          <header className="app-header">
+            <div className="crumbs">
+              <a href="/epihack-2026/index.html">&laquo; EpiHack AZ 2026</a>
+            </div>
+            <div className="header-row">
+              <h1>AZ One Health Sentinel</h1>
+              <AuthBadge />
+            </div>
+          </header>
+          <main className="container">{children}</main>
+          <footer className="app-footer">
+            Source: Ending Pandemics Academy · University of Arizona Mel &amp;
+            Enid Zuckerman College of Public Health · Global Health Institute.
+          </footer>
+        </AuthProvider>
       </body>
     </html>
   );

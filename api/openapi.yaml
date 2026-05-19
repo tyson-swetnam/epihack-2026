@@ -70,6 +70,14 @@ tags:
       …) but never asserts a diagnosis.
   - name: meta
     description: Service health, version, and spec discovery.
+  - name: auth
+    description: |
+      Account endpoints. Sign-in / sign-up / OAuth itself is handled
+      client-side via the Supabase JS SDK (plan/07-auth.md); these
+      endpoints cover what *our* backend serves on top — the user
+      record, the right-to-erasure path, and the claim-attach hook
+      that lets a previously anonymous report be linked to an
+      authenticated account.
 
 paths:
 
@@ -291,10 +299,146 @@ paths:
                 type: object
                 additionalProperties: true
 
+  # -------------------------------------------------------------------------
+  # /v1/auth/me — current user (and their profile row).
+  # -------------------------------------------------------------------------
+  /v1/auth/me:
+    get:
+      tags: [auth]
+      operationId: getCurrentUser
+      summary: Return the current user and their profile
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: User + profile.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CurrentUser"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    patch:
+      tags: [auth]
+      operationId: updateCurrentUser
+      summary: Update the authenticated user's profile
+      description: |
+        Per-field consent toggles default to off. Supplying a value
+        for `home_zip`, `contact_sms_phone`, etc. implies opt-in
+        for that channel; clearing a value implies opt-out.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AccountProfile"
+      responses:
+        "200":
+          description: Updated profile.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CurrentUser"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "422":
+          description: Validation failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    delete:
+      tags: [auth]
+      operationId: deleteCurrentUser
+      summary: Delete the user account (right to erasure)
+      description: |
+        Cascades to **detach** (not delete) any observations the user
+        had previously attached to their account. The observations
+        themselves stay in the graph (the public-health value of
+        coarse aggregate data is independent of the reporter's
+        identity); only the `observation.user_id` foreign key is
+        nulled. Auth.users row is deleted; profile row cascades via
+        ON DELETE CASCADE.
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          description: Account deleted.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  # -------------------------------------------------------------------------
+  # /v1/auth/sign-out — record the sign-out in the server audit log.
+  # -------------------------------------------------------------------------
+  /v1/auth/sign-out:
+    post:
+      tags: [auth]
+      operationId: signOut
+      summary: Record a sign-out event
+      description: |
+        The Supabase JS SDK clears the local session on the client
+        side. This endpoint exists so the server-side audit log
+        records the sign-out for governance / privacy review.
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          description: Sign-out logged.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  # -------------------------------------------------------------------------
+  # /v1/auth/claim — attach a previously anonymous report to the current user.
+  # -------------------------------------------------------------------------
+  /v1/auth/claim:
+    post:
+      tags: [auth]
+      operationId: claimReport
+      summary: Attach an anonymous report to the current account
+      description: |
+        Opt-in only. The user pastes (or the app auto-passes) the
+        `claim_token` returned from `POST /v1/reports`; the server
+        sets `observation.user_id = auth.uid()`. Idempotent — a
+        second call with the same token is a no-op.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [claim_token]
+              additionalProperties: false
+              properties:
+                claim_token:
+                  type: string
+                  pattern: "^[A-Za-z0-9_-]{16,}$"
+      responses:
+        "204":
+          description: Report attached.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
 # ============================================================================
 # Components
 # ============================================================================
 components:
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        Supabase-issued JWT. The server validates the JWT against
+        Supabase's published JWKS endpoint, extracts `sub` as the
+        `user_id`, and looks up the profile row in `public.profile`.
+        See plan/07-auth.md for the full flow.
 
   parameters:
     ObservationId:
@@ -331,6 +475,14 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/Error"
+    Unauthorized:
+      description: |
+        Missing, expired, or invalid JWT. The client should clear
+        any local session and redirect to /sign-in.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
 
   schemas:
 
@@ -352,6 +504,9 @@ components:
             - claim_token_invalid
             - not_found
             - server_error
+            - unauthorized
+            - jwt_invalid
+            - jwt_expired
         message: { type: string }
         details:
           type: object
@@ -663,3 +818,97 @@ components:
           format: date-time
         source:
           $ref: "#/components/schemas/CitedSource"
+
+    # -----------------------------------------------------------------------
+    # Auth — current user + profile. The sign-in / sign-up / OAuth dance
+    # is handled client-side via Supabase Auth (see plan/07-auth.md); the
+    # schemas below describe only what *our* backend exposes on top.
+    # -----------------------------------------------------------------------
+    CurrentUser:
+      type: object
+      required: [user_id, email_verified, created_at]
+      properties:
+        user_id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+          description: |
+            May be a `@privaterelay.appleid.com` address if the user
+            signed in with Apple and elected to hide their real email.
+        email_verified:
+          type: boolean
+        provider:
+          type: string
+          enum: [email, google, facebook, apple]
+        created_at:
+          type: string
+          format: date-time
+        last_sign_in_at:
+          type: string
+          format: date-time
+        profile:
+          $ref: "#/components/schemas/AccountProfile"
+
+    AccountProfile:
+      type: object
+      additionalProperties: false
+      description: |
+        The persistent profile stored against an authenticated
+        account. Distinct from `ProfilePatch` (which attaches a
+        profile to a single anonymous report) — this profile applies
+        to every future report from the same account.
+
+        Every field is optional. Setting a value implies opt-in for
+        that channel; absence is opt-out. Every boolean flag defaults
+        to false.
+      properties:
+        display_name:
+          type: string
+          maxLength: 80
+          description: |
+            Shown back to the user only. Never appears on the public
+            dashboard or in agency exports.
+        home_zip:
+          type: string
+          pattern: "^[0-9]{5}$"
+        primary_language:
+          type: string
+          maxLength: 32
+        accessibility_needs:
+          type: array
+          items: { type: string, maxLength: 60 }
+        contact_email_opt_in:
+          type: boolean
+          default: false
+          description: |
+            If true, verified agencies may contact the user via their
+            account email about reports they file.
+        contact_sms_phone:
+          type: string
+          pattern: "^\\+?[0-9]{10,15}$"
+        contact_sms_opt_in:
+          type: boolean
+          default: false
+        precise_location_consent:
+          type: boolean
+          default: false
+        share_photo_gps_animal_env:
+          type: boolean
+          default: false
+        share_photo_gps_human:
+          type: boolean
+          default: false
+        age_band:
+          type: string
+          enum: ["<18", "18-29", "30-44", "45-64", "65+"]
+        sex_at_birth:
+          type: string
+          enum: [female, male, intersex, prefer_not_to_say]
+        gender_identity:
+          type: string
+          maxLength: 60
+        race_ethnicity:
+          type: array
+          items: { type: string, maxLength: 60 }

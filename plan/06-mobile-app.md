@@ -17,6 +17,10 @@ designed for. The pilot is a **mobile-friendly web app on GitHub
 Pages**; the full prototype targets the Apple App Store and Google
 Play.
 
+> **See also:** [`plan/07-auth.md`](./07-auth.html) — the optional
+> account system layered on top of this anonymous-first flow.
+> Anonymous reporting is never gated by sign-in.
+
 ## Hard rules
 
 These are load-bearing — every decision below derives from them.

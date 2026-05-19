@@ -1,0 +1,50 @@
+# Build the Jekyll site at the repo root and publish to gh-pages/.
+#
+# Pairs with deploy-app.yml (which publishes the Next.js app to
+# gh-pages/app/). Both workflows use keep_files: true so the Jekyll
+# root and the Next.js subtree coexist without clobbering each other.
+
+name: Build + deploy Jekyll site
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'app/**'
+      - 'api/**'
+      - '.github/workflows/deploy-app.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-jekyll
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2'
+          bundler-cache: true
+
+      - name: Build Jekyll site
+        env:
+          JEKYLL_ENV: production
+        run: bundle exec jekyll build --baseurl /epihack-2026
+
+      - name: Publish to gh-pages/
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: ./_site
+          keep_files: true
+          exclude_assets: '.github,app'
+          commit_message: 'jekyll: deploy ${{ github.sha }}'

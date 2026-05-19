@@ -198,3 +198,55 @@ body {
   margin: 1rem 0;
 }
 .profile-form legend { padding: 0 .35rem; font-weight: 600; color: var(--c-navy); }
+
+/* Auth */
+.header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .75rem;
+}
+.auth-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+  padding: .3rem .6rem;
+  background: rgba(255,255,255,.12);
+  border-radius: 999px;
+  color: #fff;
+  font-size: .85rem;
+  text-decoration: none;
+}
+.auth-badge-signin { background: rgba(255,255,255,.2); }
+.auth-name { color: #fff; text-decoration: none; }
+.auth-signout {
+  background: transparent;
+  border: 0;
+  color: #fff;
+  cursor: pointer;
+  padding: 0 .15rem;
+  font-size: 1rem;
+}
+
+.sign-in { max-width: 480px; margin: 0 auto; }
+.oauth-buttons { display: flex; flex-direction: column; gap: .6rem; margin: 1rem 0; }
+.btn.oauth { background: #111; color: #fff; }
+.btn.oauth-google { background: #fff; color: #111; border: 1px solid var(--c-rule); }
+.btn.oauth-facebook { background: #1877f2; }
+.divider {
+  display: flex; align-items: center; gap: .75rem;
+  color: var(--c-mute); font-size: .85rem; margin: 1.2rem 0 .6rem;
+}
+.divider::before, .divider::after {
+  content: ''; flex: 1; border-top: 1px solid var(--c-rule);
+}
+.email-form .field input { width: 100%; }
+.mode-switch { display: flex; flex-wrap: wrap; gap: 1rem; margin-top: 1rem; }
+.link {
+  background: transparent; border: 0; color: var(--c-navy);
+  text-decoration: underline; cursor: pointer; font: inherit; padding: 0;
+}
+
+.account-dl { display: grid; grid-template-columns: max-content 1fr; gap: .35rem 1rem; margin: 1rem 0; }
+.account-dl dt { color: var(--c-mute); }
+.account-dl dd { margin: 0; }

@@ -47,9 +47,10 @@ app/
 
 ```bash
 cd app
+cp .env.example .env.local      # fill in Supabase URL + anon key if you want auth
 npm install
-npm run gen:api          # generate TS types from ../api/openapi.yaml
-npm run dev              # localhost:3000
+npm run gen:api                 # generate TS types from ../api/openapi.yaml
+npm run dev                     # localhost:3000
 ```
 
 The dev server defaults to `NEXT_PUBLIC_API_BASE=mock`, which makes
@@ -57,8 +58,21 @@ the API client short-circuit to `src/mocks/*.json` so the app runs
 without a backend. Point at a real Intake Agent with:
 
 ```bash
-NEXT_PUBLIC_API_BASE=https://sentinel.example.org/api npm run dev
+NEXT_PUBLIC_API_BASE=http://localhost:8000 npm run dev
 ```
+
+And to run the FastAPI backend locally:
+
+```bash
+cd agents
+uv sync
+ONEHEALTH_AUTH_MOCK=1 uv run uvicorn onehealth_agents.api:app --reload --port 8000
+```
+
+Sign-in is gated by `NEXT_PUBLIC_SUPABASE_URL` and
+`NEXT_PUBLIC_SUPABASE_ANON_KEY`. When unset, the auth UI renders in
+"configure-me" mode and anonymous reporting still works end-to-end.
+See [`plan/07-auth.md`](../plan/07-auth.html) for the architecture.
 
 ## Production build
 

@@ -36,11 +36,14 @@ exclude:
   - app/tsconfig.json
   - app/next.config.mjs
   - app/.gitignore
+  - app/.env.example
+  - app/.env.local
   - app/src
   - app/.next
   - app/out
   - app/node_modules
   - api
+  - agents
 
 defaults:
   - scope:

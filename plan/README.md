@@ -35,6 +35,11 @@ architecture that consumes real-time data via MCP servers.
    EXIF-stripped photos, ZIP/km coarsening, "never diagnose" risk
    boundary, DuckLake snapshots backed by GitHub LFS, web pilot
    → iOS + Android.
+7. [`07-auth.md`](./07-auth.html) — optional account system
+   (email/password, magic-link, OAuth via Google / Facebook /
+   Apple) layered on top of anonymous reporting. Supabase Auth
+   backend; right to erasure detaches but does not delete attached
+   observations.
 
 ## The thesis in one paragraph
 

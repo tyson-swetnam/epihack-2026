@@ -27,6 +27,12 @@ const nextConfig = {
   env: {
     NEXT_PUBLIC_API_BASE: process.env.NEXT_PUBLIC_API_BASE ?? 'mock',
     NEXT_PUBLIC_BUILD: process.env.NEXT_PUBLIC_BUILD ?? 'dev',
+    // Supabase Auth (plan/07-auth.md). When unset (default), the
+    // auth UI renders in "configure-me" mode so the build still
+    // succeeds on a fresh clone; sign-in is disabled until the real
+    // project URL + anon key land in .env.local.
+    NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL ?? '',
+    NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '',
   },
 };
 
