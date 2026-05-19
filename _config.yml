@@ -28,6 +28,22 @@ exclude:
   - "*.log"
   - Gemfile
   - Gemfile.lock
+  # Next.js source for the new reporting app is built separately
+  # (see .github/workflows/deploy-app.yml) and deployed to
+  # gh-pages/app/. Jekyll must NOT try to process these.
+  - app/package.json
+  - app/package-lock.json
+  - app/tsconfig.json
+  - app/next.config.mjs
+  - app/.gitignore
+  - app/.env.example
+  - app/.env.local
+  - app/src
+  - app/.next
+  - app/out
+  - app/node_modules
+  - api
+  - agents
 
 defaults:
   - scope:

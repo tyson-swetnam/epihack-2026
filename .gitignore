@@ -1,0 +1,65 @@
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+.env
+!.env.example
+
+# Build / dist
+build/
+dist/
+*.egg-info/
+*.egg
+wheels/
+pip-wheel-metadata/
+
+# uv
+.uv-cache/
+
+# Test / coverage
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+.mypy_cache/
+.pyre/
+.ruff_cache/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Node (in case the prototype app picks up tooling later)
+node_modules/
+.next/
+out/
+.vercel/
+
+# Jekyll output (Pages publishes from source; never commit _site)
+_site/
+.jekyll-cache/
+.sass-cache/
+
+# Local data
+*.duckdb
+*.duckdb.wal
+ducklake-data/
+
+# Logs
+*.log

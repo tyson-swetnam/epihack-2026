@@ -1,0 +1,34 @@
+[build-system]
+requires = ["hatchling>=1.21"]
+build-backend = "hatchling.build"
+
+[project]
+name = "sms-entry-mcp"
+version = "0.1.0"
+description = "Model Context Protocol server for the SMS-only intake entry point (Twilio-compatible, mock-by-default). Built for EpiHack Arizona 2026, Phase 2 of the OneHealth roadmap."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "EpiHack Arizona 2026" }]
+keywords = ["mcp", "sms", "twilio", "intake", "one-health", "epihack"]
+
+dependencies = [
+    "mcp[cli]>=1.2.0",
+    "httpx>=0.27",
+    "pydantic>=2.7",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8",
+    "pytest-asyncio>=0.23",
+]
+
+[project.scripts]
+sms-entry-mcp = "sms_entry_mcp.__main__:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/sms_entry_mcp"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

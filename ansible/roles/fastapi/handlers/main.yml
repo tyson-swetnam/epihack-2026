@@ -1,0 +1,6 @@
+---
+- name: Restart fastapi
+  ansible.builtin.systemd:
+    name: onehealth-api
+    daemon_reload: true
+    state: restarted

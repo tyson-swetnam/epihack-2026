@@ -1,0 +1,17 @@
+{
+  "_comment": "Paste the 'great-az-tick-check' block into your Claude Desktop config under mcpServers. Restart Claude Desktop after editing. With no GATTC_BACKEND_URL set the server runs in mock mode -- safe to demo without disturbing the Walker lab.",
+  "mcpServers": {
+    "great-az-tick-check": {
+      "command": "uvx",
+      "args": [
+        "--from",
+        "/absolute/path/to/epihack-2026/mcp/great-az-tick-check-mcp",
+        "great-az-tick-check-mcp"
+      ],
+      "env": {
+        "GATTC_BACKEND_URL": "",
+        "GATTC_API_TOKEN": ""
+      }
+    }
+  }
+}

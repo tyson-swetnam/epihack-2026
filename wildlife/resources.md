@@ -398,6 +398,32 @@ participatory program for vector data.*
   wild birds. Cross-platform analyses confirm seasonality patterns
   match for >97% of species studied.
 
+### Outbreaks Near Me
+- **Website:** <https://outbreaksnearme.org/us/en-US>
+- **Operator.** Boston Children's Hospital + HealthMap
+  (Dr. John Brownstein's team). Successor to **Flu Near You**
+  (2011–2022).
+- **What it is.** A US-wide **participatory-surveillance** platform
+  where the public self-reports symptoms — fever, cough, GI signs,
+  rashes, fatigue — and the platform aggregates the data by ZIP
+  code into a near-real-time symptom-cluster map. Free, no account
+  beyond a ZIP and an age band.
+- **Why it matters.** It is the closest existing analogue to the
+  AZ One Health Sentinel app's symptom-side intake; the AZ
+  prototype should either federate with it (handing OBNM-style
+  symptom reports straight through), or — at minimum — direct
+  users to it for *human* symptom self-reporting while the
+  Sentinel app focuses on the wildlife / vector / heat side that
+  OBNM doesn't cover. The HealthMap team's prior work
+  (BioCaster, ProMED-mail, HealthMap.org) is also worth
+  benchmarking against for the Cluster Detection Agent.
+- **Where it lands in the knowledge graph:**
+  `resource.outbreaks_near_me` node in
+  [`schema/deep/datasets_apis.sql`](../schema/deep/datasets_apis.sql)
+  with edges to `focus.zoonotic`, `focus.vector_borne`, and the
+  Figure-3 *Detect* milestone (it directly improves early
+  detection).
+
 ### AZGFD wildlife mortality reporting
 *See the AZGFD entry above. AZGFD's existing public-report channel for
 sick / dead wildlife is the de facto Arizona participatory baseline; a

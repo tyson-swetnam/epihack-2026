@@ -1,0 +1,312 @@
+{
+  "_comment": "Canned IntakeAgent -> ... -> NotificationAgent responses for the heat vertical. Returned by app/shared/intake-client.js when the page runs in mock mode. The shapes mirror what agents/examples/scenario_c_heat.py produces -- specifically the Observation contract in agents/src/onehealth_agents/contracts.py: triage_class is one of tc.go_to_cooling_center / tc.dispatch_chw / tc.call_911 / tc.check_in_only / tc.drink_water_advisory; heat_vulnerability is a HeatVulnerabilityScore with line-item components; cooling_centers and transport_offer come from the EnrichmentAgent via mag-hrn-mcp + 211-az-mcp. There is one canned response per triage class so each branch of the heat UI can be exercised end-to-end.",
+
+  "heat_chw_checkin": {
+    "flow": "heat_chw_checkin",
+    "vertical": "heat",
+    "consent_profile": "consent.anonymous_heat",
+    "triage_class": "tc.go_to_cooling_center",
+    "secondary_actions": ["dispatch-CHW-transport"],
+    "rationale": "Heat vulnerability score 12/15 (unsheltered, outdoor_exposure, no_ac, magenta_heatrisk, symptomatic_heat_exhaustion); HeatRisk=Magenta",
+    "geo": {
+      "resolved_county": "Maricopa",
+      "kg_node_id": "county.maricopa",
+      "zcta": "85003",
+      "tribal_land": false
+    },
+    "heatrisk": {
+      "tool": "nws-heatrisk-mcp.heatrisk",
+      "level": "Magenta",
+      "ambient_temp_f": 115,
+      "date": "2026-05-19"
+    },
+    "heat_vulnerability": {
+      "total": 12,
+      "max_possible": 15,
+      "components": [
+        { "factor": "unsheltered",                  "label": "Currently unsheltered",                  "points": 3, "population_node": "pop.unsheltered" },
+        { "factor": "outdoor_exposure",             "label": "Outdoor exposure ≥ 4 h",                 "points": 2, "population_node": "pop.outdoor_workers" },
+        { "factor": "no_ac",                        "label": "No AC access today",                     "points": 2, "population_node": "pop.no_ac_renters" },
+        { "factor": "magenta_heatrisk",             "label": "Magenta NWS HeatRisk forecast",          "points": 3, "population_node": null },
+        { "factor": "symptomatic_heat_exhaustion",  "label": "Heat-exhaustion symptoms (sweat+headache)","points": 2, "population_node": null }
+      ]
+    },
+    "cooling_centers": {
+      "tool": "mag-hrn-mcp.search_centers",
+      "centers": [
+        {
+          "id": "center.phx_central_library",
+          "name": "Burton Barr Central Library cooling center",
+          "address": "1221 N Central Ave, Phoenix, AZ 85004",
+          "phone": "+1-602-262-4636",
+          "distance_km": 0.6,
+          "open_now": true,
+          "hours_today": "10:00 AM – 8:00 PM",
+          "pets_ok": false,
+          "transport_eligible": true,
+          "services": ["water", "rest area", "Wi-Fi", "restrooms"],
+          "maps_url": "https://maps.apple.com/?daddr=1221+N+Central+Ave,+Phoenix,+AZ+85004"
+        },
+        {
+          "id": "center.phx_human_services",
+          "name": "Human Services Campus respite center",
+          "address": "204 S 12th Ave, Phoenix, AZ 85007",
+          "phone": "+1-602-282-0853",
+          "distance_km": 1.2,
+          "open_now": true,
+          "hours_today": "7:00 AM – 10:00 PM",
+          "pets_ok": true,
+          "transport_eligible": true,
+          "services": ["water", "shaded rest", "showers", "medical"],
+          "maps_url": "https://maps.apple.com/?daddr=204+S+12th+Ave,+Phoenix,+AZ+85007"
+        },
+        {
+          "id": "center.phx_st_vincent",
+          "name": "St Vincent de Paul Dining Room",
+          "address": "420 W Watkins Rd, Phoenix, AZ 85003",
+          "phone": "+1-602-261-6868",
+          "distance_km": 1.8,
+          "open_now": true,
+          "hours_today": "11:00 AM – 5:00 PM",
+          "pets_ok": false,
+          "transport_eligible": false,
+          "services": ["water", "meal", "rest area"],
+          "maps_url": "https://maps.apple.com/?daddr=420+W+Watkins+Rd,+Phoenix,+AZ+85003"
+        }
+      ]
+    },
+    "transport_offer": {
+      "tool": "211-az-mcp.transport_to_cooling_center",
+      "available": true,
+      "provider": "211 Arizona heat-relief rideshare",
+      "eta_minutes": 18,
+      "phone": "+1-877-211-8661",
+      "note": "Dispatching this triggers an MOU-covered ride for the subject + CHW to the nearest pet-friendly open center."
+    },
+    "edges_written": [
+      "observation -> occurredIn -> zcta.85003",
+      "observation -> riskFactor -> pop.unsheltered",
+      "observation -> riskFactor -> pop.outdoor_workers",
+      "observation -> riskFactor -> pop.no_ac_renters",
+      "observation -> contextOf -> heatrisk.magenta.2026-05-19",
+      "observation -> referredTo -> center.phx_human_services",
+      "observation -> partOf -> focus.heat_unsheltered"
+    ],
+    "milestones": [
+      { "milestone": "Detect",  "fired_at": "2026-05-19T18:42:11Z" },
+      { "milestone": "Prevent", "fired_at": "2026-05-19T18:42:11Z" }
+    ]
+  },
+
+  "heat_chw_checkin_911": {
+    "flow": "heat_chw_checkin",
+    "vertical": "heat",
+    "consent_profile": "consent.anonymous_heat",
+    "triage_class": "tc.call_911",
+    "secondary_actions": ["dispatch-CHW-transport"],
+    "rationale": "Heat vulnerability score 14/15 with hot dry skin + confusion = heat-stroke triad; HeatRisk=Magenta",
+    "geo": {
+      "resolved_county": "Maricopa",
+      "kg_node_id": "county.maricopa",
+      "zcta": "85003",
+      "tribal_land": false
+    },
+    "heatrisk": {
+      "tool": "nws-heatrisk-mcp.heatrisk",
+      "level": "Magenta",
+      "ambient_temp_f": 117,
+      "date": "2026-05-19"
+    },
+    "heat_vulnerability": {
+      "total": 14,
+      "max_possible": 15,
+      "components": [
+        { "factor": "unsheltered",               "label": "Currently unsheltered",            "points": 3, "population_node": "pop.unsheltered" },
+        { "factor": "outdoor_exposure",          "label": "Outdoor exposure ≥ 4 h",           "points": 2, "population_node": "pop.outdoor_workers" },
+        { "factor": "no_ac",                     "label": "No AC access today",               "points": 2, "population_node": "pop.no_ac_renters" },
+        { "factor": "magenta_heatrisk",          "label": "Magenta NWS HeatRisk forecast",    "points": 3, "population_node": null },
+        { "factor": "symptomatic_heat_stroke",   "label": "Heat-stroke triad (confusion + hot dry skin)","points": 3, "population_node": null },
+        { "factor": "thermo_meds",               "label": "Thermoregulation-affecting meds",  "points": 1, "population_node": null }
+      ]
+    },
+    "cooling_centers": { "tool": "mag-hrn-mcp.search_centers", "centers": [] },
+    "transport_offer": {
+      "tool": "911",
+      "available": true,
+      "provider": "Phoenix Fire EMS",
+      "phone": "911",
+      "note": "Life-threatening triage class -- do not transport to a cooling center. Call 911 now."
+    },
+    "edges_written": [
+      "observation -> occurredIn -> zcta.85003",
+      "observation -> riskFactor -> pop.unsheltered",
+      "observation -> partOf -> focus.heat_stroke"
+    ],
+    "milestones": [
+      { "milestone": "Detect",  "fired_at": "2026-05-19T18:51:02Z" },
+      { "milestone": "Respond", "fired_at": "2026-05-19T18:51:02Z" }
+    ]
+  },
+
+  "heat_self_report": {
+    "flow": "heat_self_report",
+    "vertical": "heat",
+    "consent_profile": "consent.anonymous_heat",
+    "triage_class": "tc.drink_water_advisory",
+    "secondary_actions": [],
+    "rationale": "Heat vulnerability score 4/15 (orange_heatrisk, symptomatic_heat_exhaustion); HeatRisk=Orange",
+    "geo": {
+      "resolved_county": "Maricopa",
+      "kg_node_id": "county.maricopa",
+      "zcta": "85008",
+      "tribal_land": false
+    },
+    "heatrisk": {
+      "tool": "nws-heatrisk-mcp.heatrisk",
+      "level": "Orange",
+      "ambient_temp_f": 104,
+      "date": "2026-05-19"
+    },
+    "heat_vulnerability": {
+      "total": 4,
+      "max_possible": 15,
+      "components": [
+        { "factor": "outdoor_exposure",            "label": "Outdoor exposure ≥ 4 h",         "points": 2, "population_node": "pop.outdoor_workers" },
+        { "factor": "orange_heatrisk",             "label": "Orange NWS HeatRisk forecast",   "points": 1, "population_node": null },
+        { "factor": "symptomatic_heat_exhaustion", "label": "Heat-exhaustion symptoms",       "points": 2, "population_node": null }
+      ]
+    },
+    "cooling_centers": {
+      "tool": "mag-hrn-mcp.search_centers",
+      "centers": [
+        {
+          "id": "center.phx_papago_library",
+          "name": "Papago Park Branch Library",
+          "address": "5210 E McKellips Rd, Phoenix, AZ 85008",
+          "phone": "+1-602-262-4636",
+          "distance_km": 1.1,
+          "open_now": true,
+          "hours_today": "10:00 AM – 6:00 PM",
+          "pets_ok": false,
+          "transport_eligible": false,
+          "services": ["water", "rest area", "Wi-Fi"],
+          "maps_url": "https://maps.apple.com/?daddr=5210+E+McKellips+Rd,+Phoenix,+AZ+85008"
+        }
+      ]
+    },
+    "transport_offer": {
+      "tool": "211-az-mcp.transport_to_cooling_center",
+      "available": false,
+      "provider": "211 Arizona",
+      "phone": "+1-877-211-8661",
+      "note": "Self-report flow offers a phone link to 211 rather than CHW dispatch."
+    },
+    "edges_written": [
+      "observation -> occurredIn -> zcta.85008",
+      "observation -> contextOf -> heatrisk.orange.2026-05-19"
+    ],
+    "milestones": [
+      { "milestone": "Detect", "fired_at": "2026-05-19T15:22:09Z" }
+    ]
+  },
+
+  "heat_check_in_only": {
+    "flow": "heat_chw_checkin",
+    "vertical": "heat",
+    "consent_profile": "consent.anonymous_heat",
+    "triage_class": "tc.check_in_only",
+    "secondary_actions": [],
+    "rationale": "Heat vulnerability score 1/15 (orange_heatrisk only); subject asymptomatic, sheltered, AC available.",
+    "geo": {
+      "resolved_county": "Maricopa", "kg_node_id": "county.maricopa", "zcta": "85008"
+    },
+    "heatrisk": { "tool": "nws-heatrisk-mcp.heatrisk", "level": "Orange", "ambient_temp_f": 101, "date": "2026-05-19" },
+    "heat_vulnerability": {
+      "total": 1,
+      "max_possible": 15,
+      "components": [
+        { "factor": "orange_heatrisk", "label": "Orange NWS HeatRisk forecast", "points": 1, "population_node": null }
+      ]
+    },
+    "cooling_centers": { "tool": "mag-hrn-mcp.search_centers", "centers": [] },
+    "transport_offer": { "tool": "211-az-mcp.transport_to_cooling_center", "available": false, "phone": "+1-877-211-8661" },
+    "edges_written": [
+      "observation -> occurredIn -> zcta.85008"
+    ],
+    "milestones": [
+      { "milestone": "Detect", "fired_at": "2026-05-19T15:00:00Z" }
+    ]
+  },
+
+  "cooling_centers_lookup": {
+    "tool": "mag-hrn-mcp.search_centers",
+    "queried_at": "2026-05-19T18:32:00Z",
+    "centers": [
+      {
+        "id": "center.phx_central_library",
+        "name": "Burton Barr Central Library cooling center",
+        "address": "1221 N Central Ave, Phoenix, AZ 85004",
+        "phone": "+1-602-262-4636",
+        "distance_km": 0.6,
+        "open_now": true,
+        "hours_today": "10:00 AM – 8:00 PM",
+        "pets_ok": false,
+        "transport_eligible": true,
+        "services": ["water", "rest area", "Wi-Fi", "restrooms"],
+        "maps_url": "https://maps.apple.com/?daddr=1221+N+Central+Ave,+Phoenix,+AZ+85004"
+      },
+      {
+        "id": "center.phx_human_services",
+        "name": "Human Services Campus respite center",
+        "address": "204 S 12th Ave, Phoenix, AZ 85007",
+        "phone": "+1-602-282-0853",
+        "distance_km": 1.2,
+        "open_now": true,
+        "hours_today": "7:00 AM – 10:00 PM",
+        "pets_ok": true,
+        "transport_eligible": true,
+        "services": ["water", "shaded rest", "showers", "medical"],
+        "maps_url": "https://maps.apple.com/?daddr=204+S+12th+Ave,+Phoenix,+AZ+85007"
+      },
+      {
+        "id": "center.phx_st_vincent",
+        "name": "St Vincent de Paul Dining Room",
+        "address": "420 W Watkins Rd, Phoenix, AZ 85003",
+        "phone": "+1-602-261-6868",
+        "distance_km": 1.8,
+        "open_now": true,
+        "hours_today": "11:00 AM – 5:00 PM",
+        "pets_ok": false,
+        "transport_eligible": false,
+        "services": ["water", "meal", "rest area"],
+        "maps_url": "https://maps.apple.com/?daddr=420+W+Watkins+Rd,+Phoenix,+AZ+85003"
+      },
+      {
+        "id": "center.phx_south_mountain_comm",
+        "name": "South Mountain Community Center",
+        "address": "212 E Alta Vista Rd, Phoenix, AZ 85042",
+        "phone": "+1-602-534-6090",
+        "distance_km": 3.1,
+        "open_now": true,
+        "hours_today": "8:00 AM – 9:00 PM",
+        "pets_ok": false,
+        "transport_eligible": true,
+        "services": ["water", "rest area", "Wi-Fi", "restrooms"],
+        "maps_url": "https://maps.apple.com/?daddr=212+E+Alta+Vista+Rd,+Phoenix,+AZ+85042"
+      },
+      {
+        "id": "center.phx_maryvale_pool",
+        "name": "Maryvale Pool & shaded rest area",
+        "address": "4444 N 51st Ave, Phoenix, AZ 85031",
+        "phone": "+1-602-262-6685",
+        "distance_km": 4.7,
+        "open_now": true,
+        "hours_today": "12:00 PM – 7:00 PM",
+        "pets_ok": false,
+        "transport_eligible": false,
+        "services": ["water", "shade", "pool", "restrooms"],
+        "maps_url": "https://maps.apple.com/?daddr=4444+N+51st+Ave,+Phoenix,+AZ+85031"
+      }
+    ]
+  }
+}

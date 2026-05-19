@@ -1,0 +1,35 @@
+[build-system]
+requires = ["hatchling>=1.21"]
+build-backend = "hatchling.build"
+
+[project]
+name = "knowledge-graph-mcp"
+version = "0.1.0"
+description = "Model Context Protocol server for the EpiHack Arizona 2026 DuckLake knowledge graph (read-only nodes / edges / properties)."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "EpiHack Arizona 2026" }]
+keywords = ["mcp", "ducklake", "duckdb", "knowledge-graph", "epidemiology", "one-health"]
+
+dependencies = [
+    "mcp[cli]>=1.2.0",
+    "pydantic>=2.7",
+    "duckdb>=1.0",
+    "onehealth-agents",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8",
+    "pytest-asyncio>=0.23",
+]
+
+[project.scripts]
+knowledge-graph-mcp = "knowledge_graph_mcp.__main__:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/knowledge_graph_mcp"]
+
+[tool.uv.sources]
+onehealth-agents = { path = "../../agents", editable = true }

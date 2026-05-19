@@ -1,0 +1,314 @@
+/* heat.css — flow-specific styles shared by the three Heat flows
+   (check-in, self-report, cool-off). Re-uses everything in shared/style.css.
+   The form chrome -- progress bar, steps, sticky bar, section blocks --
+   is the same shape as tick/tick.css but tinted to the heat-orange /
+   Magenta-HeatRisk palette. */
+
+/* ---- Heat header bar (replaces the navy bar on heat flows) -------------- */
+.heat-header {
+  background: linear-gradient(135deg, var(--c-orange) 0%, var(--c-red) 100%);
+  color: #fff;
+  padding: calc(.75rem + var(--safe-top)) 1rem .75rem;
+  position: relative;
+}
+.heat-header.magenta {
+  background: linear-gradient(135deg, var(--c-magenta) 0%, var(--c-red) 100%);
+}
+.heat-header a { color: #fff; text-decoration: none; opacity: .9; }
+.heat-header a:hover { opacity: 1; text-decoration: underline; }
+.heat-header h1 { margin: 0; font-size: 1.1rem; font-weight: 600; }
+.heat-header .crumbs { font-size: .8rem; opacity: .9; margin-bottom: .15rem; }
+
+/* ---- Progress bar (matches tick.css but tinted) ------------------------ */
+.progress {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: #fff;
+  border-bottom: 1px solid var(--c-rule);
+  padding: .6rem 1rem;
+}
+.progress .bar {
+  position: relative;
+  height: 6px;
+  background: #f6e0d6;
+  border-radius: 999px;
+  overflow: hidden;
+}
+.progress .bar .fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 0%;
+  background: var(--c-orange);
+  border-radius: 999px;
+  transition: width .3s ease;
+}
+.progress.magenta .bar .fill { background: var(--c-magenta); }
+.progress .label {
+  display: flex;
+  justify-content: space-between;
+  font-size: .78rem;
+  color: var(--c-mute);
+  margin-bottom: .3rem;
+}
+.progress .label .step-name { color: var(--c-orange-2); font-weight: 600; }
+.progress.magenta .label .step-name { color: var(--c-magenta); }
+
+/* ---- Step container (same shape as tick.css) --------------------------- */
+.step { display: none; animation: fade-in .18s ease both; }
+.step.active { display: block; }
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.step h2 {
+  margin: .25rem 0 .75rem 0;
+  color: var(--c-orange-2);
+  font-size: 1.25rem;
+}
+.step h2.magenta { color: var(--c-magenta); }
+.step p.lead { color: var(--c-ink); }
+
+/* ---- Form chrome shared with tick (kept local so each flow's CSS
+        is self-contained without depending on tick.css) ------------------ */
+label.field {
+  display: block;
+  margin: 1rem 0 0;
+  font-size: .9rem;
+  color: var(--c-ink);
+  font-weight: 600;
+}
+label.field .hint {
+  display: block;
+  font-weight: 400;
+  font-size: .78rem;
+  color: var(--c-mute);
+  margin-top: .1rem;
+}
+input[type="text"], input[type="number"], input[type="date"],
+input[type="time"], input[type="email"], input[type="tel"],
+select, textarea {
+  display: block;
+  width: 100%;
+  min-height: var(--tap);
+  margin-top: .35rem;
+  padding: .55rem .7rem;
+  font: inherit;
+  border: 1px solid var(--c-rule);
+  border-radius: var(--radius);
+  background: #fff;
+  color: var(--c-ink);
+}
+select { padding-right: 2rem; }
+input:focus, select:focus, textarea:focus {
+  border-color: var(--c-orange);
+  outline: 3px solid var(--c-focus);
+  outline-offset: 1px;
+}
+.field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: .75rem;
+}
+@media (max-width: 420px) {
+  .field-row { grid-template-columns: 1fr; gap: 0; }
+}
+
+/* ---- Check grid (symptoms multi-select) -------------------------------- */
+.check-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: .55rem;
+  margin-top: .5rem;
+}
+@media (max-width: 420px) {
+  .check-grid { grid-template-columns: 1fr; }
+}
+.check-grid label {
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+  min-height: var(--tap);
+  padding: .5rem .75rem;
+  border: 1px solid var(--c-rule);
+  border-radius: var(--radius);
+  background: #fff;
+  cursor: pointer;
+  font-size: .92rem;
+  user-select: none;
+}
+.check-grid label:has(input:checked) {
+  background: #ffe8df;
+  border-color: var(--c-orange);
+}
+.check-grid input[type="checkbox"] { width: 20px; height: 20px; margin: 0; flex: 0 0 auto; }
+.check-grid label.none-of-above:has(input:checked) {
+  background: var(--c-soft);
+  border-color: var(--c-mute);
+}
+
+/* ---- GPS status (matches tick) ----------------------------------------- */
+.geo-status {
+  margin-top: .6rem;
+  padding: .65rem .8rem;
+  border-radius: var(--radius);
+  border: 1px dashed var(--c-rule);
+  background: var(--c-soft-warm);
+  font-size: .85rem;
+  color: var(--c-mute);
+  min-height: var(--tap);
+  display: flex;
+  align-items: center;
+  gap: .55rem;
+}
+.geo-status.ok   { border-color: var(--c-green); background: #effaf0; color: #1a5a1f; }
+.geo-status.warn { border-color: #d8a13d; background: #fff8e6; color: #8a5a00; }
+.geo-status .dot {
+  width: 10px; height: 10px; border-radius: 50%;
+  background: var(--c-mute); flex: 0 0 auto;
+}
+.geo-status.ok .dot   { background: var(--c-green); }
+.geo-status.warn .dot { background: #d8a13d; }
+
+/* ---- Consent panel ----------------------------------------------------- */
+.consent-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: .85rem;
+  margin-top: .5rem;
+}
+.consent-table th, .consent-table td {
+  text-align: left;
+  padding: .45rem .55rem;
+  border-bottom: 1px solid var(--c-rule);
+}
+.consent-table th { background: var(--c-soft-warm); color: var(--c-mute); font-weight: 600; }
+.consent-table .y { color: var(--c-green); font-weight: 600; }
+.consent-table .n { color: var(--c-mute); }
+
+/* ---- Sticky next bar --------------------------------------------------- */
+.sticky-bar {
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  background: rgba(255,255,255,0.96);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border-top: 1px solid var(--c-rule);
+  padding: .75rem 1rem calc(.75rem + var(--safe-bottom));
+  display: flex;
+  gap: .55rem;
+  z-index: 10;
+}
+.sticky-bar .btn { flex: 1; }
+.sticky-bar .btn.back { flex: 0 0 auto; padding-left: 1rem; padding-right: 1rem; }
+
+/* ---- Submitting overlay ----------------------------------------------- */
+.submitting { text-align: center; padding: 2rem 1rem; }
+.submitting .big-spinner {
+  display: inline-block;
+  width: 48px; height: 48px;
+  border: 5px solid #f6e0d6;
+  border-top-color: var(--c-orange);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 1rem;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .submitting .big-spinner { animation: none; border-top-color: var(--c-orange); }
+}
+.submitting .agent-log {
+  text-align: left;
+  margin: 1rem auto 0;
+  max-width: 420px;
+  font-size: .85rem;
+  color: var(--c-mute);
+  background: var(--c-soft-warm);
+  border-radius: var(--radius);
+  padding: .75rem 1rem;
+  border-left: 4px solid var(--c-orange);
+}
+.submitting .agent-log .line { padding: .15rem 0; }
+.submitting .agent-log .line.done::before { content: "✓ "; color: var(--c-green); }
+.submitting .agent-log .line.pending::before { content: "… "; }
+
+/* ---- Result cards ----------------------------------------------------- */
+.result-card {
+  border: 1px solid var(--c-rule);
+  border-left: 6px solid var(--c-orange);
+  border-radius: var(--radius);
+  padding: 1rem 1.1rem;
+  margin: 1rem 0;
+  background: var(--c-soft-warm);
+}
+.result-card.tc-call_911 { border-left-color: var(--c-red); background: #fdecea; }
+.result-card.tc-go_to_cooling_center { border-left-color: var(--c-magenta); }
+.result-card h3 {
+  margin: 0 0 .4rem 0;
+  color: var(--c-orange-2);
+}
+.result-card.tc-call_911 h3 { color: #7a1a12; }
+.result-card.tc-go_to_cooling_center h3 { color: var(--c-magenta); }
+
+.section-block {
+  border: 1px solid var(--c-rule);
+  border-radius: var(--radius);
+  padding: .9rem 1rem;
+  margin: .8rem 0;
+}
+.section-block h3 {
+  margin: 0 0 .4rem 0;
+  font-size: .95rem;
+  color: var(--c-orange-2);
+  text-transform: uppercase;
+  letter-spacing: .05em;
+}
+.section-block ul { margin: .4rem 0 0 1.1rem; padding: 0; }
+.section-block li { margin: .25rem 0; }
+.section-block .receipt {
+  font-size: .76rem;
+  color: var(--c-mute);
+  margin-top: .35rem;
+}
+
+.cta-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: .55rem;
+  margin-top: 1rem;
+}
+@media (max-width: 420px) {
+  .cta-grid { grid-template-columns: 1fr; }
+}
+
+/* ---- Error banner ----------------------------------------------------- */
+.error-banner {
+  background: #fdecea;
+  border: 1px solid var(--c-red);
+  color: #7a1a12;
+  padding: .65rem .85rem;
+  border-radius: var(--radius);
+  margin: .75rem 0;
+  font-size: .9rem;
+}
+
+/* ---- Cool-off page hero ---------------------------------------------- */
+.cool-hero {
+  background: linear-gradient(135deg, #1f8fbf 0%, var(--c-orange) 100%);
+  color: #fff;
+  padding: 1.25rem 1.1rem;
+  border-radius: 10px;
+  margin: 1rem 0 1rem;
+}
+.cool-hero h1 { margin: 0 0 .35rem 0; font-size: 1.3rem; color: #fff; }
+.cool-hero p  { margin: 0; opacity: .95; font-size: .9rem; }
+
+/* Make sure noscript fallback list is readable */
+noscript .center {
+  border: 1px solid var(--c-rule);
+  border-left: 6px solid var(--c-orange);
+  border-radius: var(--radius);
+  padding: .85rem 1rem;
+  margin: .65rem 0;
+  background: #fff;
+}

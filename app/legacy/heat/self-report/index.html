@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Heat self-report — AZ One Health Sentinel</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#E84A2B" />
+<meta name="description" content="Anonymous self-report flow for heat-illness symptoms in Arizona. Computes a vulnerability score and offers a phone link to 211 instead of dispatching transport." />
+<link rel="manifest" href="../../manifest.webmanifest" />
+<link rel="icon" type="image/svg+xml" href="../../icons/icon.svg" />
+<link rel="apple-touch-icon" href="../../icons/icon-192.png" />
+<link rel="stylesheet" href="../../shared/style.css" />
+<link rel="stylesheet" href="../heat.css" />
+</head>
+<body data-api-base="mock" data-i18n-default="auto">
+
+<header class="heat-header">
+  <div class="crumbs"><a href="../../index.html">&laquo; AZ One Health Sentinel</a></div>
+  <h1>Heat self-report</h1>
+</header>
+
+<div class="progress" id="progress" hidden>
+  <div class="label">
+    <span><span class="step-name" id="step-name">Where</span></span>
+    <span id="step-count">Step 1 of 5</span>
+  </div>
+  <div class="bar"><div class="fill" id="progress-fill"></div></div>
+</div>
+
+<main class="container" id="main">
+
+  <!-- =====================================================================
+       Step 1 — Where + when (no Identify step for self-report)
+       ===================================================================== -->
+  <section class="step active" id="step-where" data-step="where" data-step-name="Where">
+    <h2 data-i18n="heat.where.heading">Where and when</h2>
+    <p class="lead">
+      Anonymous heat self-report. Takes about a minute. We use your
+      coarse location to find a cooling center and to feed county-level
+      cluster detection &mdash; no identifying info is collected.
+    </p>
+
+    <label class="field" for="zip">
+      <span data-i18n="geo.zip_label">Your location</span>
+    </label>
+    <div class="geo-status" id="geo-status" role="status" aria-live="polite">
+      <span class="dot"></span>
+      <span id="geo-status-text">Tap &ldquo;Use my location&rdquo; or enter a ZIP below.</span>
+    </div>
+    <div class="field-row" style="margin-top:.5rem">
+      <button type="button" class="btn secondary" id="geo-btn" data-i18n="geo.use_location">Use my location</button>
+      <input type="text" id="zip" inputmode="numeric" maxlength="10"
+             autocomplete="postal-code" data-i18n-attr="placeholder:geo.zip_placeholder;aria-label:geo.zip_label" />
+    </div>
+
+    <label class="field" for="time-of-checkin">
+      <span data-i18n="heat.where.time">Time of check-in</span>
+      <input type="time" id="time-of-checkin" required />
+    </label>
+
+    <noscript>
+      <div class="error-banner" role="status" style="margin-top:1rem">
+        This flow needs JavaScript. In the meantime, dial
+        <a href="tel:18772118661">2-1-1</a> (Arizona heat-relief line)
+        or read <a href="../../../heat/01-public-awareness-cooling-centers.html">the cooling-center docs</a>.
+      </div>
+    </noscript>
+  </section>
+
+  <!-- =====================================================================
+       Step 2 — Symptoms
+       ===================================================================== -->
+  <section class="step" id="step-symptoms" data-step="symptoms" data-step-name="Symptoms" hidden>
+    <h2 data-i18n="heat.symptoms.heading">What are you feeling?</h2>
+
+    <!-- Phase-4 wearable opt-in. Hidden if no bridge is present. -->
+    <div class="toggle-row" id="wearable-row" hidden style="margin:0 0 1rem">
+      <span>
+        <span class="label">Pair wearable</span>
+        <span class="hint" id="wearable-hint">Pre-fill HR + skin temp from your paired device.</span>
+      </span>
+      <label class="toggle-switch">
+        <input type="checkbox" id="wearable-toggle" />
+        <span class="slider" aria-hidden="true"></span>
+      </label>
+    </div>
+
+    <p class="lead" data-i18n="heat.symptoms.lead">Tap all that apply. "None of the above" is a perfectly normal answer.</p>
+
+    <div class="check-grid" id="symptoms-grid" role="group" aria-label="Heat symptoms checklist">
+      <label><input type="checkbox" value="confusion">      <span data-i18n="heat.symptoms.confusion">Confusion / altered mental status</span></label>
+      <label><input type="checkbox" value="hot_dry_skin">   <span data-i18n="heat.symptoms.hot_dry_skin">Hot dry skin (not sweating)</span></label>
+      <label><input type="checkbox" value="heavy_sweating"> <span data-i18n="heat.symptoms.heavy_sweating">Heavy sweating</span></label>
+      <label><input type="checkbox" value="headache">       <span data-i18n="heat.symptoms.headache">Headache</span></label>
+      <label><input type="checkbox" value="dizziness">      <span data-i18n="heat.symptoms.dizziness">Dizziness</span></label>
+      <label><input type="checkbox" value="muscle_cramps">  <span data-i18n="heat.symptoms.muscle_cramps">Muscle cramps</span></label>
+      <label class="none-of-above"><input type="checkbox" value="none"> <span data-i18n="heat.symptoms.none">None of the above</span></label>
+    </div>
+
+    <label class="field" for="core-temp" style="margin-top:1.25rem">
+      <span data-i18n="heat.symptoms.coretemp">Core body temperature (°F, if you measured)</span>
+      <span class="hint" data-i18n="heat.symptoms.coretemp.hint">Optional. ≥ 104 °F is the heat-stroke threshold.</span>
+      <input type="number" id="core-temp" inputmode="decimal" step="0.1" min="90" max="115" placeholder="—" />
+      <span id="core-temp-badge" class="badge cool" hidden style="margin-left:.4rem">from wearable</span>
+    </label>
+
+    <div class="field" id="wearable-hr-row" hidden style="margin-top:.6rem">
+      <span>Heart rate (bpm, from wearable)
+        <span id="wearable-hr-badge" class="badge cool">from wearable</span>
+      </span>
+      <input type="number" id="wearable-hr" inputmode="numeric" step="1" min="20" max="240" placeholder="—" />
+    </div>
+  </section>
+
+  <!-- =====================================================================
+       Step 3 — Exposure (same as CHW flow, defaults look like the self-report cohort)
+       ===================================================================== -->
+  <section class="step" id="step-exposure" data-step="exposure" data-step-name="Exposure" hidden>
+    <h2 data-i18n="heat.exposure.heading">Today's exposure</h2>
+
+    <label class="field" for="outdoor-hours">
+      <span data-i18n="heat.exposure.outdoor">Outdoor time today</span>
+      <span class="hint" data-i18n="heat.exposure.outdoor.hint">Best guess in hours. ≥ 4 h adds 2 points to the score.</span>
+    </label>
+    <div class="slider-field">
+      <input type="range" id="outdoor-hours" min="0" max="14" step="1" value="3"
+             aria-describedby="outdoor-hours-value" />
+      <div><span class="value" id="outdoor-hours-value">3 h</span></div>
+    </div>
+
+    <div class="toggle-row" style="margin-top:1rem">
+      <span>
+        <span class="label" data-i18n="heat.exposure.ac">Access to air conditioning today?</span>
+        <span class="hint" data-i18n="heat.exposure.ac.hint">Working AC is the single strongest indoor-mortality protector.</span>
+      </span>
+      <label class="toggle-switch">
+        <input type="checkbox" id="ac-access" checked />
+        <span class="slider" aria-hidden="true"></span>
+      </label>
+    </div>
+
+    <fieldset style="border:0;padding:0;margin:1rem 0 0">
+      <legend class="field" style="margin:0" data-i18n="heat.exposure.water">When did you last drink water?</legend>
+      <div class="radio-pills" role="radiogroup" aria-label="Last drank water">
+        <label><input type="radio" name="last-water" value="under_1h" checked><span data-i18n="heat.exposure.water.under1">&lt;1h</span></label>
+        <label><input type="radio" name="last-water" value="1_3h"><span data-i18n="heat.exposure.water.1_3">1-3h</span></label>
+        <label><input type="radio" name="last-water" value="over_3h"><span data-i18n="heat.exposure.water.over3">&gt;3h</span></label>
+        <label><input type="radio" name="last-water" value="unknown"><span data-i18n="heat.exposure.water.unknown">?</span></label>
+      </div>
+    </fieldset>
+
+    <div class="toggle-row">
+      <span>
+        <span class="label" data-i18n="heat.exposure.meds">On thermoregulation-affecting medications?</span>
+        <span class="hint" data-i18n="heat.exposure.meds.hint">Antipsychotics, anticholinergics, diuretics, beta-blockers, stimulants.</span>
+      </span>
+      <label class="toggle-switch">
+        <input type="checkbox" id="thermo-meds" />
+        <span class="slider" aria-hidden="true"></span>
+      </label>
+    </div>
+  </section>
+
+  <!-- =====================================================================
+       Step 4 — Consent
+       ===================================================================== -->
+  <section class="step" id="step-consent" data-step="consent" data-step-name="Consent" hidden>
+    <h2 data-i18n="heat.consent.heading">What we keep and what we drop</h2>
+    <p>
+      <strong data-i18n="heat.consent.profile">Profile: consent.anonymous_heat</strong>
+      &mdash; the same suppression profile as the CHW flow.
+    </p>
+    <table class="consent-table" aria-label="Fields kept vs. fields not collected">
+      <thead><tr><th>Field</th><th>Kept</th><th>Why / not why</th></tr></thead>
+      <tbody>
+        <tr><td>GPS or ZIP (coarse)</td><td class="y">Yes</td><td>Cooling-center search + ZCTA cluster detection.</td></tr>
+        <tr><td>Symptoms</td><td class="y">Yes</td><td>Triage class (heat-exhaustion vs. heat-stroke).</td></tr>
+        <tr><td>Outdoor / AC / water / meds</td><td class="y">Yes</td><td>Vulnerability-score line items.</td></tr>
+        <tr><td>Email, phone</td><td class="n">Not collected</td><td>Suppressed: <code>consent.anonymous_heat</code>.</td></tr>
+        <tr><td>Name, household, occupation</td><td class="n">Not collected</td><td>Suppressed: <code>consent.anonymous_heat</code>.</td></tr>
+      </tbody>
+    </table>
+    <label class="field" style="margin-top:1.25rem;display:flex;gap:.65rem;align-items:flex-start;font-weight:400">
+      <input type="checkbox" id="consent-ok" style="width:22px;height:22px;margin-top:.15rem;flex:0 0 auto" />
+      <span>I agree to share the fields marked "Yes" above with the AZ One Health Sentinel pipeline.</span>
+    </label>
+  </section>
+
+  <!-- =====================================================================
+       Step 5 — Submit / Result
+       ===================================================================== -->
+  <section class="step" id="step-submit" data-step="submit" data-step-name="Submit" hidden>
+    <div id="submit-pre">
+      <h2 data-i18n="heat.submit.heading">Ready to send?</h2>
+      <p>Posts through <strong>Intake &rarr; Geo &rarr; Validation &rarr;
+        Triage(Heat) &rarr; Enrichment &rarr; Notification</strong>.</p>
+      <div id="summary" class="section-block">
+        <h3>Summary</h3>
+        <div id="summary-body" class="muted small">Loading&hellip;</div>
+      </div>
+    </div>
+
+    <div id="submit-pending" class="submitting" hidden role="status" aria-live="polite">
+      <div class="big-spinner" aria-hidden="true"></div>
+      <div><strong data-i18n="heat.submit.running">Running the agent pipeline…</strong></div>
+      <div class="agent-log" id="agent-log">
+        <div class="line pending">Intake Agent: applying consent.anonymous_heat suppression</div>
+        <div class="line pending">Geo-Enrichment Agent: resolving ZCTA</div>
+        <div class="line pending">Validation Agent: dedupe + spatial sanity</div>
+        <div class="line pending">Triage Agent (Heat): computing vulnerability score</div>
+        <div class="line pending">Enrichment Agent: mag-hrn-mcp.search_centers + nws-heatrisk-mcp</div>
+        <div class="line pending">Notification Agent: building self-report card</div>
+      </div>
+    </div>
+
+    <div id="submit-result" hidden></div>
+    <div id="submit-error" class="error-banner" hidden role="alert"></div>
+  </section>
+
+</main>
+
+<div class="sticky-bar" id="sticky-bar" hidden>
+  <button type="button" class="btn secondary back" id="back-btn" data-i18n="nav.back">Back</button>
+  <button type="button" class="btn heat" id="next-btn" data-i18n="nav.next">Next</button>
+</div>
+
+<footer class="app-footer" style="margin-bottom:6rem">
+  Prototype &middot; no real data is sent. See the
+  <a href="../../README.html">app README</a>.
+</footer>
+
+<script type="module" src="self-report.js"></script>
+
+</body>
+</html>

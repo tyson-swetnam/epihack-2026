@@ -18,7 +18,7 @@ heavy lifting:
 | Layer | Role | What it lets us do |
 |---|---|---|
 | **[Claude Code](https://claude.com/product/claude-code)** | Agentic authoring | Drafts the schema, runs parallel sub-agents to research AZ counties / tribes / pathogens / outbreaks / datasets / standards, keeps the prose docs in sync with the SQL seeds, and opens pull requests against this repo. Every commit message in `git log` describes a Claude-led change. |
-| **GitHub** | Source of truth + review surface | Every change &mdash; new content, schema, MCP code, visualizations &mdash; lands as a pull request; humans review and merge. Versioned snapshots of upstream specs (e.g. `mcp/vectorsurv/openapi/`) make API drift a `git diff` away. The site itself is served via GitHub Pages with Jekyll. |
+| **GitHub** | Source of truth + review surface | Every change &mdash; new content, schema, MCP code, visualizations &mdash; lands as a pull request; humans review and merge. Versioned snapshots of upstream specs (e.g. `mcp/vectorsurv-mcp/openapi/`) make API drift a `git diff` away. The site itself is served via GitHub Pages with Jekyll. |
 | **[DuckLake](https://ducklake.select/) (Postgres + [DuckDB](https://duckdb.org/))** | Queryable knowledge graph | A property-graph (`kg.node`, `kg.edge`, `kg.property`) seeded from version-controlled SQL; Postgres holds the DuckLake catalog (time-travel, branches, ACID), DuckDB is the query engine. Joins Parquet + Postgres + CSV in a single SQL statement; works on a laptop and at hack-day scale. |
 
 What makes it *living* rather than a static snapshot:
@@ -27,11 +27,11 @@ What makes it *living* rather than a static snapshot:
   drafts a `schema/deep/*.sql` seed, and opens a PR. Reviewers (humans
   or other agents) merge. The next `.read` rebuilds the graph.
 - **Upstream API drift is detected, not silently swallowed.** The
-  `mcp/vectorsurv/openapi/` directory holds versioned snapshots; a
+  `mcp/vectorsurv-mcp/openapi/` directory holds versioned snapshots; a
   `git diff` between two snapshots is the changelog the MCP client
   reacts to.
 - **MCP servers stream live agency data into the same graph.**
-  The included [`vectorsurv-mcp`](./mcp/vectorsurv/) exposes the
+  The included [`vectorsurv-mcp`](./mcp/vectorsurv-mcp/) exposes the
   national mosquito- and tick-surveillance API as MCP tools (sites,
   collections, pools, vector-index calculations, human / equine
   arbovirus case counts). An LLM client can query VectorSurv and
@@ -58,8 +58,27 @@ Everything in this repository is also a page on the published site at
 - [Map](./map/) &mdash; MapLibre GL map of Arizona surfacing the geospatial slice of the knowledge graph: 15 counties, 22 tribal nations, NEON Domain 14 sites, agency HQs by jurisdiction, federal-land units, and historical outbreak locations. Mobile-responsive with a collapsible panel.
 - [Pathogen knowledge graph](./graph/) &mdash; Cytoscape.js node-edge viewer for the 16 pathogens with their vectors, reservoirs, focus areas, and surveilling agencies. Color- and shape-coded; filter by pathogen class; switch layouts.
 
+### Application plan
+- [AZ One Health Sentinel — plan](./plan/) &mdash; five-document plan for a mobile-first participatory-surveillance app spanning Vector-Borne Disease and Heat. Covers Figure 2 parameter mapping by vertical, the MCP integration topology, the eight-agent architecture, four worked end-to-end data flows, and a phased roadmap tied to the [Figure 3 timeliness milestones](./figures/03-outbreak-timeliness-metrics.md).
+
 ### MCP servers (live data ingestion for LLMs)
-- [`vectorsurv-mcp`](./mcp/vectorsurv/) &mdash; Python MCP server wrapping the [VectorSurv](https://vectorsurv.org/) API ([spec v1.0.44](./mcp/vectorsurv/openapi/)). Exposes 13 tools including `vectorsurv_agency_region_intersect` (the fastest way to enumerate AZ agencies), `vectorsurv_get_pools`, `vectorsurv_pools_are_positive`, `vectorsurv_get_case_counts`, and client-side abundance / infection-rate / vector-index calculators.
+- [`vectorsurv-mcp`](./mcp/vectorsurv-mcp/) &mdash; Wraps the [VectorSurv](https://vectorsurv.org/) API (spec v1.0.44). 13 tools.
+- [`knowledge-graph-mcp`](./mcp/knowledge-graph-mcp/) &mdash; Read-only DuckDB query MCP over the kg (572 nodes / 791 edges / 1027 properties). 12 tools + SQL escape-hatch.
+- [`great-az-tick-check-mcp`](./mcp/great-az-tick-check-mcp/) &mdash; Mock submission tracking for the UA Cooperative Extension tick program. 5 tools.
+- [`nws-heatrisk-mcp`](./mcp/nws-heatrisk-mcp/) &mdash; NWS HeatRisk + alerts + heat-index. 7 tools.
+- [`mag-hrn-mcp`](./mcp/mag-hrn-mcp/) &mdash; MAG Heat Relief Network cooling-center search. 5 tools.
+- [`adhs-mcp`](./mcp/adhs-mcp/) &mdash; ADHS public surveillance summaries (heat mortality, arbovirus, reportable conditions). 6 tools.
+- [`211-az-mcp`](./mcp/211-az-mcp/) &mdash; 211 Arizona referrals + transport dispatch. 6 tools.
+- [`whispers-mcp`](./mcp/whispers-mcp/) &mdash; USGS WHISPers wildlife mortality events. 6 tools.
+- [`inaturalist-mcp`](./mcp/inaturalist-mcp/) &mdash; iNaturalist citizen-science observations. 6 tools.
+
+### Application (Phase 0 + 1)
+- [`app/`](./app/) &mdash; Vanilla HTML+JS+CSS prototype. Four flows: tick mail-in (VBD), CHW heat check-in, anonymous heat self-report, "where can I cool off?". Mobile-first; Spanish bundle.
+- [`agents/`](./agents/) &mdash; 8-agent pipeline (Intake → Geo-Enrichment → Validation → Triage → Enrichment → Notification → Cluster Detection → Knowledge Update). 29 tests; Scenarios A and C run end-to-end against shipped MCP-tool names.
+- See [`plan/EXECUTION-STATUS.md`](./plan/EXECUTION-STATUS.md) and [`plan/EXECUTION-STATUS-PHASE-1-2.md`](./plan/EXECUTION-STATUS-PHASE-1-2.md) for the verification matrix.
+
+### Agency dashboard (Phase 3)
+- [`dashboard/`](./dashboard/) &mdash; Read-only analyst workspace for ADHS Vector-Borne &amp; Zoonotic Diseases, Maricopa County DPH Heat Surveillance, AZ Game &amp; Fish Wildlife Health Program, and Coconino HHS. Four-audience landing pages, status cards, Cluster Detection Agent feed, lazy-loaded MapLibre embed, sparkline case-count tables, and a SQL preview that round-trips to `knowledge-graph-mcp`. Implements Scenario D from [`plan/04-data-flows.md`](./plan/04-data-flows.md).
 
 ### Knowledge-graph SQL
 - [`schema/`](./schema/) &mdash; core graph (frameworks) plus worksheet template, focus areas, designs, World Café cards, and the two focus-group seeds.
@@ -81,10 +100,10 @@ graph/          Cytoscape.js pathogen knowledge graph (16 pathogens with
                 their vectors, reservoirs, focus areas, and surveilling
                 agencies).
 mcp/
-  └── vectorsurv/   Model Context Protocol server wrapping the VectorSurv
-                    vector-borne disease surveillance API (sites,
-                    collections, pools, abundance, infection rate,
-                    vector index).
+  └── vectorsurv-mcp/   Model Context Protocol server wrapping the VectorSurv
+                        vector-borne disease surveillance API (sites,
+                        collections, pools, abundance, infection rate,
+                        vector index).
 figures/        Structured transcriptions of the EpiHack reference figures
   ├── 01-purpose-one-health-participatory-system.md
   ├── 02-minimum-key-data-parameters.md
@@ -106,6 +125,14 @@ heat/           Focus group 2 -- Heat
   ├── 04-vulnerable-populations.md
   ├── resources.md                          -- 30+ AZ heat-resource catalog
   └── index.html
+dashboard/      Phase-3 agency-side read-only analyst workspace
+  ├── index.html                            -- four-audience landing page
+  ├── adhs/                                 -- ADHS VBZD: statewide arbovirus + heat-mortality
+  ├── mcdph/                                -- Maricopa heat surveillance + WNV vector index
+  ├── azgfd/                                -- WHISPers + AZGFD mortality + iNaturalist
+  ├── coconino/                             -- plague + hantavirus + Grand-Canyon NPS
+  ├── shared/                               -- style.css, kg-client.js, cluster-feed.js, map-embed.js, sparkline.js, auth-stub.js
+  └── mock/                                 -- canned cluster / arbovirus / heat / wildlife JSON
 worksheets/     Completed design worksheets from EpiHack breakouts
   ├── 01-animal-health-events.md
   └── 02-desert-wildlife-interface.md
@@ -272,6 +299,59 @@ SELECT * FROM chain;
       teams &mdash; DuckDB's recursive CTEs handle the path queries.
 - [ ] Track the lifecycle (Figure 4) as project state for each pilot
       community deployment.
+
+## Self-hosting on a VM
+
+Spinning up your own instance? [`deploy/README.md`](./deploy/README.md)
+walks through VM sizing, DNS, and the operations runbook;
+[`ansible/`](./ansible/) is a one-command Ansible playbook that takes
+a fresh Ubuntu 24.04 VM from `apt update` to a running deployment of
+Claude Code, every MCP server in [`mcp/`](./mcp/), the FastAPI backend,
+the Next.js reporting app, Postgres for the DuckLake catalog, and
+nginx with optional Let's Encrypt TLS.
+
+```bash
+cd ansible
+cp inventory.example.yml inventory.yml          # edit ansible_host
+cp group_vars/all.vault.example.yml group_vars/all.vault.yml
+ansible-vault encrypt group_vars/all.vault.yml  # fill in secrets first
+ansible-galaxy install -r requirements.yml
+ansible-playbook -i inventory.yml playbook.yml --ask-vault-pass
+```
+
+## Contributing + governance
+
+The repository is now stewarded by a standing review board (ADHS,
+AZGFD, ITCA-TEC, Maricopa Vector Control) per the cross-cutting
+governance track in [`plan/05-roadmap.md`](./plan/05-roadmap.md).
+Contributions are welcome through pull requests; the six documents
+below describe the conventions, the review structure, the security
+posture, and the version history.
+
+- [`CONTRIBUTING.md`](./CONTRIBUTING.md) &mdash; local environment
+  setup, PR workflow, MCP-server and schema-seed templates, coding
+  style, and the privacy + data-sovereignty checklist every PR
+  touching observation data must pass.
+- [`GOVERNANCE.md`](./GOVERNANCE.md) &mdash; standing review board
+  membership, proposal-then-merge cadence, tribal-partner veto,
+  opt-in posture for tribal data, conflict-of-interest disclosure,
+  and sunset clauses for MCP servers that proxy tribal data.
+- [`SECURITY.md`](./SECURITY.md) &mdash; private-disclosure channel,
+  the five-class threat model
+  (re-identification / credential leakage / token reuse /
+  prompt-injection / cluster-detection false positives), mitigations
+  in place, and an itemised list of known security gaps.
+- [`CHANGELOG.md`](./CHANGELOG.md) &mdash; per-phase rollup of what
+  landed and when (PRs #1 through #8), plus the "Next" backlog from
+  [`plan/EXECUTION-STATUS-PHASE-1-2.md`](./plan/EXECUTION-STATUS-PHASE-1-2.md)
+  and [`plan/CLUSTER-CALIBRATION.md`](./plan/CLUSTER-CALIBRATION.md).
+- [`mcp/README.md`](./mcp/README.md) &mdash; index of all 11 MCP
+  servers with tool counts, auth posture, and test counts, plus the
+  recipe for adding a new MCP server.
+- [`NOTICE`](./NOTICE) &mdash; third-party attribution for runtime
+  dependencies (MapLibre, Cytoscape, FastMCP / `mcp` SDK, pydantic,
+  httpx, DuckDB / DuckLake), data sources surfaced via MCP, and
+  upstream-spec snapshots.
 
 ## License
 

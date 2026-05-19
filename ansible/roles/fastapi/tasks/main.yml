@@ -1,0 +1,46 @@
+---
+# FastAPI backend (agents/src/onehealth_agents/api/) under uvicorn,
+# managed by systemd. Reads Supabase JWT config + Postgres DSN from
+# the unit's environment file.
+
+- name: uv sync the agents package
+  become_user: "{{ onehealth_user }}"
+  ansible.builtin.command:
+    cmd: uv sync
+    chdir: "{{ onehealth_repo_path }}/agents"
+    creates: "{{ onehealth_repo_path }}/agents/.venv/bin/uvicorn"
+  environment:
+    PATH: "/usr/local/bin:/usr/bin:/bin"
+
+- name: Write the FastAPI env file
+  ansible.builtin.template:
+    src: onehealth-api.env.j2
+    dest: /etc/onehealth-api.env
+    owner: root
+    group: "{{ onehealth_group }}"
+    mode: "0640"
+  notify: Restart fastapi
+  no_log: true
+
+- name: Install the systemd unit
+  ansible.builtin.template:
+    src: onehealth-api.service.j2
+    dest: /etc/systemd/system/onehealth-api.service
+    mode: "0644"
+  notify: Restart fastapi
+
+- name: Enable + start onehealth-api
+  ansible.builtin.systemd:
+    name: onehealth-api
+    daemon_reload: true
+    enabled: true
+    state: started
+
+- name: Wait for the API to answer /v1/healthz
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ fastapi_bind_port }}/v1/healthz"
+    status_code: 200
+  register: api_health
+  retries: 12
+  delay: 2
+  until: api_health.status == 200

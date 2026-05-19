@@ -1,0 +1,54 @@
+# =============================================================================
+# Secret values referenced by the playbook. Copy this file to
+# all.vault.yml, fill in the real values, then run:
+#
+#   ansible-vault encrypt group_vars/all.vault.yml
+#
+# Never commit an unencrypted vault file. The .example file ships
+# with every key empty so a fresh deployer knows what to provide.
+# =============================================================================
+
+# --- Anthropic API ------------------------------------------------------------
+# Claude Code needs this to talk to the API. Get one at
+# https://console.anthropic.com/. Required.
+vault_anthropic_api_key: ""
+
+# --- Postgres -----------------------------------------------------------------
+# Password for the onehealth Postgres role. Required.
+# Generate with: openssl rand -base64 32
+vault_postgres_password: ""
+
+# --- Supabase Auth (plan/07) --------------------------------------------------
+# JWT secret OR the public JWKS URL — the FastAPI backend uses one to
+# verify Supabase-issued tokens. JWKS is recommended (rotates without
+# redeploys). Either field can stay blank if you set
+# fastapi_auth_mock: "1" in all.yml.
+vault_supabase_jwks_url: ""
+vault_supabase_jwt_secret: ""
+
+# --- Let's Encrypt ------------------------------------------------------------
+# Email used to register the ACME account. Only required when
+# tls_enabled: true.
+vault_tls_email: ""
+
+# --- Per-MCP-server credentials -----------------------------------------------
+# Each MCP server reads its own env vars; values land in the
+# systemd unit overrides (when run as a service) and in
+# ~/.claude.json (for stdio mode). Leave blank to use the server's
+# mock-by-default backend.
+
+# vectorsurv-mcp — UC Davis DART Gateway account
+vault_vectorsurv_username: ""
+vault_vectorsurv_password: ""
+
+# great-az-tick-check-mcp — future Walker-lab API
+vault_gattc_api_token: ""
+
+# adhs-mcp — future ADHS open-data API token
+vault_adhs_api_token: ""
+
+# 211-az-mcp — future 211 Arizona backend
+vault_az211_api_key: ""
+
+# sms-entry-mcp — Twilio HMAC validation
+vault_sms_twilio_auth_token: ""

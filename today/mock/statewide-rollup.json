@@ -1,0 +1,43 @@
+{
+  "_comment": "The five-number snapshot at the bottom of the page. In production this is recomputed hourly by a small aggregation MCP (see README.md -> 'Wire to real MCPs') that fans out to vectorsurv-mcp, adhs-mcp, whispers-mcp and rolls each metric into a single tidy row. Today it's canned.",
+  "tool": "today-rollup-mcp (proposed; currently canned)",
+  "as_of": "2026-05-19T14:00:00Z",
+  "cadence_minutes": 60,
+  "items": [
+    {
+      "key": "heat_dispatches_week",
+      "value": 28,
+      "label": "Heat-emergency dispatches this week",
+      "trend": "up",
+      "sources": ["211-az-mcp.list_recent_dispatches", "adhs-mcp.heat_mortality"]
+    },
+    {
+      "key": "wnv_pools_positive_week",
+      "value": 12,
+      "label": "WNV pools positive (statewide, past 2 weeks)",
+      "trend": "up",
+      "sources": ["vectorsurv-mcp.vectorsurv_get_pools"]
+    },
+    {
+      "key": "hantavirus_cases_ytd",
+      "value": 1,
+      "label": "Hantavirus cases (AZ, year to date)",
+      "trend": "flat",
+      "sources": ["adhs-mcp.cases_by_pathogen"]
+    },
+    {
+      "key": "rabies_cases_ytd",
+      "value": 41,
+      "label": "Rabies cases in animals (AZ, year to date)",
+      "trend": "flat",
+      "sources": ["adhs-mcp.cases_by_pathogen", "whispers-mcp.whispers_search_events"]
+    },
+    {
+      "key": "plague_cases_ytd",
+      "value": 0,
+      "label": "Plague cases in humans (AZ, year to date)",
+      "trend": "flat",
+      "sources": ["adhs-mcp.cases_by_pathogen"]
+    }
+  ]
+}

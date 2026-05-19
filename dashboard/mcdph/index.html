@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>MCDPH — Maricopa heat-surveillance dashboard</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="theme-color" content="#E84A2B" />
+<link rel="stylesheet" href="../shared/style.css" />
+</head>
+<body data-agency="mcdph" data-mock-base="../mock">
+
+<header class="dash-header">
+  <div>
+    <div class="crumbs">
+      <a href="../../index.html">EpiHack AZ 2026</a> &middot;
+      <a href="../index.html">agency dashboard</a>
+    </div>
+    <h1>MCDPH — Heat Surveillance &amp; vector index <span class="agency-tag">Maricopa County</span></h1>
+  </div>
+  <div id="auth-stub"></div>
+</header>
+
+<div class="printable-banner">
+  <h1>MCDPH heat-surveillance — printable</h1>
+  <p>Generated <span id="print-date"></span></p>
+</div>
+
+<main class="container">
+
+  <p class="muted small">
+    Phase-1 success criterion (per
+    <a href="../../plan/05-roadmap.html#phase-1--heat-vertical-month-12">roadmap</a>):
+    a clustering of 5 heat-exhaustion check-ins in one ZCTA over 2 hours
+    triggers a county heat-emergency alert to MCDPH. The
+    <a href="../../plan/04-data-flows.html#scenario-c--unsheltered-resident-heat-checkin">Scenario C</a>
+    pin from downtown Phoenix is the canonical example.
+  </p>
+
+  <h2>Status <span class="sub">last 24h / 7d / 30d</span></h2>
+  <div class="status-row">
+    <div class="status-tile"><span class="label">CHW check-ins &middot; 24h</span><span class="value">47 <span class="delta up">+12</span></span></div>
+    <div class="status-tile"><span class="label">CHW check-ins &middot; 7d</span><span class="value">281</span></div>
+    <div class="status-tile"><span class="label">Heat-emergency alerts &middot; 30d</span><span class="value">6</span></div>
+    <div class="status-tile"><span class="label">WNV MIR / 1000 latest</span><span class="value">8.2 <span class="delta up">+14%</span></span></div>
+  </div>
+
+  <h2>Cluster feed <span class="sub">Maricopa-scoped &middot; heat + WNV</span></h2>
+  <ul class="cluster-feed" id="cluster-feed"></ul>
+
+  <h2>Map <span class="sub">CHW heat-check-in pins + WNV pool positivity</span></h2>
+  <div class="map-shell" id="map-shell"></div>
+
+  <h2>WNV vector index <span class="sub">Maricopa weekly MIR / 1000</span></h2>
+  <div class="analyst-table-wrap">
+    <table class="analyst-table" id="wnv-table">
+      <caption>WNV pool positivity for Maricopa County (MIR per 1000, bias-corrected MLE)</caption>
+      <thead>
+        <tr>
+          <th>ISO week</th>
+          <th class="num">MIR / 1000</th>
+          <th class="num">Human cases</th>
+          <th>Trend</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <h2>Drill-down</h2>
+  <div class="audience-grid">
+    <a class="audience-card" href="heat-clusters.html" style="--c:#E84A2B">
+      <h3>Heat clusters &middot; spatial-temporal</h3>
+      <p>ZCTA-by-ZCTA scan of unsheltered heat-exhaustion check-ins coming through the CHW flow.</p>
+    </a>
+    <a class="audience-card" href="../adhs/heat-mortality.html" style="--c:#1F3A93">
+      <h3>Statewide heat-mortality (ADHS)</h3>
+      <p>How the Maricopa weekly counts compare to the statewide totals.</p>
+    </a>
+  </div>
+
+  <h2>Open the underlying observations</h2>
+  <button id="show-sql" class="btn secondary">Show SQL preview</button>
+  <div id="sql-mount"></div>
+
+  <div class="future-box">
+    <strong>Future work:</strong> the CHW check-in pin will, in
+    Phase 3, link directly to the field-app submission view (read-only
+    for the analyst). The dispatch / transport response is a write
+    action that lives outside this dashboard.
+  </div>
+
+  <p class="crosslinks">
+    Cross-references:
+    <a href="../../map/index.html">map</a>
+    <a href="../../app/legacy/heat/check-in/index.html">CHW heat flow</a>
+    <a href="../../heat/04-vulnerable-populations.html">vulnerable populations</a>
+    <a href="../../plan/04-data-flows.html#scenario-c--unsheltered-resident-heat-checkin">Scenario C</a>
+  </p>
+</main>
+
+<footer class="dash-footer">
+  Source: Maricopa County Department of Public Health &middot; Heat
+  Surveillance &middot; Maricopa County Vector Control.
+</footer>
+
+<script type="module">
+  import { mountAuthStub } from '../shared/auth-stub.js';
+  import { mountClusterFeed } from '../shared/cluster-feed.js';
+  import { mountMapEmbed } from '../shared/map-embed.js';
+  import { renderSparkline } from '../shared/sparkline.js';
+  import { fetchMock, renderSqlPreview } from '../shared/kg-client.js';
+
+  mountAuthStub(document.getElementById('auth-stub'), 'mcdph');
+  document.getElementById('print-date').textContent = new Date().toISOString().slice(0, 10);
+
+  mountClusterFeed(document.getElementById('cluster-feed'), {
+    audience: 'mcdph',
+    limit: 5
+  });
+
+  // Map: Maricopa clusters + a derived synthetic ZCTA-pin spread
+  fetchMock('cluster-feed.json').then(payload => {
+    const features = (payload.clusters || [])
+      .filter(c => !c.audiences || c.audiences.indexOf('mcdph') >= 0)
+      .map(c => ({
+        type: 'Feature',
+        geometry: { type: 'Point', coordinates: [c.lon, c.lat] },
+        properties: {
+          title: c.title,
+          label: c.title,
+          severity: c.severity,
+          pathogen: c.pathogen,
+          county: c.county,
+          detected_at: c.detected_at,
+          kg_node_id: c.kg_node_id
+        }
+      }));
+    // Synthetic check-in pins clustered around Maricopa ZCTAs
+    const zctas = [
+      [-112.0740, 33.4485, '85003'],
+      [-112.0950, 33.4630, '85007'],
+      [-112.0410, 33.4500, '85008'],
+      [-112.1100, 33.4170, '85009'],
+      [-112.1750, 33.5040, '85019']
+    ];
+    zctas.forEach(([lon, lat, zcta]) => {
+      features.push({
+        type: 'Feature',
+        geometry: { type: 'Point', coordinates: [lon, lat] },
+        properties: {
+          title: `ZCTA ${zcta}`,
+          label: `CHW heat check-ins (ZCTA ${zcta})`,
+          severity: 'watch',
+          pathogen: 'heat',
+          county: 'Maricopa',
+          kg_node_id: `zcta.${zcta}`
+        }
+      });
+    });
+    mountMapEmbed(document.getElementById('map-shell'), {
+      geojson: { type: 'FeatureCollection', features },
+      colorBy: 'severity'
+    });
+  });
+
+  fetchMock('arbovirus-feed.json').then(d => {
+    const mc = (d.counties || []).find(c => c.county === 'Maricopa');
+    if (!mc) return;
+    const mir = mc.wnv.weekly_mir || [];
+    const cases = mc.wnv.human_cases_weekly || [];
+    const tbody = document.querySelector('#wnv-table tbody');
+    tbody.innerHTML = '';
+    mir.forEach((w, i) => {
+      const tr = document.createElement('tr');
+      tr.innerHTML =
+        `<td>${w.iso_week}</td>` +
+        `<td class="num">${w.mir_per_1000.toFixed(1)}</td>` +
+        `<td class="num">${cases[i] ? cases[i].cases : '—'}</td>` +
+        `<td class="spark"></td>`;
+      tbody.appendChild(tr);
+    });
+    // last row gets the trend sparkline
+    if (tbody.lastElementChild) {
+      tbody.lastElementChild.querySelector('td.spark').appendChild(
+        renderSparkline(mir.map(w => w.mir_per_1000), { title: 'Maricopa WNV MIR / 1000' })
+      );
+    }
+  });
+
+  document.getElementById('show-sql').addEventListener('click', () => {
+    const sql =
+`-- Maricopa County heat-check-in observations, 30-day window.
+-- Filtered by the consent_profile mask so PII columns
+-- (phone, household_id) are suppressed at query time.
+SELECT n.node_id,
+       p_zcta.value_text   AS zcta,
+       p_age.value_text    AS age_band,
+       p_dt.value_text     AS reported_at,
+       p_vuln.value_text   AS vulnerability_score
+FROM   kg.node     n
+JOIN   kg.property p_zcta  ON p_zcta.node_id  = n.node_id AND p_zcta.key  = 'zcta'
+JOIN   kg.property p_dt    ON p_dt.node_id    = n.node_id AND p_dt.key    = 'reported_at'
+LEFT JOIN kg.property p_age   ON p_age.node_id  = n.node_id AND p_age.key  = 'age_band'
+LEFT JOIN kg.property p_vuln  ON p_vuln.node_id = n.node_id AND p_vuln.key = 'vulnerability_score'
+WHERE  n.node_type  = 'observation'
+  AND  EXISTS (
+    SELECT 1 FROM kg.edge
+    WHERE subject_id = n.node_id
+      AND predicate  = 'occurredIn'
+      AND object_id  = 'county.maricopa'
+  )
+  AND CAST(p_dt.value_text AS TIMESTAMP) >= NOW() - INTERVAL '30 DAYS'
+ORDER BY p_dt.value_text DESC
+LIMIT  500;`;
+    renderSqlPreview(document.getElementById('sql-mount'), sql,
+      'Maricopa heat check-ins (30-day window, PII suppressed)');
+  });
+</script>
+
+</body>
+</html>

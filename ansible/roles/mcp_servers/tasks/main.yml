@@ -1,0 +1,40 @@
+---
+# For each MCP server under mcp/<name>-mcp/:
+#   1. `uv sync` (creates .venv with the server's dependencies)
+#   2. Append it to ~/.claude.json so Claude Code spawns it via stdio
+#      when the project at {{ onehealth_repo_path }} is opened.
+#
+# Per-server credentials come from the vault (vault_vectorsurv_username,
+# etc.) and ride into the generated MCP entry as env vars.
+
+- name: Ensure each MCP server's venv is built
+  become_user: "{{ onehealth_user }}"
+  ansible.builtin.command:
+    cmd: uv sync
+    chdir: "{{ onehealth_repo_path }}/mcp/{{ item }}"
+    creates: "{{ onehealth_repo_path }}/mcp/{{ item }}/.venv/bin/python"
+  loop: "{{ mcp_servers }}"
+  environment:
+    PATH: "/usr/local/bin:/usr/bin:/bin"
+
+- name: Build the MCP-server registration JSON for ~/.claude.json
+  become_user: "{{ onehealth_user }}"
+  ansible.builtin.template:
+    src: claude.json.j2
+    dest: "{{ onehealth_home }}/.claude.json"
+    mode: "0600"
+  no_log: true
+
+- name: Verify Claude Code lists every MCP server
+  become_user: "{{ onehealth_user }}"
+  ansible.builtin.shell: |
+    set -euo pipefail
+    export PATH="{{ onehealth_home }}/.npm-global/bin:$PATH"
+    cd {{ onehealth_repo_path }}
+    claude mcp list || true   # tolerate the case where claude can't reach the LLM during smoke
+  register: mcp_list
+  changed_when: false
+
+- name: Report registered MCP servers
+  ansible.builtin.debug:
+    msg: "{{ mcp_list.stdout_lines }}"

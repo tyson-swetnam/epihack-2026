@@ -1,0 +1,132 @@
+---
+# Base packages, deploy user, firewall, swap, time sync. Idempotent.
+
+- name: Update apt cache (once per run)
+  ansible.builtin.apt:
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Install base packages
+  ansible.builtin.apt:
+    name:
+      - acl                       # become_user needs ACL support
+      - build-essential
+      - ca-certificates
+      - curl
+      - fail2ban
+      - git
+      - gnupg
+      - htop
+      - jq
+      - libpq-dev                 # psycopg2 build
+      - lsb-release
+      - python3-pip
+      - python3-venv
+      - python3-psycopg2          # community.postgresql modules
+      - rsync
+      - software-properties-common
+      - ufw
+      - unzip
+      - zstd
+    state: present
+
+- name: Ensure timezone is UTC
+  community.general.timezone:
+    name: UTC
+
+- name: Ensure deploy group exists
+  ansible.builtin.group:
+    name: "{{ onehealth_group }}"
+    state: present
+
+- name: Ensure deploy user exists
+  ansible.builtin.user:
+    name: "{{ onehealth_user }}"
+    group: "{{ onehealth_group }}"
+    home: "{{ onehealth_home }}"
+    shell: /bin/bash
+    create_home: true
+    state: present
+
+- name: Ensure /srv/onehealth exists and is owned by the deploy user
+  ansible.builtin.file:
+    path: "{{ onehealth_root }}"
+    state: directory
+    owner: "{{ onehealth_user }}"
+    group: "{{ onehealth_group }}"
+    mode: "0755"
+
+# --- Swap (skip if RAM ≥ 8 GB and a swapfile already exists) -----------------
+
+- name: Check for existing swap
+  ansible.builtin.command: swapon --show=NAME --noheadings
+  register: swap_status
+  changed_when: false
+
+- name: Create a 2 GB swap file when no swap is configured
+  when: swap_status.stdout | trim | length == 0
+  block:
+    - name: Allocate the swap file
+      ansible.builtin.command: fallocate -l 2G /swapfile
+      args:
+        creates: /swapfile
+
+    - name: Lock down /swapfile permissions
+      ansible.builtin.file:
+        path: /swapfile
+        owner: root
+        group: root
+        mode: "0600"
+
+    - name: Format swap
+      ansible.builtin.command: mkswap /swapfile
+      register: mkswap
+      changed_when: "'Setting up swapspace' in mkswap.stdout"
+      failed_when: mkswap.rc != 0 and 'already' not in mkswap.stderr
+
+    - name: Activate swap
+      ansible.builtin.command: swapon /swapfile
+      register: swapon
+      changed_when: swapon.rc == 0
+      failed_when: swapon.rc != 0 and 'already' not in swapon.stderr
+
+    - name: Persist swap in fstab
+      ansible.posix.mount:
+        name: none
+        src: /swapfile
+        fstype: swap
+        opts: sw
+        state: present
+
+# --- UFW firewall ------------------------------------------------------------
+
+- name: Allow OpenSSH
+  community.general.ufw:
+    rule: allow
+    name: OpenSSH
+
+- name: Allow HTTP
+  community.general.ufw:
+    rule: allow
+    port: "80"
+    proto: tcp
+
+- name: Allow HTTPS
+  community.general.ufw:
+    rule: allow
+    port: "443"
+    proto: tcp
+
+- name: Enable UFW with default-deny incoming
+  community.general.ufw:
+    state: enabled
+    policy: deny
+    direction: incoming
+
+# --- fail2ban ----------------------------------------------------------------
+
+- name: Enable fail2ban
+  ansible.builtin.service:
+    name: fail2ban
+    state: started
+    enabled: true

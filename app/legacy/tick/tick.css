@@ -1,0 +1,320 @@
+/* tick/tick.css — flow-specific styles. Builds on shared/style.css. */
+
+/* ---- Progress bar (sticks below the header) ----------------------------- */
+.progress {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: #fff;
+  border-bottom: 1px solid var(--c-rule);
+  padding: .6rem 1rem;
+}
+.progress .bar {
+  position: relative;
+  height: 6px;
+  background: #e3e8ef;
+  border-radius: 999px;
+  overflow: hidden;
+}
+.progress .bar .fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 0%;
+  background: var(--c-navy);
+  border-radius: 999px;
+  transition: width .3s ease;
+}
+.progress .label {
+  display: flex;
+  justify-content: space-between;
+  font-size: .78rem;
+  color: var(--c-mute);
+  margin-bottom: .3rem;
+}
+.progress .label .step-name { color: var(--c-navy); font-weight: 600; }
+
+/* ---- Steps -------------------------------------------------------------- */
+.step {
+  display: none;
+  animation: fade-in .18s ease both;
+}
+.step.active { display: block; }
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.step h2 {
+  margin: .25rem 0 .75rem 0;
+  color: var(--c-navy);
+  font-size: 1.25rem;
+}
+.step p.lead { color: var(--c-ink); }
+
+/* ---- Form controls (mobile-first, 44px tap targets) -------------------- */
+label.field {
+  display: block;
+  margin: 1rem 0 0;
+  font-size: .9rem;
+  color: var(--c-ink);
+  font-weight: 600;
+}
+label.field .hint {
+  display: block;
+  font-weight: 400;
+  font-size: .78rem;
+  color: var(--c-mute);
+  margin-top: .1rem;
+}
+input[type="text"], input[type="number"], input[type="date"],
+input[type="email"], select, textarea {
+  display: block;
+  width: 100%;
+  min-height: var(--tap);
+  margin-top: .35rem;
+  padding: .55rem .7rem;
+  font: inherit;
+  border: 1px solid var(--c-rule);
+  border-radius: var(--radius);
+  background: #fff;
+  color: var(--c-ink);
+}
+select { padding-right: 2rem; }
+input:focus, select:focus, textarea:focus {
+  border-color: var(--c-navy);
+  outline: 3px solid var(--c-focus);
+  outline-offset: 1px;
+}
+.field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: .75rem;
+}
+@media (max-width: 420px) {
+  .field-row { grid-template-columns: 1fr; gap: 0; }
+}
+
+/* ---- Big checkbox-style toggle group ---------------------------------- */
+.check-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: .55rem;
+  margin-top: .5rem;
+}
+@media (max-width: 420px) {
+  .check-grid { grid-template-columns: 1fr; }
+}
+.check-grid label {
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+  min-height: var(--tap);
+  padding: .5rem .75rem;
+  border: 1px solid var(--c-rule);
+  border-radius: var(--radius);
+  background: #fff;
+  cursor: pointer;
+  font-size: .92rem;
+  user-select: none;
+}
+.check-grid label:has(input:checked) {
+  background: #eef2fb;
+  border-color: var(--c-navy);
+}
+.check-grid input[type="checkbox"] { width: 20px; height: 20px; margin: 0; flex: 0 0 auto; }
+
+/* ---- GPS status block -------------------------------------------------- */
+.geo-status {
+  margin-top: .6rem;
+  padding: .65rem .8rem;
+  border-radius: var(--radius);
+  border: 1px dashed var(--c-rule);
+  background: var(--c-soft);
+  font-size: .85rem;
+  color: var(--c-mute);
+  min-height: var(--tap);
+  display: flex;
+  align-items: center;
+  gap: .55rem;
+}
+.geo-status.ok { border-color: var(--c-green); background: #effaf0; color: #1a5a1f; }
+.geo-status.warn { border-color: #d8a13d; background: #fff8e6; color: #8a5a00; }
+.geo-status .dot {
+  width: 10px; height: 10px; border-radius: 50%;
+  background: var(--c-mute); flex: 0 0 auto;
+}
+.geo-status.ok .dot   { background: var(--c-green); }
+.geo-status.warn .dot { background: #d8a13d; }
+
+/* ---- Photo input ------------------------------------------------------- */
+.photo-input {
+  display: block;
+  margin-top: .75rem;
+  padding: 1.25rem 1rem;
+  border: 2px dashed var(--c-rule);
+  border-radius: var(--radius);
+  background: var(--c-soft);
+  text-align: center;
+  color: var(--c-navy);
+  cursor: pointer;
+  font-weight: 600;
+  min-height: 120px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.photo-input input { display: none; }
+.photo-input .icon { font-size: 1.8rem; line-height: 1; margin-bottom: .35rem; }
+.photo-input.has-file { border-style: solid; background: #eef2fb; }
+.photo-preview {
+  display: block;
+  margin: .75rem auto 0;
+  max-width: 100%;
+  max-height: 320px;
+  border-radius: var(--radius);
+  border: 1px solid var(--c-rule);
+}
+
+/* ---- Consent panel ----------------------------------------------------- */
+.consent-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: .85rem;
+  margin-top: .5rem;
+}
+.consent-table th, .consent-table td {
+  text-align: left;
+  padding: .45rem .55rem;
+  border-bottom: 1px solid var(--c-rule);
+}
+.consent-table th { background: var(--c-soft); color: var(--c-mute); font-weight: 600; }
+.consent-table .y { color: var(--c-green); font-weight: 600; }
+.consent-table .n { color: var(--c-mute); }
+
+/* ---- Sticky Next bar --------------------------------------------------- */
+.sticky-bar {
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  background: rgba(255,255,255,0.96);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border-top: 1px solid var(--c-rule);
+  padding: .75rem 1rem calc(.75rem + var(--safe-bottom));
+  display: flex;
+  gap: .55rem;
+  z-index: 10;
+}
+.sticky-bar .btn { flex: 1; }
+.sticky-bar .btn.back { flex: 0 0 auto; padding-left: 1rem; padding-right: 1rem; }
+
+/* ---- Spinner on submit ------------------------------------------------- */
+.spinner {
+  display: inline-block;
+  width: 18px; height: 18px;
+  border: 3px solid rgba(255,255,255,.4);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .spinner { animation: none; border-top-color: rgba(255,255,255,.9); }
+}
+
+/* ---- Submitting overlay ----------------------------------------------- */
+.submitting {
+  text-align: center;
+  padding: 2rem 1rem;
+}
+.submitting .big-spinner {
+  display: inline-block;
+  width: 48px; height: 48px;
+  border: 5px solid #e3e8ef;
+  border-top-color: var(--c-navy);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 1rem;
+}
+.submitting .agent-log {
+  text-align: left;
+  margin: 1rem auto 0;
+  max-width: 420px;
+  font-size: .85rem;
+  color: var(--c-mute);
+  background: var(--c-soft);
+  border-radius: var(--radius);
+  padding: .75rem 1rem;
+  border-left: 4px solid var(--c-navy);
+}
+.submitting .agent-log .line { padding: .15rem 0; }
+.submitting .agent-log .line.done::before { content: "✓ "; color: var(--c-green); }
+.submitting .agent-log .line.pending::before { content: "… "; }
+
+/* ---- Success result card ---------------------------------------------- */
+.result-card {
+  border: 1px solid var(--c-rule);
+  border-left: 6px solid var(--c-green);
+  border-radius: var(--radius);
+  padding: 1rem 1.1rem;
+  margin: 1rem 0;
+  background: #f6fdf7;
+}
+.result-card h3 { margin: 0 0 .4rem 0; color: #1a5a1f; }
+.result-card .species {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--c-ink);
+  margin-bottom: .25rem;
+}
+.result-card .sci { font-style: italic; color: var(--c-mute); }
+.result-card .confidence {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: .75rem;
+  background: #fff1d6;
+  color: #8a5a00;
+  margin-left: .35rem;
+}
+
+.section-block {
+  border: 1px solid var(--c-rule);
+  border-radius: var(--radius);
+  padding: .9rem 1rem;
+  margin: .8rem 0;
+}
+.section-block h3 {
+  margin: 0 0 .4rem 0;
+  font-size: .95rem;
+  color: var(--c-navy);
+  text-transform: uppercase;
+  letter-spacing: .05em;
+}
+.section-block ul { margin: .4rem 0 0 1.1rem; padding: 0; }
+.section-block li { margin: .25rem 0; }
+.section-block .receipt {
+  font-size: .76rem;
+  color: var(--c-mute);
+  margin-top: .35rem;
+}
+
+.cta-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: .55rem;
+  margin-top: 1rem;
+}
+@media (max-width: 420px) {
+  .cta-grid { grid-template-columns: 1fr; }
+}
+
+/* ---- Error banner ------------------------------------------------------ */
+.error-banner {
+  background: #fdecea;
+  border: 1px solid var(--c-red);
+  color: #7a1a12;
+  padding: .65rem .85rem;
+  border-radius: var(--radius);
+  margin: .75rem 0;
+  font-size: .9rem;
+}

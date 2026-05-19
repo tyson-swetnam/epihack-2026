@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>AZGFD — Wildlife Health Program dashboard</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="theme-color" content="#2C5F2D" />
+<link rel="stylesheet" href="../shared/style.css" />
+</head>
+<body data-agency="azgfd" data-mock-base="../mock">
+
+<header class="dash-header">
+  <div>
+    <div class="crumbs">
+      <a href="../../index.html">EpiHack AZ 2026</a> &middot;
+      <a href="../index.html">agency dashboard</a>
+    </div>
+    <h1>AZGFD — Wildlife Health Program <span class="agency-tag">statewide</span></h1>
+  </div>
+  <div id="auth-stub"></div>
+</header>
+
+<div class="printable-banner">
+  <h1>AZGFD Wildlife Health (printable)</h1>
+  <p>Generated <span id="print-date"></span></p>
+</div>
+
+<main class="container">
+
+  <p class="muted small">
+    Three streams overlaid: USGS WHISPers events
+    (<a href="../../mcp/whispers-mcp/README.html">whispers-mcp</a>),
+    AZGFD mortality reports, and iNaturalist citizen-science
+    observations
+    (<a href="../../mcp/inaturalist-mcp/README.html">inaturalist-mcp</a>).
+    Each row carries a <code>kg_node_id</code> that round-trips to the
+    underlying source. See
+    <a href="../../wildlife/02-zoonotic-surveillance.html">zoonotic surveillance</a>
+    and
+    <a href="../../wildlife/04-participatory-surveillance.html">participatory surveillance</a>
+    for the context that drove this layout.
+  </p>
+
+  <h2>Status <span class="sub">last 24h / 7d / 30d</span></h2>
+  <div class="status-row">
+    <div class="status-tile"><span class="label">New events &middot; 24h</span><span class="value">2</span></div>
+    <div class="status-tile"><span class="label">New events &middot; 7d</span><span class="value">9</span></div>
+    <div class="status-tile"><span class="label">New events &middot; 30d</span><span class="value">23 <span class="delta up">+9%</span></span></div>
+    <div class="status-tile"><span class="label">Open mortalities</span><span class="value">4</span></div>
+  </div>
+
+  <h2>Cluster feed <span class="sub">Wildlife-scope cluster events</span></h2>
+  <ul class="cluster-feed" id="cluster-feed"></ul>
+
+  <h2>Map <span class="sub">WHISPers + AZGFD + iNaturalist pins</span></h2>
+  <div class="map-shell" id="map-shell"></div>
+
+  <h2>Recent events <span class="sub">last 30 days, all sources</span></h2>
+  <div class="analyst-table-wrap">
+    <table class="analyst-table" id="events-table">
+      <caption>Wildlife mortality + surveillance events</caption>
+      <thead>
+        <tr>
+          <th>Event</th>
+          <th>Source</th>
+          <th>County</th>
+          <th>Diagnosis</th>
+          <th class="num">Affected</th>
+          <th>Period</th>
+          <th>kg_node_id</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <h2>Open the underlying observations</h2>
+  <button id="show-sql" class="btn secondary">Show SQL preview</button>
+  <div id="sql-mount"></div>
+
+  <div class="future-box">
+    <strong>Future work:</strong> AZGFD has no public write-API for
+    its internal mortality reporting today; Phase 3's
+    <code>azgfd-mcp</code> (not yet shipped) would replace the canned
+    <code>azgfd</code>-source rows here with the real feed.
+  </div>
+
+  <p class="crosslinks">
+    Cross-references:
+    <a href="../../map/index.html">map</a>
+    <a href="../../graph/index.html">pathogen graph</a>
+    <a href="../../wildlife/01-wildlife-tracking.html">wildlife tracking</a>
+    <a href="../../wildlife/02-zoonotic-surveillance.html">zoonotic surveillance</a>
+    <a href="../../wildlife/04-participatory-surveillance.html">participatory surveillance</a>
+    <a href="../coconino/index.html">Coconino HHS</a>
+  </p>
+</main>
+
+<footer class="dash-footer">
+  Source: AZ Game &amp; Fish Department Wildlife Health Program &middot;
+  USGS WHISPers &middot; iNaturalist.
+</footer>
+
+<script type="module">
+  import { mountAuthStub } from '../shared/auth-stub.js';
+  import { mountClusterFeed } from '../shared/cluster-feed.js';
+  import { mountMapEmbed } from '../shared/map-embed.js';
+  import { fetchMock, renderSqlPreview } from '../shared/kg-client.js';
+
+  mountAuthStub(document.getElementById('auth-stub'), 'azgfd');
+  document.getElementById('print-date').textContent = new Date().toISOString().slice(0, 10);
+
+  mountClusterFeed(document.getElementById('cluster-feed'), {
+    audience: 'azgfd',
+    limit: 5
+  });
+
+  fetchMock('wildlife-events.json').then(d => {
+    // Map pins: every event becomes a feature
+    const features = (d.events || []).map(e => ({
+      type: 'Feature',
+      geometry: { type: 'Point', coordinates: [e.lon, e.lat] },
+      properties: {
+        title: e.label,
+        label: e.label,
+        severity: e.severity || 'info',
+        pathogen: (e.diagnosis && e.diagnosis[0]) || '',
+        county: e.county,
+        detected_at: e.start_date,
+        kg_node_id: e.kg_node_id,
+        source: e.source
+      }
+    }));
+    mountMapEmbed(document.getElementById('map-shell'), {
+      geojson: { type: 'FeatureCollection', features },
+      colorBy: 'severity'
+    });
+
+    // Events table — newest first
+    const tbody = document.querySelector('#events-table tbody');
+    (d.events || [])
+      .slice()
+      .sort((a, b) => (b.start_date || '').localeCompare(a.start_date || ''))
+      .forEach(e => {
+        const tr = document.createElement('tr');
+        tr.dataset.kgNodeId = e.kg_node_id;
+        tr.innerHTML =
+          `<td>${e.label || ''}</td>` +
+          `<td>${e.source || ''}</td>` +
+          `<td>${e.county || ''}</td>` +
+          `<td>${(e.diagnosis || []).join(', ')}</td>` +
+          `<td class="num">${e.affected_count != null ? e.affected_count : '—'}</td>` +
+          `<td>${e.start_date || ''}${e.end_date ? ' → ' + e.end_date : ' → open'}</td>` +
+          `<td><code>${e.kg_node_id || ''}</code></td>`;
+        tbody.appendChild(tr);
+      });
+  });
+
+  document.getElementById('show-sql').addEventListener('click', () => {
+    const sql =
+`-- AZGFD Wildlife Health view: WHISPers + iNat + AZGFD mortality
+-- rows joined through the kg's "reportedVia" + "occurredIn"
+-- predicates. Sin Nombre + Yersinia pestis rows surface as a
+-- co-located health signal next to a community check-in.
+SELECT n.node_id,
+       n.label,
+       p_src.value_text  AS source,
+       p_diag.value_text AS diagnosis,
+       p_cnt.value_text  AS affected_count,
+       p_cty.value_text  AS county,
+       p_start.value_text AS start_date,
+       p_end.value_text   AS end_date
+FROM   kg.node     n
+JOIN   kg.property p_src   ON p_src.node_id   = n.node_id AND p_src.key   = 'source'
+LEFT JOIN kg.property p_diag  ON p_diag.node_id = n.node_id AND p_diag.key  = 'diagnosis'
+LEFT JOIN kg.property p_cnt   ON p_cnt.node_id  = n.node_id AND p_cnt.key   = 'affected_count'
+LEFT JOIN kg.property p_cty   ON p_cty.node_id  = n.node_id AND p_cty.key   = 'county'
+LEFT JOIN kg.property p_start ON p_start.node_id= n.node_id AND p_start.key = 'start_date'
+LEFT JOIN kg.property p_end   ON p_end.node_id  = n.node_id AND p_end.key   = 'end_date'
+WHERE  n.node_type IN ('whispers_event', 'azgfd_mortality_report', 'inat_observation')
+ORDER BY p_start.value_text DESC NULLS LAST
+LIMIT  500;`;
+    renderSqlPreview(document.getElementById('sql-mount'), sql,
+      'AZGFD wildlife events (all three sources)');
+  });
+</script>
+
+</body>
+</html>

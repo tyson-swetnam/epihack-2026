@@ -1,0 +1,12 @@
+{
+  "_comment": "Paste the 'sms-entry' block into your Claude Desktop config under mcpServers. Restart Claude Desktop after editing.",
+  "mcpServers": {
+    "sms-entry": {
+      "command": "uvx",
+      "args": ["--from", "/absolute/path/to/epihack-2026/mcp/sms-entry-mcp", "sms-entry-mcp"],
+      "env": {
+        "SMS_MODE": "mock"
+      }
+    }
+  }
+}

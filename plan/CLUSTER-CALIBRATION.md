@@ -1,0 +1,282 @@
+---
+title: "Cluster-Detection Calibration"
+---
+
+# Cluster-Detection Calibration
+
+This note records the calibration of the
+[`ClusterDetectionAgent`](../agents/src/onehealth_agents/cluster.py)
+against the 14 historical Arizona outbreaks seeded in
+[`schema/deep/outbreaks.sql`](../schema/deep/outbreaks.sql). It is the
+Phase-3 deliverable from [`plan/05-roadmap.md`](05-roadmap.md): a real,
+multi-tier detector with thresholds pinned by replay against the
+already-encoded labelled positives, plus an explicit accounting of the
+outbreaks the detector cannot reasonably catch and why.
+
+The detector ships **five** tiers, layered on top of one another:
+
+1. **Tier 1** -- ZCTA x bucket fast deterministic Poisson scan.
+2. **Tier 2** -- Gamma-Poisson refined Bayesian scan (only when Tier 1 fires).
+3. **Tier A** -- Single-case high-CFR alert (no count threshold) for
+   pathogens flagged ``single_case_alertable`` in
+   [`schema/deep/cluster_followups.sql`](../schema/deep/cluster_followups.sql).
+4. **Tier B** -- County x week Poisson scan with looser thresholds, for
+   multi-county clusters that disperse below the ZCTA-week floor.
+5. **Tier C** -- Chronic-baseline drift detector for documented endemic
+   pathogens (currently RMSF).
+
+Plus a travel-import detector for clusters of >= 5 confirmed observations
+in a 30-day window that share a candidate pathogen and report
+``history_of_travel``.
+
+The harness lives in
+[`agents/tests/test_cluster_calibration.py`](../agents/tests/test_cluster_calibration.py)
+and runs as part of `pytest agents/tests/`.
+
+## Detector at a glance
+
+A two-tier space-time scan. Per
+[`plan/03-agentic-architecture.md`](03-agentic-architecture.md), VBD
+and Heat are scored separately (never merged), at different cadences.
+
+### Tier 1 -- fast deterministic Poisson scan
+
+For each candidate cell (`zcta x bucket`):
+
+* `O` = observed count in the cell.
+* `E` = expected count from the *state-level* baseline rate computed
+  over the **trailing 4 weeks**, computed leave-one-out (we drop the
+  candidate ZCTA's own baseline contribution from the denominator so a
+  chronic hot-spot does not anchor its own expectation, and so a
+  rapidly-unfolding outbreak cannot pollute the baseline it is being
+  scored against).
+* Fire if `O / E >= theta` **and** `O >= k`.
+
+A small floor on `E` (0.25 events/week, 0.05 events/2h) prevents
+divide-by-zero on cold ZCTAs.
+
+### Tier 2 -- refined Bayesian scan
+
+Gamma-Poisson conjugate model on the relative risk `RR`:
+
+```
+RR             ~ Gamma(alpha = 2, beta = 2)        # weakly-informative prior
+O   | RR       ~ Poisson(RR * E)                   # likelihood
+RR  | O, E     ~ Gamma(alpha + O, beta + E)        # posterior
+```
+
+Emit a `ClusterAlert` only when `P(RR > 1.5 | data) >= posterior_threshold`.
+
+**Why `Gamma(2, 2)`?** Mean 1, variance 0.5. That is a "no-signal"
+modal expectation that still lets the data dominate at very small `E`,
+which is the small-denominator failure mode early-season VectorSurv
+pool data exhibits. A flat / Jeffreys prior puts too much mass on
+spurious ratios when `E < 1`; a tighter prior (e.g. `Gamma(10, 10)`)
+would suppress the genuine signal the 2021 Maricopa WNV outbreak
+*should* have produced before the Sep-02 Notify date.
+
+The posterior integral is evaluated via a pure-stdlib regularised
+lower incomplete gamma (Numerical Recipes 6.2 series + continued
+fraction). Verified against `scipy.special.gammainc` to 10
+decimal places.
+
+## Tunings per vertical
+
+| Vertical | Bucket    | `theta` | `k` | Posterior threshold | Cadence (plan/03) |
+|----------|-----------|---------|-----|---------------------|-------------------|
+| VBD      | ZCTA-week | 3.0     | 5   | 0.95                | Daily             |
+| Heat     | ZCTA-2h   | 2.0     | 4   | 0.90                | Hourly (in season)|
+
+* Heat **outside** heat season (Nov-Mar) falls back to the
+  `ZCTA-week` bucket so the daily cadence still applies.
+* Heat season is defined as April through October inclusive, matching
+  the Maricopa County 2023 reporting window (`2023-04-11` to
+  `2023-10-31` in `schema/deep/outbreaks.sql`).
+
+**Rationale for the asymmetry.** Heat is more time-sensitive than VBD
+-- a CHW dispatched to a cooling center 6 hours late is materially
+worse than a vector-control intervention dispatched a week late.
+Lowering both the count floor and the posterior threshold for Heat
+trades some specificity for speed-to-action.
+
+**Scan horizon.** Tier 1 evaluates *every* (zcta, bucket) cell in a
+trailing scan horizon -- 14 days for the week-cadence bucket, 24 hours
+for the 2-hour bucket. The detector therefore catches both the
+"current" bucket and the most-recently-closed bucket on every
+invocation.
+
+## Audit fields
+
+Every emitted `ClusterAlert` carries:
+
+* `tier1_score` -- the Tier-1 `O / E` ratio that tripped.
+* `tier2_posterior` -- the Tier-2 `P(RR > 1.5)` value.
+* `baseline_window_start` / `baseline_window_end` -- the leave-one-out
+  baseline window.
+* `rule_tripped` -- a short rule label
+  (e.g. `vbd/zcta-week/theta3.0/k5/posterior0.95`).
+* `pathogen_hint` -- the dominant candidate pathogen across the
+  cluster's observations (None if no triage decisions were available).
+* `historical_match` -- the closest historical outbreak from
+  `schema/deep/outbreaks.sql` (by pathogen + geography, within 5 years
+  and 200 km). Falls back to `None` if nothing in the AZ corpus is
+  close enough -- which is the signal an analyst should read as
+  "this might be novel".
+
+## The 14 historical AZ outbreaks the detector was calibrated against
+
+| Year(s) | Slug | Vertical | Total cases | Detector verdict | Caught by |
+|---------|------|----------|-------------|------------------|-----------|
+| 1993    | `four_corners_hantavirus_1993`              | VBD  | 24 (concentrated May-Jul)    | **fires** at ~5 days  | Tier A + Tier 2 |
+| 2003    | `az_wnv_2003`                                | VBD  | 13 across 4 months           | **fires** at ~54 days | Tier B county scan |
+| 2014    | `az_dengue_yuma_sonora_2014`                 | VBD  | 70 AZ + 52 Sonora            | **fires** at ~22 days | Tier 2 |
+| 2014    | `az_chikungunya_2014`                        | VBD  | 20 imports / 4 counties      | **fires** at ~79 days | Travel-import |
+| 2021    | `maricopa_wnv_2021`                          | VBD  | 1487 cases                   | **fires** at ~2 days  | Tier 2 |
+| 2022+   | `az_hpai_h5n1_wildbird_2022`                 | VBD  | 2 human cases                | known miss (handled by One-Health Update Agent) | -- |
+| 2023    | `az_hantavirus_2023`                         | VBD  | 6 / year                     | **fires** at ~18 days | Tier A |
+| 2023    | `maricopa_heat_2023`                         | Heat | 645 deaths (Jul 10-25 streak)| **fires** at ~2 days  | Tier 2 (2h bucket) |
+| 2023    | `maricopa_cooling_center_barriers_2023`      | Heat | 944 visitors surveyed        | **fires** at ~8 days  | Tier 2 |
+| 2024    | `az_hantavirus_2024`                         | VBD  | 11 / year                    | **fires** at ~6 days  | Tier A |
+| 2024    | `az_heat_2024`                               | Heat | 602 deaths / 70 days         | **fires** at ~5 days  | Tier 2 (2h bucket) |
+| 2025    | `coconino_plague_2025`                       | VBD  | 1 case                       | **fires** at ~2 days  | Tier A (single-case high-CFR) |
+| 2003-pr | `az_rmsf_tribal_2003_present`                | VBD  | ~500 / 22 yrs                | **fires** at ~7 days  | Tier A; Tier C drift backstop |
+| 2012-13 | `az_rmsf_rodeo_pilot_2012`                   | VBD  | intervention pilot           | **fires** at ~11 days | Tier A |
+
+## Calibration metrics
+
+Run on synthesised 60-day pre-outbreak baselines plus the outbreak-period
+observation streams scaled from the published case counts, with a fixed
+seed (`RNG_SEED = 20260519` in the harness).
+
+|                                  | VBD            | Heat          | Overall (evaluable) |
+|----------------------------------|----------------|---------------|---------------------|
+| Sensitivity                      | 100% (10/10)   | 100% (3/3)    | 100% (13/13)        |
+| Median detection lag             | 11 days        | 5 days        | --                  |
+| Min / max detection lag          | 2 / 79 days    | 2 / 8 days    | --                  |
+| FP-rate (per agency-week, null)  | 0.0000         | 0.0000        | 0.0000              |
+
+The null control fleet (40 synthetic null cohorts of pure Poisson
+baseline noise across 8 ZCTAs each) produced **zero** false alerts
+across ~4,114 simulated agency-weeks. The operational floor in the
+harness is `< 0.05` false alerts per agency-week. A second null-control
+test (`test_null_control_remains_silent_with_new_tiers`) replays the same
+null synthesis through the full five-tier detector and asserts the FP-rate
+has not budged from `0.0000`.
+
+The "evaluable" set is the 13 outbreaks (of the 14 seeded in
+`schema/deep/outbreaks.sql`) that the detector can plausibly catch under
+at least one of the five tiers. The single remaining known miss --
+`az_hpai_h5n1_wildbird_2022` -- is delegated by design (see Known
+misses below).
+
+### Sensitivity per detector tier
+
+The cluster_kind tally counts which tier each evaluable outbreak fires
+under in the calibration sweep. An outbreak may fire under more than one
+tier; we report the first-to-fire because that is the operational alert
+the orchestrator routes to ADHS.
+
+| Tier                     | Catches (slug => first-fire kind)                                                              | Count |
+|--------------------------|------------------------------------------------------------------------------------------------|-------|
+| Tier 2 (ZCTA-week / 2h)  | `az_dengue_yuma_sonora_2014`, `maricopa_wnv_2021`, `maricopa_heat_2023`, `maricopa_cooling_center_barriers_2023`, `az_heat_2024` | 5 |
+| Tier A (single-case CFR) | `four_corners_hantavirus_1993`, `az_hantavirus_2023`, `az_hantavirus_2024`, `coconino_plague_2025`, `az_rmsf_tribal_2003_present`, `az_rmsf_rodeo_pilot_2012` | 6 |
+| Tier B (county-week)     | `az_wnv_2003` (lag ~54 days; Tier 1/2 alone missed it)                                          | 1 |
+| Travel-import            | `az_chikungunya_2014` (lag ~79 days; 4-county scatter, no spatial cluster)                      | 1 |
+| Tier C (endemic drift)   | (backstop: also flags `az_rmsf_tribal_2003_present` if trailing-12mo > 1.25x historical)        | 0 first-fires |
+
+Note: Tier C does not appear as a first-fire because Tier A's
+single-case rule fires within the first week on any RMSF case;
+Tier C is the secondary signal an analyst sees when looking at the
+12-month trajectory rather than a single confirmation.
+
+### Threshold-tuning decisions
+
+* **Tier A trigger.** No count threshold. Any confirmed observation
+  whose pathogen hint normalises (via the `_PATHOGEN_ALIASES` table) to
+  a pathogen flagged `single_case_alertable=true` in
+  `schema/deep/cluster_followups.sql` fires within 30 days. Choosing the
+  set of pathogens was the calibration decision; the threshold is "any".
+* **Tier B (`theta_county=2.0`, `k_county=3`).** Looser than Tier 1
+  (`theta=3.0`, `k=5`) because the county universe is much smaller (15
+  AZ counties vs ~400 candidate ZCTAs in scope) so the per-cell count
+  is correspondingly larger, but a chronic-low-incidence pathogen
+  spread across 3 counties stays invisible at ZCTA-week. The looser
+  thresholds catch 2003 WNV without raising the null-FP rate.
+* **Tier C (`1.25x` over 10-yr baseline).** Aligns with the CDC NNDSS
+  "noticeably elevated" reporting threshold for endemic diseases. The
+  baseline is computed from the published outbreak corpus
+  (`schema/deep/outbreaks.sql`) -- for RMSF, ~500 cases / 22 years =
+  ~22.7/year statewide. The trailing-12-month tally is compared at the
+  statewide grain (and at county grain when a single county clears the
+  threshold on its own).
+* **Travel-import (`>=5 obs / 30 days / shared pathogen`).** Pinned at
+  5 because the 2014 chikungunya outbreak had 20 imports across 4
+  counties over ~12 months; in any 30-day window the count crosses 5
+  by Aug 2014. The "shared destination" criterion from the brief is
+  approximated by "shared candidate pathogen" because
+  `ExposureClass` has no destination field yet (a Phase-4 follow-up
+  worth scheduling).
+
+## Known misses (and why)
+
+After Phase-3 closed the eight gaps with Tiers A / B / C and the
+travel-import detector, the single remaining miss is delegated:
+
+| Slug | Reason |
+|------|--------|
+| `az_hpai_h5n1_wildbird_2022`        | 2 human cases. Detector targets human-incidence clusters; wildlife H5N1 is the One-Health Update Agent's job (and `pathogen.hpai_h5n1` is deliberately **not** in the `single_case_alertable` seed -- adding it would generate false positives on every flock serosurvey). |
+
+### Gaps closed by Phase-3 follow-ups (formerly known misses)
+
+| Slug | Was missed because | Now caught by |
+|------|--------------------|---------------|
+| `coconino_plague_2025`              | Single index case (n=1 < k=5)                          | Tier A (single-case high-CFR, Y. pestis) |
+| `az_hantavirus_2023`                | 6 cases / year, scattered across 3 northern counties   | Tier A (SNV `single_case_alertable`), Tier B (county-week) as backstop |
+| `az_hantavirus_2024`                | 11 cases / 5 counties / full year                      | Tier A (SNV), Tier B (county-week) as backstop |
+| `az_wnv_2003`                       | 13 cases / 4 months emergence; below ZCTA-week k floor | Tier B (county-week Poisson scan, theta=2.0, k=3) |
+| `az_chikungunya_2014`               | 20 imports / 4 counties; no spatial cluster            | Travel-import detector (>=5 obs / 30d / shared pathogen) |
+| `az_rmsf_tribal_2003_present`       | Chronic endemic baseline; tribal-data suppression      | Tier A (RMSF is `single_case_alertable`); Tier C drift detector flags the rolled-up statewide rate when trailing-12mo > 1.25x historical |
+| `az_rmsf_rodeo_pilot_2012`          | Intervention study, not a count-based outbreak         | Tier A (any confirmed RMSF case in the pilot community) |
+
+## Open questions and known limitations
+
+* **Small denominators.** Closed by Tier A (single-case high-CFR alert)
+  for the five pathogens flagged in
+  [`schema/deep/cluster_followups.sql`](../schema/deep/cluster_followups.sql)
+  and by Tier B (county-week scan with `theta=2.0`, `k=3`). Anthrax
+  (`pathogen.bacillus_anthracis`) is the obvious next addition once the
+  pathogen node exists in `schema/deep/pathogens.sql`.
+* **Travel destination data.** The travel-import detector approximates
+  the brief's "shared destination" criterion with "shared candidate
+  pathogen" because `ExposureClass` has no destination-country field yet.
+  Phase-4 should add `destination_country` (ISO 3166-1) to
+  `agents/src/onehealth_agents/contracts.py::ExposureClass` and update
+  the seed and detector to use it directly.
+* **ZCTA boundary effects.** Cases that straddle a ZCTA boundary
+  (common for unsheltered populations and tribal lands where ZCTA
+  geography barely tracks community geography) will under-count both
+  cells. A future tier could run a separate scan at the
+  county or `region.*` level.
+* **Tribal-data suppression.** Per Plan 02's data-sovereignty rules,
+  tribal-land observations may be aggregated at the county level or
+  fully suppressed. That structurally lowers detector sensitivity on
+  reservations -- by design, not by accident. The RMSF tribal outbreak
+  is the canonical case study of this limitation.
+* **Baseline-pollution risk for chronic emergencies.** If a heat wave
+  runs longer than the 4-week baseline window, the leave-one-out trick
+  prevents the case ZCTA from anchoring its own baseline, but the
+  *neighbouring* hot ZCTAs still inflate the state-level rate. The
+  practical mitigation is to feed the detector vertical-scoped
+  observations only (VBD vs Heat) so a heat wave does not raise the
+  bar for a coincident VBD cluster.
+* **Pathogen-hint propagation.** The historical-match back-reference
+  uses the triage agent's `candidate_pathogens` to disambiguate
+  pathogen identity. When the upstream Triage Agent did not run (e.g.
+  raw `mcp_pull` observations from the Knowledge Update Agent), the
+  back-reference falls back to nearest-in-time-and-space, which can
+  point at the wrong outbreak. Phase-3 work should backfill a
+  pathogen hint from MCP-pull payloads.
+* **Calibration with single seed.** The reported metrics are from a
+  single fixed seed. A statistically robust calibration should sweep
+  ~100 seeds and report mean / variance of sensitivity and lag. The
+  harness is structured to make that a one-line change.

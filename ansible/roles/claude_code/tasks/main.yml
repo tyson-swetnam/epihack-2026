@@ -1,0 +1,51 @@
+---
+# Install Claude Code globally for the deploy user (no sudo on npm thanks
+# to the per-user prefix from the `node` role) and drop a settings.json
+# that wires the Anthropic API key + default model.
+
+- name: Install Claude Code via npm
+  become_user: "{{ onehealth_user }}"
+  community.general.npm:
+    name: "{{ claude_code_npm_package }}"
+    global: true
+    state: latest
+  environment:
+    NPM_CONFIG_PREFIX: "{{ onehealth_home }}/.npm-global"
+    PATH: "{{ onehealth_home }}/.npm-global/bin:/usr/local/bin:/usr/bin:/bin"
+
+- name: Ensure ~/.claude exists
+  become_user: "{{ onehealth_user }}"
+  ansible.builtin.file:
+    path: "{{ onehealth_home }}/.claude"
+    state: directory
+    mode: "0700"
+
+- name: Write ~/.claude/settings.json
+  become_user: "{{ onehealth_user }}"
+  ansible.builtin.template:
+    src: settings.json.j2
+    dest: "{{ onehealth_home }}/.claude/settings.json"
+    mode: "0600"
+
+- name: Write the ANTHROPIC_API_KEY into the deploy user's env
+  become_user: "{{ onehealth_user }}"
+  ansible.builtin.lineinfile:
+    path: "{{ onehealth_home }}/.bashrc"
+    regexp: "^export ANTHROPIC_API_KEY="
+    line: 'export ANTHROPIC_API_KEY="{{ vault_anthropic_api_key }}"'
+    create: true
+    mode: "0600"
+  no_log: true
+
+- name: Verify Claude Code is on PATH
+  become_user: "{{ onehealth_user }}"
+  ansible.builtin.shell: |
+    set -euo pipefail
+    export PATH="{{ onehealth_home }}/.npm-global/bin:$PATH"
+    claude --version
+  register: claude_version
+  changed_when: false
+
+- name: Report Claude Code version
+  ansible.builtin.debug:
+    msg: "Claude Code: {{ claude_version.stdout }}"

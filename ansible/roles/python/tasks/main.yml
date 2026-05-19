@@ -1,0 +1,32 @@
+---
+# Python {{ python_version }} + uv. Ubuntu 24.04 ships Python 3.12 by default;
+# on 22.04 we'd add deadsnakes — out of scope for the pilot.
+
+- name: Ensure Python {{ python_version }} is installed
+  ansible.builtin.apt:
+    name:
+      - "python{{ python_version }}"
+      - "python{{ python_version }}-venv"
+    state: present
+
+- name: Install uv (system-wide) via the standalone installer
+  ansible.builtin.shell: |
+    set -euo pipefail
+    curl -LsSf https://astral.sh/uv/install.sh | sh -s -- --no-modify-path --quiet
+    # The installer drops uv into /root/.local/bin; symlink it into /usr/local/bin
+    # so every user picks it up.
+    ln -sf /root/.local/bin/uv /usr/local/bin/uv
+    ln -sf /root/.local/bin/uvx /usr/local/bin/uvx
+  args:
+    creates: /usr/local/bin/uv
+  environment:
+    HOME: /root
+
+- name: Verify uv is on PATH
+  ansible.builtin.command: uv --version
+  register: uv_version_check
+  changed_when: false
+
+- name: Report uv version
+  ansible.builtin.debug:
+    msg: "uv {{ uv_version_check.stdout }}"

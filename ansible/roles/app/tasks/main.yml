@@ -1,0 +1,50 @@
+---
+# Build the Next.js app's static export. nginx serves from app/out/.
+
+- name: Write .env.local from the playbook vars
+  become_user: "{{ onehealth_user }}"
+  ansible.builtin.template:
+    src: app.env.local.j2
+    dest: "{{ onehealth_repo_path }}/app/.env.local"
+    mode: "0600"
+  no_log: true
+
+- name: npm ci (clean, reproducible install)
+  become_user: "{{ onehealth_user }}"
+  ansible.builtin.command:
+    cmd: npm ci
+    chdir: "{{ onehealth_repo_path }}/app"
+  register: npm_ci
+  changed_when: "'added' in npm_ci.stdout or 'removed' in npm_ci.stdout"
+  environment:
+    PATH: "{{ onehealth_home }}/.npm-global/bin:/usr/local/bin:/usr/bin:/bin"
+
+- name: Generate the TypeScript API types from api/openapi.yaml
+  become_user: "{{ onehealth_user }}"
+  ansible.builtin.command:
+    cmd: npm run gen:api
+    chdir: "{{ onehealth_repo_path }}/app"
+  changed_when: true
+  environment:
+    PATH: "{{ onehealth_home }}/.npm-global/bin:/usr/local/bin:/usr/bin:/bin"
+
+- name: Build the static export
+  become_user: "{{ onehealth_user }}"
+  ansible.builtin.command:
+    cmd: npm run build
+    chdir: "{{ onehealth_repo_path }}/app"
+  register: next_build
+  changed_when: true
+  environment:
+    PATH: "{{ onehealth_home }}/.npm-global/bin:/usr/local/bin:/usr/bin:/bin"
+    NEXT_BASE_PATH: ""                    # served at the FQDN root, not /epihack-2026/app
+    NEXT_PUBLIC_API_BASE: "{{ app_api_base }}"
+    NEXT_PUBLIC_SUPABASE_URL: "{{ app_supabase_url }}"
+    NEXT_PUBLIC_SUPABASE_ANON_KEY: "{{ app_supabase_anon_key }}"
+    NEXT_PUBLIC_BUILD: "{{ ansible_date_time.iso8601 }}"
+
+- name: Confirm app/out/index.html exists
+  ansible.builtin.stat:
+    path: "{{ onehealth_repo_path }}/app/out/index.html"
+  register: out_index
+  failed_when: not out_index.stat.exists

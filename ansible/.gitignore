@@ -1,0 +1,10 @@
+# Never commit the real inventory or the encrypted vault — both
+# carry secrets specific to one deployment.
+inventory.yml
+group_vars/all.vault.yml
+group_vars/all.local.yml
+
+# Ansible runtime
+*.retry
+.ansible/
+*.log

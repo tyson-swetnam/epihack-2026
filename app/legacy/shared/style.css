@@ -1,0 +1,469 @@
+/* =========================================================================
+   AZ One Health Sentinel — prototype app
+   Shared base styles. Mobile-first. Mirrors the palette used across
+   the rest of the site (map/, graph/, index.html, plan/).
+
+   Palette
+     --c-navy    #1F3A93   primary brand (VBD vertical, links, focus)
+     --c-red     #C0392B   alert / triage urgency
+     --c-orange  #E84A2B   Heat vertical
+     --c-green   #4CAF50   success / "submitted" affirmations
+     --c-bg      #ffffff   page background
+     --c-ink     #1a1a1a   body text
+     --c-mute    #555      secondary text
+     --c-rule    #d8dde6   borders
+   ========================================================================= */
+
+:root {
+  --c-navy:   #1F3A93;
+  --c-navy-2: #15296a;
+  --c-red:    #C0392B;
+  --c-orange: #E84A2B;     /* Heat vertical accent */
+  --c-orange-2:#b53212;
+  --c-magenta:#962FBF;     /* NWS HeatRisk "Magenta" (worst tier) */
+  --c-green:  #4CAF50;
+  --c-bg:     #ffffff;
+  --c-soft:   #f4f6fb;
+  --c-soft-warm:#fff5f1;   /* warm soft surface for heat flows */
+  --c-ink:    #1a1a1a;
+  --c-mute:   #555;
+  --c-rule:   #d8dde6;
+  --c-focus:  #FFB300;
+
+  --radius:   8px;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-top:    env(safe-area-inset-top, 0px);
+
+  /* 44 x 44 minimum touch target (iOS HIG). */
+  --tap: 44px;
+}
+
+* { box-sizing: border-box; }
+
+html, body { margin: 0; padding: 0; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+               Helvetica, Arial, sans-serif;
+  color: var(--c-ink);
+  background: var(--c-bg);
+  line-height: 1.5;
+  -webkit-text-size-adjust: 100%;
+  -webkit-font-smoothing: antialiased;
+}
+
+a { color: var(--c-navy); }
+a:focus-visible, button:focus-visible, input:focus-visible,
+select:focus-visible, textarea:focus-visible, label:focus-visible {
+  outline: 3px solid var(--c-focus);
+  outline-offset: 2px;
+}
+
+/* ----- Header bar shared across pages ----------------------------------- */
+.app-header {
+  background: var(--c-navy);
+  color: #fff;
+  padding: calc(.75rem + var(--safe-top)) 1rem .75rem;
+}
+.app-header a { color: #fff; text-decoration: none; opacity: .9; }
+.app-header a:hover { opacity: 1; text-decoration: underline; }
+.app-header h1 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+.app-header .crumbs {
+  font-size: .8rem;
+  opacity: .85;
+  margin-bottom: .15rem;
+}
+
+/* ----- Page container --------------------------------------------------- */
+.container {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 1rem 1rem calc(6rem + var(--safe-bottom));
+}
+
+/* ----- Cards used on landing & success pages ---------------------------- */
+.card {
+  display: block;
+  background: #fff;
+  border: 1px solid var(--c-rule);
+  border-left: 6px solid var(--c-navy);
+  border-radius: var(--radius);
+  padding: 1rem 1.1rem;
+  margin: 0 0 1rem;
+  text-decoration: none;
+  color: inherit;
+  min-height: var(--tap);
+}
+.card:hover { background: var(--c-soft); }
+.card h2 { margin: 0 0 .35rem 0; font-size: 1.05rem; color: var(--c-navy); }
+.card p  { margin: 0; color: var(--c-mute); font-size: .9rem; }
+.card.heat   { border-left-color: var(--c-orange); }
+.card.heat h2{ color: var(--c-orange); }
+.card.stub   { opacity: .75; }
+
+.badge {
+  display: inline-block;
+  background: #e3e8ef;
+  color: #333;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: .72rem;
+  margin: .35rem .25rem 0 0;
+}
+.badge.warn { background: #fff1d6; color: #8a5a00; }
+/* "Works offline" / "Cached offline" affordance on flow cards (Phase 2). */
+.badge.offline {
+  background: #e6f6ec;
+  color: #1f6f37;
+  border: 1px solid #b4dec1;
+}
+.badge.offline::before {
+  content: "○ ";
+  color: #1f6f37;
+}
+
+/* ----- Buttons ---------------------------------------------------------- */
+.btn {
+  appearance: none;
+  -webkit-appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .4rem;
+  min-height: var(--tap);
+  min-width: var(--tap);
+  padding: .7rem 1.1rem;
+  font: inherit;
+  font-weight: 600;
+  border-radius: var(--radius);
+  border: 1px solid transparent;
+  background: var(--c-navy);
+  color: #fff;
+  cursor: pointer;
+  text-decoration: none;
+  text-align: center;
+}
+.btn:hover { background: var(--c-navy-2); }
+.btn:disabled { opacity: .55; cursor: not-allowed; }
+.btn.secondary {
+  background: #fff;
+  color: var(--c-navy);
+  border-color: var(--c-navy);
+}
+.btn.secondary:hover { background: var(--c-soft); }
+.btn.ghost {
+  background: transparent;
+  color: var(--c-navy);
+  border-color: transparent;
+}
+.btn.danger { background: var(--c-red); }
+.btn.success { background: var(--c-green); }
+.btn.block { width: 100%; }
+
+/* ----- Reduced motion --------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+}
+
+/* ----- Utility ---------------------------------------------------------- */
+.muted { color: var(--c-mute); }
+.small { font-size: .85rem; }
+.kv    { font-size: .85rem; color: var(--c-mute); margin: .15rem 0; }
+.kv strong { color: var(--c-ink); font-weight: 600; }
+
+hr.rule { border: 0; border-top: 1px solid var(--c-rule); margin: 1.25rem 0; }
+
+.app-footer {
+  max-width: 680px;
+  margin: 2rem auto 0;
+  padding: 1rem;
+  border-top: 1px solid var(--c-rule);
+  color: var(--c-mute);
+  font-size: .78rem;
+  text-align: center;
+}
+
+/* =========================================================================
+   Heat-vertical components (used by app/heat/check-in, /self-report,
+   /cool-off and the landing cards).
+   ========================================================================= */
+
+/* Landing-card accents */
+.card.heat-self  { border-left-color: var(--c-orange); }
+.card.heat-self  h2 { color: var(--c-orange); }
+.card.heat-chw   { border-left-color: var(--c-magenta); }
+.card.heat-chw   h2 { color: var(--c-magenta); }
+.card.heat-cool  { border-left-color: #1f8fbf; }
+.card.heat-cool  h2 { color: #1f8fbf; }
+.card.about      { border-left-color: var(--c-mute); opacity: .9; padding: .65rem .9rem; }
+.card.about h2   { color: var(--c-mute); font-size: .92rem; }
+
+.badge.heat    { background: #ffe2d6; color: #8a2a0c; }
+.badge.magenta { background: #f3e0fb; color: #5a1b78; }
+.badge.cool    { background: #d6edf6; color: #0a4a63; }
+
+/* Heat-themed button variants */
+.btn.heat       { background: var(--c-orange); }
+.btn.heat:hover { background: var(--c-orange-2); }
+.btn.magenta       { background: var(--c-magenta); }
+.btn.magenta:hover { background: #6f1f95; }
+
+/* ---- Vulnerability "thermometer" (CSS-only horizontal bar) ------------- */
+.thermo {
+  margin: .75rem 0 .25rem;
+}
+.thermo .thermo-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: .85rem;
+  color: var(--c-mute);
+  margin-bottom: .35rem;
+}
+.thermo .thermo-head strong {
+  font-size: 1.4rem;
+  color: var(--c-ink);
+  font-weight: 700;
+}
+.thermo .thermo-head .max { font-size: .8rem; }
+.thermo .thermo-track {
+  position: relative;
+  height: 18px;
+  border-radius: 999px;
+  background: linear-gradient(90deg,
+    #FFE08A 0%,
+    #FFB300 25%,
+    #F26F2B 50%,
+    var(--c-orange) 70%,
+    var(--c-red) 85%,
+    var(--c-magenta) 100%);
+  overflow: hidden;
+  border: 1px solid var(--c-rule);
+}
+.thermo .thermo-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 0%;
+  background: rgba(255,255,255,.55);
+  border-right: 3px solid var(--c-ink);
+  transition: width .4s ease;
+}
+.thermo .thermo-fill[data-tier="magenta"] { border-right-color: var(--c-magenta); }
+.thermo .thermo-fill[data-tier="red"]     { border-right-color: var(--c-red); }
+.thermo .thermo-fill[data-tier="orange"]  { border-right-color: var(--c-orange); }
+.thermo .thermo-fill[data-tier="yellow"]  { border-right-color: #d8a13d; }
+@media (prefers-reduced-motion: reduce) {
+  .thermo .thermo-fill { transition: none; }
+}
+.thermo-breakdown {
+  margin: .65rem 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: .9rem;
+}
+.thermo-breakdown li {
+  display: flex;
+  justify-content: space-between;
+  gap: .5rem;
+  padding: .25rem 0;
+  border-bottom: 1px dashed var(--c-rule);
+}
+.thermo-breakdown li:last-child { border-bottom: 0; }
+.thermo-breakdown .pts {
+  font-weight: 700;
+  color: var(--c-orange-2);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- Toggle-row component (yes/no answers in heat flows) --------------- */
+.toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .75rem;
+  min-height: var(--tap);
+  padding: .55rem .75rem;
+  margin-top: .5rem;
+  border: 1px solid var(--c-rule);
+  border-radius: var(--radius);
+  background: #fff;
+}
+.toggle-row .label    { font-weight: 600; font-size: .95rem; }
+.toggle-row .hint     { display: block; font-weight: 400; font-size: .78rem; color: var(--c-mute); }
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 52px;
+  height: 30px;
+  flex: 0 0 auto;
+}
+.toggle-switch input {
+  opacity: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  position: absolute;
+  inset: 0;
+  cursor: pointer;
+}
+.toggle-switch .slider {
+  position: absolute;
+  inset: 0;
+  background: #cfd5e0;
+  border-radius: 999px;
+  transition: background .18s ease;
+}
+.toggle-switch .slider::before {
+  content: "";
+  position: absolute;
+  top: 3px; left: 3px;
+  width: 24px; height: 24px;
+  background: #fff;
+  border-radius: 50%;
+  box-shadow: 0 1px 2px rgba(0,0,0,.18);
+  transition: transform .18s ease;
+}
+.toggle-switch input:checked + .slider { background: var(--c-orange); }
+.toggle-switch input:checked + .slider::before { transform: translateX(22px); }
+.toggle-switch input:focus-visible + .slider {
+  outline: 3px solid var(--c-focus);
+  outline-offset: 2px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .toggle-switch .slider, .toggle-switch .slider::before { transition: none; }
+}
+
+/* ---- Radio-pill group (age range, last drank water) -------------------- */
+.radio-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .4rem;
+  margin-top: .4rem;
+}
+.radio-pills label {
+  flex: 1 1 0;
+  min-width: 80px;
+  min-height: var(--tap);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: .5rem .65rem;
+  border: 1px solid var(--c-rule);
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-size: .9rem;
+  font-weight: 600;
+  background: #fff;
+  text-align: center;
+  user-select: none;
+}
+.radio-pills input[type="radio"] {
+  position: absolute;
+  opacity: 0;
+  width: 1px; height: 1px;
+}
+.radio-pills label:has(input:checked) {
+  background: #ffe8df;
+  border-color: var(--c-orange);
+  color: var(--c-orange-2);
+}
+.radio-pills label:focus-within {
+  outline: 3px solid var(--c-focus);
+  outline-offset: 2px;
+}
+
+/* ---- Cooling-center list ----------------------------------------------- */
+.center-list { padding: 0; margin: .5rem 0; list-style: none; }
+.center-list .center {
+  border: 1px solid var(--c-rule);
+  border-left: 6px solid var(--c-orange);
+  border-radius: var(--radius);
+  padding: .85rem 1rem;
+  margin: .65rem 0;
+  background: #fff;
+}
+.center-list .center h3 {
+  margin: 0 0 .25rem 0;
+  font-size: 1.02rem;
+  color: var(--c-orange-2);
+}
+.center-list .center .meta {
+  font-size: .82rem;
+  color: var(--c-mute);
+  margin-bottom: .35rem;
+}
+.center-list .center .badges { margin: .25rem 0 .5rem; }
+.center-list .center .actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: .5rem;
+}
+@media (max-width: 420px) {
+  .center-list .center .actions { grid-template-columns: 1fr; }
+}
+
+/* ---- Confirm-to-dispatch button (two-tap accidental-press guard) ------- */
+.confirm-btn { position: relative; }
+.confirm-btn[data-state="armed"]   { background: var(--c-orange); }
+.confirm-btn[data-state="armed"]::after {
+  content: " — tap again to confirm";
+  font-weight: 400;
+  font-size: .82rem;
+}
+.confirm-btn[data-state="dispatched"] {
+  background: var(--c-green);
+  pointer-events: none;
+}
+.confirm-btn[data-state="dispatched"]::after {
+  content: " ✓ dispatched";
+  font-weight: 700;
+}
+
+/* ---- Range slider (outdoor time) --------------------------------------- */
+.slider-field {
+  margin-top: .5rem;
+}
+.slider-field input[type="range"] {
+  width: 100%;
+  height: var(--tap);
+  margin-top: .25rem;
+  accent-color: var(--c-orange);
+}
+.slider-field .value {
+  font-weight: 700;
+  color: var(--c-orange-2);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- Language switcher chip ------------------------------------------- */
+.lang-switch {
+  position: absolute;
+  top: calc(.5rem + var(--safe-top));
+  right: .75rem;
+  display: inline-flex;
+  gap: 0;
+  background: rgba(255,255,255,.18);
+  border-radius: 999px;
+  overflow: hidden;
+  font-size: .75rem;
+}
+.lang-switch button {
+  appearance: none;
+  background: transparent;
+  color: #fff;
+  border: 0;
+  padding: .25rem .6rem;
+  min-height: 30px;
+  cursor: pointer;
+  font: inherit;
+}
+.lang-switch button[aria-pressed="true"] {
+  background: rgba(255,255,255,.95);
+  color: var(--c-orange-2);
+  font-weight: 700;
+}
+

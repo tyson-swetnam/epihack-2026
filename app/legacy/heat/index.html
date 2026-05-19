@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Heat flows — AZ One Health Sentinel</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#E84A2B" />
+<meta name="description" content="Heat-vertical flows for the AZ One Health Sentinel prototype: CHW heat check-in (Scenario C), anonymous heat self-report, and 'where can I cool off?'." />
+<link rel="stylesheet" href="../shared/style.css" />
+<link rel="stylesheet" href="heat.css" />
+<style>
+  .hero {
+    background: linear-gradient(135deg, var(--c-orange) 0%, var(--c-magenta) 100%);
+    color: #fff;
+    padding: 1.5rem 1.1rem;
+    border-radius: 10px;
+    margin: 1rem 0 1.25rem;
+  }
+  .hero h1 { margin: 0 0 .35rem 0; font-size: 1.4rem; color: #fff; }
+  .hero p  { margin: 0; opacity: .95; font-size: .95rem; }
+</style>
+</head>
+<body data-api-base="mock" data-i18n-default="auto">
+
+<header class="heat-header">
+  <div class="crumbs"><a href="../index.html">&laquo; AZ One Health Sentinel</a></div>
+  <h1>Heat flows</h1>
+</header>
+
+<main class="container" id="main">
+
+  <div class="hero">
+    <h1>Three heat-vertical flows</h1>
+    <p>CHW check-in, anonymous self-report, and a cooling-center lookup &mdash;
+       wired to the same agent pipeline as the tick mail-in.</p>
+  </div>
+
+  <a class="card heat-chw" href="check-in/index.html"
+     aria-label="CHW heat check-in: block-by-block outreach flow with vulnerability scoring and transport dispatch">
+    <h2>CHW heat check-in</h2>
+    <p>Six-step field flow for outreach workers with a tablet.
+       Computes the heat-vulnerability score, finds the nearest open
+       cooling center, and offers one-tap transport via 211 Arizona.</p>
+    <div>
+      <span class="badge magenta">Scenario C</span>
+      <span class="badge heat">Heat</span>
+      <span class="badge">CHW-mediated</span>
+    </div>
+  </a>
+
+  <a class="card heat-self" href="self-report/index.html"
+     aria-label="Heat self-report: anonymous self-report flow with a vulnerability score and 211 phone link">
+    <h2>Heat self-report</h2>
+    <p>Five-step anonymous flow. Same vulnerability scoring as the CHW
+       flow, but offers a phone link to 211 instead of dispatching a vehicle.</p>
+    <div>
+      <span class="badge heat">Heat</span>
+      <span class="badge">anonymous</span>
+    </div>
+  </a>
+
+  <a class="card heat-cool" href="cool-off/index.html"
+     aria-label="Where can I cool off: ranked list of nearby cooling centers">
+    <h2>Where can I cool off?</h2>
+    <p>Top-5 nearest open cooling centers ranked by distance,
+       with pet-friendly and transport-eligible flags up front.</p>
+    <div>
+      <span class="badge cool">lookup</span>
+      <span class="badge">mag-hrn-mcp</span>
+    </div>
+  </a>
+
+  <a class="card heat-self" href="wearable-monitor/index.html"
+     aria-label="Wearable monitor: continuous HR + skin-temp screen with auto-file at threshold">
+    <h2>Wearable monitor <span class="badge">Phase 4</span></h2>
+    <p>One-button continuous heat-stress monitor. Streams HR + skin
+       temperature from a paired Apple Watch (HealthKit) or Health
+       Connect device. Auto-files a self-report at the
+       <code>tc.go_to_cooling_center</code> threshold.</p>
+    <div>
+      <span class="badge heat">HealthKit</span>
+      <span class="badge heat">Health Connect</span>
+    </div>
+  </a>
+
+  <a class="card about" href="../../plan/05-roadmap.html#phase-1--heat-vertical-month-12"
+     aria-label="About this app: read the Phase 1 roadmap entry">
+    <h2>About these flows &middot; Phase 1 roadmap</h2>
+  </a>
+
+  <hr class="rule" />
+  <p class="muted small">
+    Cross-references:
+    <a href="../map/index.html">map of AZ</a> &middot;
+    <a href="../graph/index.html">pathogen graph</a> &middot;
+    <a href="../../heat/index.html">heat focus-group materials</a> &middot;
+    <a href="../../plan/04-data-flows.html#scenario-c--unsheltered-resident-heat-check-in">Scenario C</a>.
+  </p>
+</main>
+
+<footer class="app-footer">
+  Source: Ending Pandemics Academy &middot; University of Arizona Mel &amp;
+  Enid Zuckerman College of Public Health &middot; Global Health Institute.
+</footer>
+
+<script type="module" src="../shared/i18n.js"></script>
+</body>
+</html>
