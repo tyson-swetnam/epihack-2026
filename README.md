@@ -1,3 +1,7 @@
+---
+title: EpiHack Arizona 2026
+---
+
 # epihack-2026
 
 EpiHack AZ 2026 &mdash; a working repository for the
@@ -8,6 +12,14 @@ Global Health Institute.
 ## Contents
 
 ```
+index.html      Top-level site landing page (linked from GitHub Pages)
+map/            MapLibre GL map of AZ pinning counties, tribes, NEON
+                sites, agency HQs, federal lands, and outbreaks; each
+                feature carries a kg_node_id round-trippable to the
+                DuckLake graph.
+graph/          Cytoscape.js pathogen knowledge graph (16 pathogens with
+                their vectors, reservoirs, focus areas, and surveilling
+                agencies).
 figures/        Structured transcriptions of the EpiHack reference figures
   ├── 01-purpose-one-health-participatory-system.md
   ├── 02-minimum-key-data-parameters.md
@@ -15,6 +27,20 @@ figures/        Structured transcriptions of the EpiHack reference figures
   ├── 04-designing-launching-participatory-surveillance.md
   ├── 05-design-worksheet-template.md      -- breakout-session worksheet
   └── index.html                            -- combined HTML rendering
+wildlife/       Focus group 1 -- Wildlife & Vector-Borne Diseases
+  ├── 01-wildlife-tracking.md
+  ├── 02-zoonotic-surveillance.md
+  ├── 03-surveillance-technologies.md
+  ├── 04-participatory-surveillance.md
+  ├── resources.md                          -- 30+ AZ resources catalog
+  └── index.html
+heat/           Focus group 2 -- Heat
+  ├── 01-public-awareness-cooling-centers.md
+  ├── 02-real-time-resource-sharing.md
+  ├── 03-heat-safety-education.md
+  ├── 04-vulnerable-populations.md
+  ├── resources.md                          -- 30+ AZ heat-resource catalog
+  └── index.html
 worksheets/     Completed design worksheets from EpiHack breakouts
   ├── 01-animal-health-events.md
   └── 02-desert-wildlife-interface.md
@@ -25,9 +51,18 @@ notes/
       ├── q4-unhoused.md
       └── q4-information-flow.md
 schema/
-  ├── knowledge_graph.sql     -- core graph (frameworks)
-  ├── system_designs.sql      -- worksheet template, focus areas, designs
-  └── world_cafe.sql          -- World Café Q4 cards + engagement tactics
+  ├── knowledge_graph.sql       -- core graph (frameworks)
+  ├── system_designs.sql        -- worksheet template, focus areas, designs
+  ├── world_cafe.sql            -- World Café Q4 cards + engagement tactics
+  ├── wildlife_vectors.sql      -- focus group 1 questions, resources, design
+  ├── heat.sql                  -- focus group 2 questions, vulnerable pops, resources
+  └── deep/                     -- parallel sub-agent deep-research seeds
+      ├── counties.sql          --   all 15 AZ counties
+      ├── tribes.sql            --   all 22 federally recognized AZ tribes
+      ├── pathogens.sql         --   pathogens with vectors / reservoirs / ICD-10
+      ├── outbreaks.sql         --   historical AZ outbreaks + timeline dates
+      ├── datasets_apis.sql     --   NEON DPs, WHISPers, NWS, GBIF, iNat, etc.
+      └── standards.sql         --   FHIR, OMOP, ICD-10, Darwin Core, GeoSPARQL
 ```
 
 The Markdown files use YAML frontmatter and explicit `subject | predicate |
@@ -51,6 +86,29 @@ operationalize as a queryable knowledge graph:
 These are all relational by nature (parameters belong to categories,
 milestones precede milestones, steps precede steps, sectors emit signals)
 which is why a property-graph encoding is a natural fit.
+
+## Focus groups
+
+EpiHack Arizona 2026 broke participants into focus groups, each chartered
+to apply the frameworks above to a concrete domain. This repository covers
+two:
+
+1. **[Wildlife &amp; Vector-Borne Diseases](./wildlife/)** &mdash; four
+   guiding questions on how Arizona tracks wildlife and vector density;
+   how zoonotic infections are monitored in wildlife and vectors; what
+   technologies could improve surveillance; and how participatory
+   surveillance can better track wildlife disease. Anchored on **NEON**,
+   **ADHS**, **AZGFD**, the **Great Arizona Tick Check**, USGS WHISPers,
+   USDA APHIS, USFWS, the 22 AZ tribal nations, and 15 county vector
+   programs.
+2. **[Heat](./heat/)** &mdash; four guiding questions on how the public
+   is informed about cooling-center locations; whether centers share
+   resources in real time; what severe-heat education is provided; and
+   who is most vulnerable to heat in Arizona. Anchored on the
+   **ADHS Heat Preparedness Network**, the **MAG Heat Relief Network**
+   at hrn.azmag.gov, the **Phoenix Office of Heat Response and Mitigation**,
+   the **UA Heat Resilience Initiative** (which umbrellas SW-IFL, NIHHIS,
+   CLIMAS, BRACE, and SCORCH), NWS HeatRisk, and **211 Arizona**.
 
 ### Why DuckLake + DuckDB + Postgres
 
@@ -83,6 +141,14 @@ USE epihack;
 .read schema/knowledge_graph.sql
 .read schema/system_designs.sql
 .read schema/world_cafe.sql
+.read schema/wildlife_vectors.sql   -- focus group 1
+.read schema/heat.sql               -- focus group 2
+.read schema/deep/counties.sql      -- deep seeds (any order)
+.read schema/deep/tribes.sql
+.read schema/deep/pathogens.sql
+.read schema/deep/outbreaks.sql
+.read schema/deep/datasets_apis.sql
+.read schema/deep/standards.sql
 ```
 
 After loading, the graph is queryable in plain SQL. Examples:

@@ -1,0 +1,36 @@
+title: EpiHack Arizona 2026
+description: >
+  A working knowledge framework for the EpiHack Arizona 2026 event:
+  reference figures, breakout-session worksheets, focus-group materials
+  (Wildlife & Vector-Borne Diseases; Heat), and a DuckLake / DuckDB /
+  Postgres knowledge graph seed.
+url: "https://tyson-swetnam.github.io"
+baseurl: "/epihack-2026"
+
+# Use kramdown (GitHub Pages default) and rewrite Markdown links so
+# in-page references like `[Q1](./01-wildlife-tracking.md)` resolve to
+# `01-wildlife-tracking.html` on the published site.
+markdown: kramdown
+plugins:
+  - jekyll-relative-links
+
+relative_links:
+  enabled: true
+  collections: true
+
+# Strip the .md extension from generated URLs so internal HTML links
+# to e.g. wildlife/resources.html work cleanly.
+include:
+  - .nojekyll-skip
+
+exclude:
+  - LICENSE
+  - "*.log"
+  - Gemfile
+  - Gemfile.lock
+
+defaults:
+  - scope:
+      path: ""
+    values:
+      layout: default

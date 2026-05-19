@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Heat &mdash; EpiHack Arizona 2026</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    max-width: 1100px;
+    margin: 2rem auto;
+    padding: 0 1.25rem;
+    color: #1a1a1a;
+    line-height: 1.55;
+  }
+  nav.crumbs { font-size: .9rem; color: #555; margin-bottom: 1rem; }
+  nav.crumbs a { color: #1F3A93; text-decoration: none; }
+  h1 { border-bottom: 3px solid #E84A2B; padding-bottom: .35rem; }
+  h2 { margin-top: 2.25rem; color: #B23A1B; }
+  h3 { margin-top: 1.25rem; }
+  .question-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem;
+    margin: 1.25rem 0 2rem;
+  }
+  .q-card {
+    border: 2px solid #E84A2B;
+    border-radius: 8px;
+    padding: 1rem 1.1rem;
+    background: #fef6f3;
+    text-decoration: none;
+    color: inherit;
+    display: block;
+  }
+  .q-card:hover { background: #fde9e2; }
+  .q-card .num {
+    display: inline-block;
+    background: #B23A1B;
+    color: #fff;
+    border-radius: 50%;
+    width: 1.8rem; height: 1.8rem;
+    line-height: 1.8rem;
+    text-align: center;
+    font-weight: bold;
+    margin-right: .5rem;
+  }
+  .q-card .text { display: block; margin-top: .4rem; color: #333; font-size: .95rem; }
+  .resource {
+    border-left: 6px solid var(--c, #999);
+    background: #fafbfd;
+    padding: .9rem 1.1rem;
+    margin: 1rem 0;
+    border-radius: 0 6px 6px 0;
+  }
+  .resource h3 { margin-top: 0; }
+  .resource .tag {
+    display: inline-block;
+    background: #e3e8ef;
+    color: #333;
+    padding: 1px 8px;
+    border-radius: 999px;
+    font-size: .75rem;
+    margin-left: .4rem;
+    vertical-align: middle;
+  }
+  .stat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: .75rem;
+    margin: 1.25rem 0;
+  }
+  .stat {
+    background: #fef6f3;
+    border-left: 4px solid #E84A2B;
+    padding: .8rem 1rem;
+    border-radius: 0 6px 6px 0;
+  }
+  .stat .num { font-size: 1.5rem; font-weight: bold; color: #B23A1B; display: block; }
+  .stat .label { color: #555; font-size: .85rem; }
+  table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: .95rem; }
+  th, td { border: 1px solid #ddd; padding: .5rem .75rem; text-align: left; vertical-align: top; }
+  th { background: #f0f3f8; }
+  .hero {
+    background: linear-gradient(135deg, #E84A2B 0%, #FFB347 100%);
+    color: #fff;
+    padding: 1.75rem;
+    border-radius: 10px;
+    margin: 1rem 0 2rem;
+  }
+  .hero h1 { color: #fff; border: none; margin: 0 0 .4rem 0; }
+  .hero p { margin: 0; opacity: .95; }
+  footer { margin-top: 4rem; padding-top: 1rem; border-top: 1px solid #ddd; color: #666; font-size: .85rem; }
+</style>
+</head>
+<body>
+
+<nav class="crumbs">
+  <a href="../index.html">EpiHack AZ 2026</a> &raquo; Heat
+</nav>
+
+<div class="hero">
+  <h1>Heat</h1>
+  <p>EpiHack Arizona 2026 focus group &mdash; surveillance, response, and
+     participatory systems for extreme heat in Arizona, the hottest large
+     metropolitan region in the United States.</p>
+</div>
+
+<h2>The scale of the problem</h2>
+<div class="stat-grid">
+  <div class="stat"><span class="num">4,320+</span><span class="label">heat-exposure deaths in AZ, 2013&ndash;2024</span></div>
+  <div class="stat"><span class="num">990</span><span class="label">heat-related deaths in 2023 (state total)</span></div>
+  <div class="stat"><span class="num">~4,298</span><span class="label">heat-related ER visits per year (AZ)</span></div>
+  <div class="stat"><span class="num">2005</span><span class="label">Maricopa heat surveillance started</span></div>
+  <div class="stat"><span class="num">200+</span><span class="label">cooling / hydration sites on the MAG Heat Relief Network</span></div>
+  <div class="stat"><span class="num">36%</span><span class="label">of 2016 Maricopa heat deaths among unsheltered residents</span></div>
+</div>
+
+<h2>The four guiding questions</h2>
+<div class="question-grid">
+
+  <a class="q-card" href="01-public-awareness-cooling-centers.html">
+    <span class="num">1</span><strong>How do you inform the public about cooling-center locations?</strong>
+    <span class="text">MAG HRN, ADHS Heat Preparedness Network ArcGIS map, Pima County map, UA CRH map, 211 Arizona.</span>
+  </a>
+
+  <a class="q-card" href="02-real-time-resource-sharing.html">
+    <span class="num">2</span><strong>Do cooling centers share resources in real time?</strong>
+    <span class="text">Mostly no &mdash; current gaps, data-model sketch, and technology options.</span>
+  </a>
+
+  <a class="q-card" href="03-heat-safety-education.html">
+    <span class="num">3</span><strong>What do you provide for heat-safety education?</strong>
+    <span class="text">ADHS BRACE, UA Heat Resilience Initiative, NWS HeatRisk, CHW outreach, FFA-style networks.</span>
+  </a>
+
+  <a class="q-card" href="04-vulnerable-populations.html">
+    <span class="num">4</span><strong>Who is most vulnerable to heat in AZ?</strong>
+    <span class="text">Unsheltered residents, older adults, AI/AN and Black Maricopa residents, outdoor workers, tribal rural communities.</span>
+  </a>
+
+</div>
+
+<h2>Anchor data resources <a class="tag" href="resources.html" style="text-decoration:none">full catalog →</a></h2>
+
+<h3>State of Arizona</h3>
+
+<div class="resource" style="--c: #C0392B">
+  <h3>ADHS Heat Safety / Climate &amp; Health Program
+    <span class="tag">state · public-health authority</span></h3>
+  <p>Heat-preparedness materials and the statewide ArcGIS Experience map
+     of Heat Preparedness Network locations. ADHS Climate &amp; Health
+     Program was established in 2013 under the <strong>CDC BRACE</strong>
+     cooperative agreement. Publishes the annual heat-mortality report
+     (990 deaths in 2023; >4,320 since 2013).</p>
+  <p><a href="https://www.azdhs.gov/preparedness/epidemiology-disease-control/extreme-weather/heat-safety/heat-preparedness/index.php">ADHS Heat Preparedness</a>
+   &middot; <a href="https://experience.arcgis.com/experience/c5bdf9ab90894e1baa5860c450dedb3b">Heat Preparedness Network map</a>
+   &middot; <a href="https://pub.azdhs.gov/health-stats/report/heat/">Mortality report portal</a></p>
+</div>
+
+<h3>Counties and cities</h3>
+
+<div class="resource" style="--c: #E84A2B">
+  <h3>Maricopa County (MCDPH) &mdash; Heat Surveillance
+    <span class="tag">county</span></h3>
+  <p>Heat-associated mortality surveillance since <strong>2005/2006</strong>.
+     Real-time updates during the season, annual <em>Heat-Associated
+     Deaths in Maricopa County</em> report; surfaced the unsheltered
+     burden (36% of 2016 deaths) and the AI/AN and Black mortality
+     disparities.</p>
+  <p><a href="https://www.maricopa.gov/1858/Heat-Surveillance">maricopa.gov / Heat Surveillance</a></p>
+</div>
+
+<div class="resource" style="--c: #E84A2B">
+  <h3>Maricopa Association of Governments (MAG) &mdash; Heat Relief Network
+    <span class="tag">regional</span></h3>
+  <p>200+ cooling, hydration, respite, and donation sites; May 1 &ndash;
+     September 30; pet-friendly filter; running since 2005.</p>
+  <p><a href="https://hrn.azmag.gov/">hrn.azmag.gov</a>
+   &middot; <a href="https://azmag.gov/Programs/Heat-Relief-Network">MAG program page</a></p>
+</div>
+
+<div class="resource" style="--c: #E84A2B">
+  <h3>City of Phoenix &mdash; Office of Heat Response and Mitigation
+    <span class="tag">city</span></h3>
+  <p>First publicly-funded municipal heat office in the U.S. (2021),
+     directed by Dr. David Hondula (ASU). Runs HeatReadyPHX,
+     tree-and-shade master plans, cool-pavement pilots, and reflective
+     bus-shelter roof studies.</p>
+  <p><a href="https://www.phoenix.gov/heat">phoenix.gov/heat</a></p>
+</div>
+
+<div class="resource" style="--c: #E84A2B">
+  <h3>Pima County &mdash; Cooling Centers
+    <span class="tag">county</span></h3>
+  <p>~3 dozen air-conditioned cooling centers and hydration stations
+     stocked with cooling towels, water, electrolyte packets, and
+     education materials.</p>
+  <p><a href="https://www.pima.gov/2307/Cooling-Centers">pima.gov / Cooling Centers</a>
+   &middot; <a href="https://www.pima.gov/3225/Stay-Informed-Extreme-Heat">Stay Informed</a></p>
+</div>
+
+<h3>Tribal</h3>
+
+<div class="resource" style="--c: #E6A038">
+  <h3>CLIMAS &middot; Inter Tribal Council of Arizona TEC
+    <span class="tag">tribal · academic partnership</span></h3>
+  <p>CLIMAS (NOAA-funded since 1998) is a UA + ITCA + NMSU partnership
+     explicitly working on <strong>rural, border, and tribal heat
+     resilience</strong>. ITCA-TEC builds tribally-driven epidemiologic
+     capacity across the Phoenix and Tucson IHS Areas.</p>
+  <p><a href="https://climas.arizona.edu/">climas.arizona.edu</a>
+   &middot; <a href="https://itcaonline.com/programs/research-and-evaluation/epidemiology/">ITCA-TEC</a></p>
+</div>
+
+<h3>Federal</h3>
+
+<div class="resource" style="--c: #2C3E50">
+  <h3>CDC BRACE &middot; NSSP / BioSense &middot; ATSDR Place &amp; Health
+    <span class="tag">federal</span></h3>
+  <p>Climate-Ready States &amp; Cities Initiative (BRACE) &mdash; AZ is
+     one of 16 states / 2 cities. AZ ED heat-illness data flows through
+     the National Syndromic Surveillance Program (BioSense). ATSDR's
+     Place and Health program publishes Extreme Heat Adaptation
+     guidance. 2025 MMWR reported on cooling-center awareness, use, and
+     access barriers in Maricopa County.</p>
+  <p><a href="https://www.cdc.gov/mmwr/volumes/74/wr/mm7414a4.htm">MMWR 2025 — Maricopa cooling centers</a>
+   &middot; <a href="https://www.atsdr.cdc.gov/place-health/share/extreme-heat-adaptation.html">ATSDR Heat Adaptation</a></p>
+</div>
+
+<div class="resource" style="--c: #2C3E50">
+  <h3>NOAA NWS &mdash; HeatRisk &middot; NIHHIS
+    <span class="tag">federal</span></h3>
+  <p>NWS Phoenix and Tucson issue daily ZIP-code-level HeatRisk forecasts
+     (Green / Yellow / Orange / Red / Magenta) that trigger Extreme Heat
+     Watch and Warning products. NIHHIS coordinates federal heat health
+     work across NOAA + HHS and funds the UA-led Center for Heat
+     Resilient Communities.</p>
+  <p><a href="https://www.weather.gov/psr/heat">NWS Phoenix Heat</a>
+   &middot; <a href="https://www.weather.gov/twc/">NWS Tucson</a></p>
+</div>
+
+<h3>Academic and research</h3>
+
+<div class="resource" style="--c: #1F3A93">
+  <h3>University of Arizona &mdash; Heat Resilience Initiative
+    <span class="tag">academic · umbrella</span></h3>
+  <p>Coordinates DOE-funded SW-IFL, NIHHIS-funded Center for Heat
+     Resilient Communities, NOAA CLIMAS, CDC BRACE, and NIH SCORCH.
+     MEZCOPH received <strong>$2M from CDC</strong> for AZ heat
+     interventions.</p>
+  <p><a href="https://heat.arizona.edu/">heat.arizona.edu</a>
+   &middot; <a href="https://azclimatehealth.arizona.edu/resources/patients">AZ Climate &amp; Health (patient resources)</a>
+   &middot; <a href="https://azhealthtxt.arizona.edu/resources/az-cooling-centers-map">UA CRH AZ Cooling Centers Map</a></p>
+</div>
+
+<div class="resource" style="--c: #1F3A93">
+  <h3>ASU &mdash; Knowledge Exchange for Resilience
+    <span class="tag">academic</span></h3>
+  <p>Co-leads the Arizona Heat Resilience Workgroup; informed the
+     Governor's Extreme Heat Preparedness Plan. Heat researchers
+     including Dr. David Hondula (also Phoenix OHRM director) lead
+     urban-heat-island work.</p>
+  <p><a href="https://resilience.asu.edu/">resilience.asu.edu</a>
+   &middot; <a href="https://sustainability.asu.edu/hue/news/">Healthy Urban Environments</a></p>
+</div>
+
+<h3>Participatory and public-facing</h3>
+
+<div class="resource" style="--c: #4CAF50">
+  <h3>211 Arizona &middot; CHWs &middot; Train-the-Trainer
+    <span class="tag">participatory</span></h3>
+  <p>211 Arizona phone routing in English and Spanish for cooling
+     centers, transportation, utility assistance, and emergency AC
+     repair. Community Health Workers do in-home heat-risk assessments.
+     The 12-year-old Western Regional Public Health Train-the-Trainer
+     program (HHS Region 9) was named in the
+     <a href="../notes/world-cafe/q4-heat.html">World Café Q4 Heat card</a>
+     as a proven scale channel.</p>
+  <p><a href="https://211arizona.org/crisis/heat-relief/">211arizona.org / Heat Relief</a></p>
+</div>
+
+<h2>How this connects to the rest of the site</h2>
+<table>
+<thead><tr><th>Concept</th><th>Where</th></tr></thead>
+<tbody>
+<tr><td>Purpose of a One Health Participatory System</td>
+    <td><a href="../figures/index.html#fig-01">Figure 1</a></td></tr>
+<tr><td>Minimum Key Data Parameters (Environmental class applies)</td>
+    <td><a href="../figures/index.html#fig-02">Figure 2</a></td></tr>
+<tr><td>Outbreak Timeliness Metrics (Detect &rarr; Respond intervals)</td>
+    <td><a href="../figures/index.html#fig-03">Figure 3</a></td></tr>
+<tr><td>12-step design lifecycle</td>
+    <td><a href="../figures/index.html#fig-04">Figure 4</a></td></tr>
+<tr><td>World Café Q4 Heat card &mdash; community engagement tactics</td>
+    <td><a href="../notes/world-cafe/q4-heat.html">heat card</a></td></tr>
+</tbody>
+</table>
+
+<footer>
+  EpiHack Arizona 2026 &middot; Heat focus group. Source: Ending Pandemics
+  Academy &middot; University of Arizona Mel &amp; Enid Zuckerman College
+  of Public Health &middot; Global Health Institute.
+</footer>
+
+</body>
+</html>

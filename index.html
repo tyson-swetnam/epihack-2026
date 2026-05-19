@@ -94,23 +94,59 @@
 <div class="section-grid">
   <a class="card" href="wildlife/index.html" style="--c: #2C5F2D">
     <h3>Wildlife &amp; Vector-Borne Diseases</h3>
-    <p>Four guiding questions plus NEON, ADHS, and AZGFD as anchor
-       resources.</p>
+    <p>Four questions plus 30+ anchor resources across state, county,
+       tribal, federal, academic, and citizen-science jurisdictions.</p>
     <div class="badges">
       <span class="badge">wildlife</span>
       <span class="badge">vectors</span>
       <span class="badge">zoonotic</span>
     </div>
   </a>
+  <a class="card" href="heat/index.html" style="--c: #E84A2B">
+    <h3>Heat</h3>
+    <p>Cooling-center awareness, real-time coordination, education, and
+       the populations most at risk in the hottest large U.S. metro.</p>
+    <div class="badges">
+      <span class="badge">extreme-heat</span>
+      <span class="badge">cooling-centers</span>
+      <span class="badge">equity</span>
+    </div>
+  </a>
+</div>
+
+<h2>Interactive visualizations</h2>
+<div class="section-grid">
+  <a class="card" href="map/index.html" style="--c: #1F6FB0">
+    <h3>Arizona map <span style="font-weight:400;font-size:.85em;color:#888">(MapLibre GL)</span></h3>
+    <p>All 15 counties, 22 tribal nations, NEON sites, agency HQs,
+       federal-land units, and historical-outbreak locations from the
+       knowledge graph &mdash; each pin links back to its
+       <code>kg_node_id</code>.</p>
+    <div class="badges">
+      <span class="badge">geospatial</span>
+      <span class="badge">maplibre</span>
+    </div>
+  </a>
+  <a class="card" href="graph/index.html" style="--c: #C0392B">
+    <h3>Pathogen knowledge graph <span style="font-weight:400;font-size:.85em;color:#888">(Cytoscape)</span></h3>
+    <p>16 pathogens with their vectors, reservoirs, surveilling agencies,
+       and focus areas as an interactive node-edge graph. Filter by
+       pathogen class; switch layouts; click a node to see its
+       neighborhood.</p>
+    <div class="badges">
+      <span class="badge">knowledge-graph</span>
+      <span class="badge">cytoscape</span>
+    </div>
+  </a>
 </div>
 
 <h2>Design worksheets (completed)</h2>
 <div class="section-grid">
-  <a class="card" href="worksheets/01-animal-health-events.md" style="--c: #C2185B">
+  <a class="card" href="worksheets/01-animal-health-events.html" style="--c: #C2185B">
     <h3>Unusual Animal Health Events as Early Warning Signal</h3>
     <p>Animal owners and caretakers reporting unusual events as a human-health early-warning signal.</p>
   </a>
-  <a class="card" href="worksheets/02-desert-wildlife-interface.md" style="--c: #6A1B9A">
+  <a class="card" href="worksheets/02-desert-wildlife-interface.html" style="--c: #6A1B9A">
     <h3>Desert Urban Wildlife &amp; Hobby-Farm Interface</h3>
     <p>Hobby farmers and observers at the desert urban-wildlife interface.</p>
   </a>
@@ -118,15 +154,15 @@
 
 <h2>World Café &mdash; Q4: Successful direct public engagement</h2>
 <div class="section-grid">
-  <a class="card" href="notes/world-cafe/q4-heat.md" style="--c: #E84A7A">
+  <a class="card" href="notes/world-cafe/q4-heat.html" style="--c: #E84A7A">
     <h3>Heat (pink card)</h3>
     <p>Community events, train-the-trainer (Region 9), media syndication, CHW heat-risk assessments.</p>
   </a>
-  <a class="card" href="notes/world-cafe/q4-unhoused.md" style="--c: #5BA3D0">
+  <a class="card" href="notes/world-cafe/q4-unhoused.html" style="--c: #5BA3D0">
     <h3>Unhoused (blue card)</h3>
     <p>Healthy Companions Program, Heat Surveillance, Shelter App.</p>
   </a>
-  <a class="card" href="notes/world-cafe/q4-information-flow.md" style="--c: #E6C36A">
+  <a class="card" href="notes/world-cafe/q4-information-flow.html" style="--c: #E6C36A">
     <h3>Information Flow (yellow card)</h3>
     <p>Face-to-face, SMS, geo-alerts, Epic/TMC EMR, dating apps &harr; STI.</p>
   </a>
@@ -141,8 +177,9 @@ the catalog) and queried via <strong>DuckDB</strong>:</p>
   <li><code>schema/system_designs.sql</code> &mdash; worksheet template, focus areas, completed designs.</li>
   <li><code>schema/world_cafe.sql</code> &mdash; World Café Q4 engagement examples and tactics.</li>
   <li><code>schema/wildlife_vectors.sql</code> &mdash; wildlife / vector-borne focus group, four questions, and 30+ anchor resources across state, county, tribal, federal, academic, and citizen-science jurisdictions.</li>
+  <li><code>schema/heat.sql</code> &mdash; Heat focus group, four questions, vulnerable populations, and 30+ heat-specific resources (ADHS BRACE, MAG HRN, Phoenix OHRM, NWS HeatRisk, UA Heat Resilience Initiative, CLIMAS, 211 Arizona).</li>
 </ul>
-<p>See the <a href="README.md">README</a> for bootstrap commands and example queries.</p>
+<p>See the <a href="README.html">README</a> for bootstrap commands and example queries.</p>
 
 <footer>
   Source: Ending Pandemics Academy &middot; University of Arizona Mel &amp;
