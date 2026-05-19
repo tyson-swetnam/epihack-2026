@@ -130,18 +130,19 @@
   </a>
 </div>
 
-<h2>Prototype app (Phase 0)</h2>
+<h2>Prototype app (Phase 0 + 1)</h2>
 <div class="section-grid">
   <a class="card" href="app/index.html" style="--c: #C0392B">
     <h3>AZ One Health Sentinel &mdash; prototype</h3>
-    <p>Vanilla HTML+JS+CSS prototype hosting the Scenario-A tick mail-in
-       flow end-to-end: GPS, photo capture, symptom check, consent,
-       and a success card with species ID + mailing label + 14-day
-       watchlist. Mobile-first; no build pipeline.</p>
+    <p>Vanilla HTML+JS+CSS app hosting four flows: tick mail-in (VBD)
+       and three heat flows (CHW check-in, anonymous self-report,
+       "where can I cool off?"). Mobile-first; Spanish bundle;
+       vulnerability-score thermometer; confirm-before-dispatch
+       transport button.</p>
     <div class="badges">
-      <span class="badge">phase-0</span>
-      <span class="badge">prototype</span>
       <span class="badge">vbd</span>
+      <span class="badge">heat</span>
+      <span class="badge">prototype</span>
     </div>
   </a>
 </div>
@@ -153,42 +154,67 @@
     <p>Wraps the VectorSurv mosquito and tick surveillance API
        (sites, collections, pools, abundance, infection rate, vector
        index) &mdash; 13 tools, spec-aligned to v1.0.44.</p>
-    <div class="badges">
-      <span class="badge">vbd</span>
-      <span class="badge">shipped</span>
-    </div>
+    <div class="badges"><span class="badge">vbd</span><span class="badge">shipped</span></div>
   </a>
   <a class="card" href="mcp/knowledge-graph-mcp/README.html" style="--c: #1F3A93">
     <h3>knowledge-graph-mcp</h3>
     <p>Read-only DuckDB query MCP over the EpiHack knowledge graph
-       (572 nodes / 791 edges / 1027 properties at last load).
-       12 tools incl. <code>kg_node_lookup</code>, <code>kg_path</code>,
-       <code>kg_pathogens_by_vector</code>, and a SELECT-only SQL
+       (572 nodes / 791 edges / 1027 properties). 12 tools incl.
+       <code>kg_node_lookup</code>, <code>kg_path</code>,
+       <code>kg_pathogens_by_vector</code>, plus a SELECT-only SQL
        escape-hatch.</p>
-    <div class="badges">
-      <span class="badge">both</span>
-      <span class="badge">shipped</span>
-    </div>
+    <div class="badges"><span class="badge">both</span><span class="badge">shipped</span></div>
   </a>
   <a class="card" href="mcp/great-az-tick-check-mcp/README.html" style="--c: #6A1B9A">
     <h3>great-az-tick-check-mcp</h3>
     <p>Mock submission tracking for the Great Arizona Tick Check
-       (UA Cooperative Extension / Walker lab) until the real API
-       arrives. 5 tools incl. mailing-label generation.</p>
-    <div class="badges">
-      <span class="badge">vbd</span>
-      <span class="badge">shipped</span>
-    </div>
+       (UA Cooperative Extension / Walker lab). 5 tools incl.
+       mailing-label generation.</p>
+    <div class="badges"><span class="badge">vbd</span><span class="badge">shipped</span></div>
   </a>
   <a class="card" href="mcp/nws-heatrisk-mcp/README.html" style="--c: #E84A2B">
     <h3>nws-heatrisk-mcp</h3>
     <p>NWS HeatRisk + active heat alerts + Rothfusz heat-index
-       calculator. 7 tools, public api.weather.gov (no auth, just a
-       User-Agent).</p>
-    <div class="badges">
-      <span class="badge">heat</span>
-      <span class="badge">shipped</span>
-    </div>
+       calculator. 7 tools.</p>
+    <div class="badges"><span class="badge">heat</span><span class="badge">shipped</span></div>
+  </a>
+  <a class="card" href="mcp/mag-hrn-mcp/README.html" style="--c: #E84A2B">
+    <h3>mag-hrn-mcp</h3>
+    <p>MAG Heat Relief Network &mdash; cooling-center search,
+       open-now / pets-ok filters, supply-status stub. 5 tools, 12
+       canned Phoenix-metro centers, ArcGIS Feature Service
+       env-overridable.</p>
+    <div class="badges"><span class="badge">heat</span><span class="badge">shipped</span></div>
+  </a>
+  <a class="card" href="mcp/adhs-mcp/README.html" style="--c: #C0392B">
+    <h3>adhs-mcp</h3>
+    <p>ADHS public surveillance summaries: heat mortality,
+       arbovirus, recent cases by pathogen, reportable conditions
+       with ICD-10 / SNOMED. 6 tools, mock-by-default with a clean
+       swap-in path.</p>
+    <div class="badges"><span class="badge">both</span><span class="badge">shipped</span></div>
+  </a>
+  <a class="card" href="mcp/211-az-mcp/README.html" style="--c: #4CAF50">
+    <h3>211-az-mcp</h3>
+    <p>211 Arizona referrals: transport to cooling center, utility
+       assistance, crisis lines. 6 tools, in-memory dispatch
+       tracking, English + Spanish + indigenous-language pathways.</p>
+    <div class="badges"><span class="badge">heat</span><span class="badge">shipped</span></div>
+  </a>
+  <a class="card" href="mcp/whispers-mcp/README.html" style="--c: #2C3E50">
+    <h3>whispers-mcp</h3>
+    <p>USGS WHISPers wildlife mortality / morbidity events &mdash;
+       AZ event listings, bbox queries, species / diagnosis filters.
+       6 tools, 15 tests, 10 canned events including Four Corners
+       hantavirus and the 2025 Coconino plague.</p>
+    <div class="badges"><span class="badge">vbd</span><span class="badge">shipped</span></div>
+  </a>
+  <a class="card" href="mcp/inaturalist-mcp/README.html" style="--c: #4CAF50">
+    <h3>inaturalist-mcp</h3>
+    <p>iNaturalist citizen-science observations &mdash; tick
+       observations, vector + rodent records, taxonomy resolution.
+       6 tools, 21 canned AZ observations, place_id=53.</p>
+    <div class="badges"><span class="badge">vbd</span><span class="badge">shipped</span></div>
   </a>
 </div>
 
