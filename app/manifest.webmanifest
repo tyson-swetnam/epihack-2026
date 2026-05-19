@@ -1,0 +1,70 @@
+{
+  "name": "AZ One Health Sentinel",
+  "short_name": "Sentinel",
+  "description": "Mobile-first participatory-surveillance prototype for Arizona: tick mail-in, CHW heat check-in, anonymous heat self-report, and cooling-center lookup.",
+  "id": "/app/",
+  "scope": "/app/",
+  "start_url": "/app/index.html",
+  "display": "standalone",
+  "orientation": "portrait",
+  "theme_color": "#1F3A93",
+  "background_color": "#ffffff",
+  "lang": "en",
+  "categories": ["health", "medical", "utilities"],
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "maskable"
+    },
+    {
+      "src": "icons/icon.svg",
+      "type": "image/svg+xml",
+      "sizes": "any",
+      "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Submit a tick",
+      "short_name": "Tick",
+      "description": "Mail-in tick report with a 14-day symptom watchlist.",
+      "url": "/app/tick/index.html",
+      "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "Heat check-in (CHW)",
+      "short_name": "Check-in",
+      "description": "Field-app flow for community health workers.",
+      "url": "/app/heat/check-in/index.html",
+      "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "Heat self-report",
+      "short_name": "Self-report",
+      "description": "Anonymous heat-illness self-report.",
+      "url": "/app/heat/self-report/index.html",
+      "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "Where can I cool off?",
+      "short_name": "Cool off",
+      "description": "Nearby cooling-center lookup.",
+      "url": "/app/heat/cool-off/index.html",
+      "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    }
+  ]
+}

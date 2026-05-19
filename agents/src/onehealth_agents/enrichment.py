@@ -98,6 +98,42 @@ class EnrichmentAgent:
                     county_id=observation.geo.county_id if observation.geo else None,
                 )
 
+            # Nearby wildlife mortality (USGS WHISPers) + citizen-science
+            # observations (iNaturalist) for the user's bounding box, if
+            # we have coordinates. Both are best-effort enrichment; the
+            # failure-isolation pattern records them in failed_tools and
+            # the observation still lands.
+            if (
+                observation.dataset.general.lat
+                and observation.dataset.general.lon
+            ):
+                lat = observation.dataset.general.lat
+                lon = observation.dataset.general.lon
+                # ~50 km box around the report.
+                bbox = (lon - 0.5, lat - 0.5, lon + 0.5, lat + 0.5)
+                await hydrate(
+                    "whispers-mcp",
+                    "whispers_events_bbox",
+                    min_lon=bbox[0], min_lat=bbox[1],
+                    max_lon=bbox[2], max_lat=bbox[3],
+                    days=90,
+                    limit=50,
+                )
+                await hydrate(
+                    "inaturalist-mcp",
+                    "inat_observations_near",
+                    lat=lat,
+                    lon=lon,
+                    radius_km=25,
+                    taxon=(
+                        "ticks" if observation.dataset.exposure.tick_insect_bite
+                        else "mosquitoes"
+                    ),
+                    days=90,
+                    quality_grade="research",
+                    limit=50,
+                )
+
         # --- Heat branch --------------------------------------------------
         if observation.vertical in {Vertical.HEAT, Vertical.BOTH}:
             if observation.dataset.general.lat and observation.dataset.general.lon:

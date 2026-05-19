@@ -207,6 +207,22 @@ class FakeMCPClient:
             transport_to_cooling_center,
         )
 
+        # whispers-mcp.events_bbox ---------------------------------------
+        async def whispers_events_bbox(**_: Any) -> dict[str, Any]:
+            return {"events": [], "count": 0}
+
+        client.register(
+            "whispers-mcp", "whispers_events_bbox", whispers_events_bbox
+        )
+
+        # inaturalist-mcp.observations_near ------------------------------
+        async def inat_observations_near(**_: Any) -> dict[str, Any]:
+            return {"observations": [], "count": 0}
+
+        client.register(
+            "inaturalist-mcp", "inat_observations_near", inat_observations_near
+        )
+
         return client
 
 

@@ -4,6 +4,11 @@
 
 import { requestLocation, isPlausibleZip } from '../shared/geo.js';
 import { submitIntake, isMockMode } from '../shared/intake-client.js';
+import { enqueueReport } from '../shared/sync.js';
+import { bootstrapOfflineUi } from '../shared/sw-register.js';
+
+// Register the service worker + mount the sync-status pill in the header.
+bootstrapOfflineUi();
 
 // ---------------------------------------------------------------------------
 // Step orchestration
@@ -352,17 +357,78 @@ async function doSubmit() {
 
   try {
     const payload = buildPayload();
+
+    // Offline short-circuit: if the browser already knows it's offline,
+    // skip the fetch attempt and queue immediately. This also covers the
+    // mock-mode case where the SW won't see a real network request.
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      await enqueueReport({
+        flow: 'tick_mailin',
+        vertical: 'vbd',
+        payload
+      });
+      pend.hidden = true;
+      renderQueuedResult();
+      return;
+    }
+
     const res = await submitIntake('tick_mailin', payload,
                                    { photoBlob: state.photo });
+    // The service worker may catch an offline submit and respond with a
+    // 202 { queued: true } — in that case we still need to put it in the
+    // IDB queue ourselves (the SW does not have the original payload).
+    if (res && res.queued) {
+      await enqueueReport({
+        flow: 'tick_mailin',
+        vertical: 'vbd',
+        payload
+      });
+      pend.hidden = true;
+      renderQueuedResult();
+      return;
+    }
     pend.hidden = true;
     renderResult(res);
   } catch (e) {
+    // Network rejection (DNS, CORS, offline w/o SW). Treat as offline-queue.
+    try {
+      await enqueueReport({
+        flow: 'tick_mailin',
+        vertical: 'vbd',
+        payload: buildPayload()
+      });
+      pend.hidden = true;
+      renderQueuedResult();
+      return;
+    } catch (_) { /* fall through to error UI */ }
     pend.hidden = true;
     pre.hidden  = false;
     stick.hidden = false;
     error.hidden = false;
     error.textContent = `Submit failed: ${e.message}. Try again, or come back later.`;
   }
+}
+
+function renderQueuedResult() {
+  const el = $('submit-result');
+  el.hidden = false;
+  el.innerHTML = `
+    <div class="result-card" role="status" aria-live="polite"
+         style="border-left:6px solid #FFB300;background:#fff8e6">
+      <h3>Saved offline.</h3>
+      <p>You're offline (or the server isn't reachable). Your tick report
+         is safely stored on this device and will upload automatically
+         the next time you have a network connection.</p>
+      <p class="muted small">
+        Watch the <strong>pending</strong> badge in the header — it will
+        switch to <strong>synced</strong> once the report reaches the
+        Intake Agent.
+      </p>
+    </div>
+    <div class="cta-grid">
+      <a class="btn ghost" href="../index.html">Back to app home</a>
+    </div>
+  `;
 }
 
 function renderResult(res) {

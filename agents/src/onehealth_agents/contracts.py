@@ -466,20 +466,79 @@ class ClusterAlert(BaseModel):
         description="Per plan/03 backstop, final declaration is always human.",
     )
 
+    # ---- Calibrated-detector audit fields (Phase-3 cluster calibration). ----
+    # All optional with defaults so legacy callers keep round-tripping.
+    tier1_score: Optional[float] = Field(
+        default=None,
+        description="Tier-1 deterministic O/E ratio that tripped the alert.",
+    )
+    tier2_posterior: Optional[float] = Field(
+        default=None,
+        description="Tier-2 Gamma-Poisson posterior P(RR > 1.5 | data).",
+    )
+    baseline_window_start: Optional[str] = Field(
+        default=None,
+        description="ISO 8601 start of the trailing baseline window.",
+    )
+    baseline_window_end: Optional[str] = Field(
+        default=None,
+        description="ISO 8601 end of the trailing baseline window.",
+    )
+    rule_tripped: Optional[str] = Field(
+        default=None,
+        description="Free-text label of the rule that fired "
+        "(e.g. 'vbd/zcta-week/theta3.0/k5/posterior0.95').",
+    )
+    pathogen_hint: Optional[str] = Field(
+        default=None,
+        description="Best-guess pathogen.* slug from the cluster's observations.",
+    )
+    historical_match: Optional[str] = Field(
+        default=None,
+        description="Slug of the closest historical outbreak (within 5 yr & 200 km); "
+        "null if no neighbour is close enough.",
+    )
+
 
 # ---------------------------------------------------------------------------
 # Per-agent audit trace  (Figure 3 timeliness clock anchor)
+#
+# Mirrors the columns of ``kg.agent_run`` defined in
+# ``schema/deep/audit.sql``. The orchestrator's audit sink projects each
+# pipeline step into one of these and the sink writes it to DuckLake (or an
+# in-memory DuckDB during tests). The ``status`` Literal is kept for back-
+# compat with the existing orchestrator code paths; the audit sink maps it
+# to the SQL ``outcome`` enum ('success' / 'degraded' / 'error') at write
+# time.
 # ---------------------------------------------------------------------------
 class AgentRun(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
+    # Identity
+    run_id: str = Field(default_factory=lambda: uuid4().hex)
     agent: str
+    observation_id: Optional[str] = None
+
+    # Timing
     started_at: str
     finished_at: str
     duration_ms: float
+
+    # Outcome
     status: Literal["ok", "degraded", "failed"]
     error: Optional[str] = None
+
+    # Model + token accounting
     model: Optional[str] = None
+    prompt_tokens: Optional[int] = None
+    completion_tokens: Optional[int] = None
+    cache_read_tokens: Optional[int] = None
+    cache_creation_tokens: Optional[int] = None
+    cost_usd: Optional[float] = None
+
+    # Reproducibility (sha256 of canonical-JSON input/output payloads)
+    input_digest: Optional[str] = None
+    output_digest: Optional[str] = None
 
 
 # ---------------------------------------------------------------------------

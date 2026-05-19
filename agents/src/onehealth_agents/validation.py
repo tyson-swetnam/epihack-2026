@@ -21,6 +21,13 @@ from .contracts import (
 
 # consent.* -> set of param.* slugs that should be suppressed.
 # Mirrors the suppressesField edges in schema/deep/application.sql.
+# Tribal nations whose data-sharing MOUs are currently signed and
+# active. Empty by default -- the safer posture per plan/02
+# "Auth + data-sovereignty notes". An operator populates this from an
+# out-of-band list at deployment time.
+_TRIBAL_MOU_ACTIVE: set[str] = set()
+
+
 _SUPPRESS_RULES: dict[ConsentProfile, set[str]] = {
     ConsentProfile.ANONYMOUS_HEAT: {
         "param.email",
@@ -121,9 +128,41 @@ class ValidationAgent:
                 suppressed.append(slug)
                 flags.append(f"consent_violation:{slug}")
 
-        # 4. Tribal-data MOU check (placeholder).
+        # 4. Tribal-data sovereignty: if the observation falls on a
+        #    tribal nation's land AND that tribe does NOT have an
+        #    active data-sharing MOU on record, suppress every
+        #    row-level identifier and coarsen geo to the county
+        #    centroid. Tag the observation so a reviewer knows to
+        #    audit before any downstream sharing.
+        #
+        #    ``_TRIBAL_MOU_ACTIVE`` is an in-memory set that an
+        #    operator populates at deployment from an out-of-band
+        #    list of signed agreements. Empty by default -- the
+        #    safer posture.
         if observation.geo and observation.geo.tribe_id:
-            flags.append(f"tribal_mou_check_required:{observation.geo.tribe_id}")
+            tribe = observation.geo.tribe_id
+            if tribe not in _TRIBAL_MOU_ACTIVE:
+                # Row-level suppression at write time, per plan/02
+                # "Auth + data-sovereignty notes".
+                obs_dict = observation.dataset.general
+                for field in (
+                    "contact_email",
+                    "contact_phone",
+                    "household_member_id",
+                    "unique_id",
+                ):
+                    if getattr(obs_dict, field, None) is not None:
+                        setattr(obs_dict, field, None)
+                        suppressed.append(f"tribal_sovereignty:{field}")
+                # Coarsen geo to the county centroid (if we have one)
+                # so spatial detail isn't carried downstream.
+                if observation.geo.county_id:
+                    obs_dict.lat = None
+                    obs_dict.lon = None
+                    suppressed.append("tribal_sovereignty:precise_coordinates")
+                flags.append(f"tribal_sovereignty_applied:{tribe}")
+            else:
+                flags.append(f"tribal_mou_active:{tribe}")
 
         # Decide final status.
         if duplicate_of:

@@ -1,0 +1,38 @@
+{
+  "_comment": "Canned NWS HeatRisk for the AZ One Health Today aggregated view. Shaped like nws-heatrisk-mcp.nws_heatrisk + nws_heatrisk_week merged. Point is Phoenix City Hall (Maricopa County) to match the agency-dashboard demo and app/heat/mock-responses.json (heat_chw_checkin, date 2026-05-19, Magenta).",
+  "tool": "nws-heatrisk-mcp.nws_heatrisk_week",
+  "fetched_at": "2026-05-19T14:05:00Z",
+  "lat": 33.4484,
+  "lon": -112.0740,
+  "county": "Maricopa",
+  "today": {
+    "date": "2026-05-19",
+    "category": {
+      "value": 4,
+      "label": "Magenta",
+      "description": "Rare and/or long-duration extreme heat with little to no overnight relief. Risk to anyone without effective cooling and/or adequate hydration."
+    },
+    "ambient_temp_f": 115,
+    "overnight_low_f": 89,
+    "advice_short": "Stay indoors with AC noon-7pm. Check on neighbors over 65 or unsheltered."
+  },
+  "week": [
+    { "date": "2026-05-19", "category": "Magenta", "value": 4, "high_f": 115 },
+    { "date": "2026-05-20", "category": "Magenta", "value": 4, "high_f": 114 },
+    { "date": "2026-05-21", "category": "Red",     "value": 3, "high_f": 110 },
+    { "date": "2026-05-22", "category": "Red",     "value": 3, "high_f": 109 },
+    { "date": "2026-05-23", "category": "Orange",  "value": 2, "high_f": 105 },
+    { "date": "2026-05-24", "category": "Orange",  "value": 2, "high_f": 104 },
+    { "date": "2026-05-25", "category": "Yellow",  "value": 1, "high_f": 100 }
+  ],
+  "active_alerts": [
+    {
+      "id": "NWS-PSR-EHW-20260519",
+      "event": "Excessive Heat Warning",
+      "headline": "Excessive Heat Warning in effect until 2026-05-22 20:00 MST",
+      "sender_name": "NWS Phoenix",
+      "severity": "Extreme",
+      "affected_zones": ["AZZ540", "AZZ541", "AZZ548", "AZZ549", "AZZ550", "AZZ551", "AZZ552", "AZZ553", "AZZ554", "AZZ555", "AZZ559"]
+    }
+  ]
+}

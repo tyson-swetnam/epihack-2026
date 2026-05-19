@@ -1,0 +1,82 @@
+{
+  "_comment": "Canned vectorsurv_calculate_infection_rate output shape (MIR per 1000 mosquitoes, Biweek interval, target WNV, mosquito) for the trailing four weeks. Mirrors mcp/vectorsurv/src/vectorsurv_mcp/calculations.py:infection_rate(). The `county_summary` block is a small aggregation we'd add to a future MCP tool (see the README's wire-to-real-MCPs section).",
+  "tool": "vectorsurv-mcp.vectorsurv_calculate_infection_rate",
+  "fetched_at": "2026-05-19T14:05:00Z",
+  "target_disease": "WNV",
+  "interval": "Biweek",
+  "method": "mir",
+  "scale": 1000,
+  "arthropod": "mosquito",
+  "by_county": {
+    "Maricopa": {
+      "kg_node_id": "county.maricopa",
+      "trend_label": "up 3x vs trailing 4 weeks",
+      "trend_multiple": 3.1,
+      "intervals": [
+        { "interval": "2026-B07", "positive_pools":  3, "total_pools":  82, "mosquitoes_tested": 4920, "infection_rate": 0.61, "method": "mir", "scale": 1000, "target": "WNV" },
+        { "interval": "2026-B08", "positive_pools":  4, "total_pools":  91, "mosquitoes_tested": 5340, "infection_rate": 0.75, "method": "mir", "scale": 1000, "target": "WNV" },
+        { "interval": "2026-B09", "positive_pools":  7, "total_pools":  88, "mosquitoes_tested": 5210, "infection_rate": 1.34, "method": "mir", "scale": 1000, "target": "WNV" },
+        { "interval": "2026-B10", "positive_pools": 12, "total_pools": 102, "mosquitoes_tested": 6240, "infection_rate": 1.92, "method": "mir", "scale": 1000, "target": "WNV" }
+      ]
+    },
+    "Pima": {
+      "kg_node_id": "county.pima",
+      "trend_label": "stable",
+      "trend_multiple": 1.1,
+      "intervals": [
+        { "interval": "2026-B07", "positive_pools": 1, "total_pools": 44, "mosquitoes_tested": 2410, "infection_rate": 0.41, "method": "mir", "scale": 1000, "target": "WNV" },
+        { "interval": "2026-B08", "positive_pools": 1, "total_pools": 46, "mosquitoes_tested": 2530, "infection_rate": 0.40, "method": "mir", "scale": 1000, "target": "WNV" },
+        { "interval": "2026-B09", "positive_pools": 2, "total_pools": 48, "mosquitoes_tested": 2680, "infection_rate": 0.75, "method": "mir", "scale": 1000, "target": "WNV" },
+        { "interval": "2026-B10", "positive_pools": 1, "total_pools": 45, "mosquitoes_tested": 2470, "infection_rate": 0.40, "method": "mir", "scale": 1000, "target": "WNV" }
+      ]
+    },
+    "Coconino": {
+      "kg_node_id": "county.coconino",
+      "trend_label": "no pools positive",
+      "trend_multiple": 0,
+      "intervals": [
+        { "interval": "2026-B07", "positive_pools": 0, "total_pools": 12, "mosquitoes_tested":  610, "infection_rate": 0, "method": "mir", "scale": 1000, "target": "WNV" },
+        { "interval": "2026-B08", "positive_pools": 0, "total_pools": 14, "mosquitoes_tested":  720, "infection_rate": 0, "method": "mir", "scale": 1000, "target": "WNV" },
+        { "interval": "2026-B09", "positive_pools": 0, "total_pools": 15, "mosquitoes_tested":  790, "infection_rate": 0, "method": "mir", "scale": 1000, "target": "WNV" },
+        { "interval": "2026-B10", "positive_pools": 0, "total_pools": 16, "mosquitoes_tested":  830, "infection_rate": 0, "method": "mir", "scale": 1000, "target": "WNV" }
+      ]
+    },
+    "Yuma": {
+      "kg_node_id": "county.yuma",
+      "trend_label": "first positives of season",
+      "trend_multiple": null,
+      "intervals": [
+        { "interval": "2026-B07", "positive_pools": 0, "total_pools": 24, "mosquitoes_tested": 1320, "infection_rate": 0, "method": "mir", "scale": 1000, "target": "WNV" },
+        { "interval": "2026-B08", "positive_pools": 0, "total_pools": 26, "mosquitoes_tested": 1450, "infection_rate": 0, "method": "mir", "scale": 1000, "target": "WNV" },
+        { "interval": "2026-B09", "positive_pools": 1, "total_pools": 28, "mosquitoes_tested": 1530, "infection_rate": 0.65, "method": "mir", "scale": 1000, "target": "WNV" },
+        { "interval": "2026-B10", "positive_pools": 2, "total_pools": 30, "mosquitoes_tested": 1620, "infection_rate": 1.23, "method": "mir", "scale": 1000, "target": "WNV" }
+      ]
+    }
+  },
+  "statewide": {
+    "intervals": [
+      { "interval": "2026-B07", "positive_pools":  4, "total_pools": 162, "mosquitoes_tested":  9260, "infection_rate": 0.43, "method": "mir", "scale": 1000, "target": "WNV" },
+      { "interval": "2026-B08", "positive_pools":  5, "total_pools": 177, "mosquitoes_tested": 10040, "infection_rate": 0.50, "method": "mir", "scale": 1000, "target": "WNV" },
+      { "interval": "2026-B09", "positive_pools": 10, "total_pools": 179, "mosquitoes_tested": 10210, "infection_rate": 0.98, "method": "mir", "scale": 1000, "target": "WNV" },
+      { "interval": "2026-B10", "positive_pools": 15, "total_pools": 193, "mosquitoes_tested": 11160, "infection_rate": 1.34, "method": "mir", "scale": 1000, "target": "WNV" }
+    ]
+  },
+  "active_outbreaks": [
+    {
+      "tool": "whispers-mcp + knowledge-graph-mcp",
+      "kg_node_id": "outbreak.maricopa.wnv.2026",
+      "label": "Maricopa County WNV cluster",
+      "started": "2026-05-04",
+      "human_cases_ytd": 7,
+      "summary": "Cluster of WNV-positive Culex pools in central and west-side ZCTAs; first human case confirmed 2026-05-11."
+    },
+    {
+      "tool": "whispers-mcp",
+      "kg_node_id": "outbreak.coconino.plague.2025",
+      "label": "Coconino prairie-dog plague hotspot (active monitoring)",
+      "started": "2025-08-12",
+      "human_cases_ytd": 0,
+      "summary": "Continued AZGFD monitoring of Yersinia pestis in Coconino prairie-dog colonies; no human cases this year."
+    }
+  ]
+}

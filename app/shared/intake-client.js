@@ -88,6 +88,13 @@ export async function submitIntake(flow, payload, opts = {}) {
     body: form,
     signal: opts.signal
   });
+  // The service worker (app/sw.js) hands back a 202 + { queued: true } when
+  // it has caught an offline submission. Surface that to callers verbatim
+  // so they can route through the IDB sync queue without retrying.
+  if (res.status === 202) {
+    const body = await res.json().catch(() => ({}));
+    if (body && body.queued) return { ...body, http_status: 202 };
+  }
   if (!res.ok) {
     throw new Error(`intake failed: ${res.status} ${res.statusText}`);
   }

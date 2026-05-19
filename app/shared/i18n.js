@@ -229,7 +229,46 @@ const MESSAGES = {
     'cooloff.center.transport':   'Transporte disponible',
     'cooloff.center.open_maps':   'Abrir en Mapas',
     'cooloff.center.call_211':    'Llamar al 211',
-  }
+  },
+
+  // -----------------------------------------------------------------
+  // Diné Bizaad (Navajo) -- PLACEHOLDER BUNDLE.
+  //
+  // Every key falls back to English at runtime via the `t()` helper.
+  // The small set of keys present here is meant to make the language
+  // switcher work and to mark the surfaces that a native-speaker
+  // reviewer should translate first. DO NOT ship these strings
+  // publicly without a Diné Bizaad speaker's review -- per plan/02
+  // "Auth + data-sovereignty notes" the indigenous-language UI is
+  // gated on native-speaker sign-off.
+  // -----------------------------------------------------------------
+  nv: {
+    '_status':            'placeholder-needs-native-speaker-review',
+    '_display_name':      'Diné Bizaad',
+    '_display_name_en':   'Navajo',
+    // The handful of strings worth attempting before review -- mark
+    // these as "best guess" pending review. The runtime falls back
+    // to English for everything else.
+    'common.yes':         'Aooʼ',     // "Yes"
+    'common.no':          'Dooda',         // "No"
+    'common.continue':    'Tʼóó shįįʼ',  // "Continue" (best guess; review)
+    'nav.back':           'Tʼáádiííʼ ', // placeholder
+    'nav.submit':         'Submit',        // intentional EN fallback
+  },
+
+  // -----------------------------------------------------------------
+  // Tohono O'odham -- PLACEHOLDER BUNDLE. Same caveats as Diné Bizaad.
+  // -----------------------------------------------------------------
+  oh: {
+    '_status':            'placeholder-needs-native-speaker-review',
+    '_display_name':      'Oʼodham ñiok',
+    '_display_name_en':   "Tohono O'odham",
+    'common.yes':         'Heuʼu',    // "Yes" -- review
+    'common.no':          'Pi-a',          // "No" -- review
+    'common.continue':    'Continue',      // EN fallback
+    'nav.back':           'Back',          // EN fallback
+    'nav.submit':         'Submit',        // EN fallback
+  },
 };
 
 const STORAGE_KEY = 'sentinel.lang';
