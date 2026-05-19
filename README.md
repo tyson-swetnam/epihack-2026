@@ -100,10 +100,10 @@ graph/          Cytoscape.js pathogen knowledge graph (16 pathogens with
                 their vectors, reservoirs, focus areas, and surveilling
                 agencies).
 mcp/
-  └── vectorsurv/   Model Context Protocol server wrapping the VectorSurv
-                    vector-borne disease surveillance API (sites,
-                    collections, pools, abundance, infection rate,
-                    vector index).
+  └── vectorsurv-mcp/   Model Context Protocol server wrapping the VectorSurv
+                        vector-borne disease surveillance API (sites,
+                        collections, pools, abundance, infection rate,
+                        vector index).
 figures/        Structured transcriptions of the EpiHack reference figures
   ├── 01-purpose-one-health-participatory-system.md
   ├── 02-minimum-key-data-parameters.md

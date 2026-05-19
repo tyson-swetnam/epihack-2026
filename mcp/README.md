@@ -25,7 +25,7 @@ Eleven servers ship today. Every server follows the same shape:
 
 | Server | Description | Tools | Auth posture | Tests |
 |---|---|---:|---|---:|
-| [`vectorsurv/`](./vectorsurv/) | VectorSurv national mosquito + tick surveillance API; pools, collections, agency-region intersects, vector-index math, case counts | 13 | Username + password → bearer (`VECTORSURV_USERNAME`, `VECTORSURV_PASSWORD`) with auto-refresh | 6 |
+| [`vectorsurv-mcp/`](./vectorsurv-mcp/) | VectorSurv national mosquito + tick surveillance API; pools, collections, agency-region intersects, vector-index math, case counts | 13 | Username + password → bearer (`VECTORSURV_USERNAME`, `VECTORSURV_PASSWORD`) with auto-refresh | 6 |
 | [`knowledge-graph-mcp/`](./knowledge-graph-mcp/) | Read-only DuckDB query MCP over the EpiHack DuckLake kg (572 nodes / 791 edges / 1027 properties); regions-at-point, pathogen-by-vector, outbreak check, SELECT-only SQL escape hatch | 12 | None — local DuckLake catalog via env path (`KG_DUCKDB_PATH`); SELECT-only SQL parser blocks all writes | 22 |
 | [`great-az-tick-check-mcp/`](./great-az-tick-check-mcp/) | UA Cooperative Extension Great AZ Tick Check mail-in submission tracking + species feedback (mock backend by default) | 5 | Optional `GATTC_API_TOKEN` for a future real backend; defaults to mock-mode (no auth) | 10 |
 | [`nws-heatrisk-mcp/`](./nws-heatrisk-mcp/) | NWS public API + WPC HeatRisk gridded product; current conditions, forecast, active alerts, heat-index calculation | 7 | None — public API; requires a polite `NWS_USER_AGENT` per NOAA guidance | 17 |
@@ -42,7 +42,7 @@ Tool and test counts are sourced from each server's README and its
 
 ## How to add a new MCP server
 
-Use [`vectorsurv/`](./vectorsurv/) as the template — it is the most
+Use [`vectorsurv-mcp/`](./vectorsurv-mcp/) as the template — it is the most
 complete reference in the family and follows every convention
 reviewers expect.
 
@@ -50,8 +50,8 @@ reviewers expect.
 
 ```bash
 cd mcp
-cp -R vectorsurv my-new-server
-cd my-new-server
+cp -R vectorsurv-mcp my-new-server-mcp
+cd my-new-server-mcp
 # rename src/vectorsurv_mcp → src/my_new_server_mcp; update pyproject.toml
 ```
 
