@@ -7,11 +7,16 @@
 import { requestLocation, isPlausibleZip } from '../../shared/geo.js';
 import { submitIntake, isMockMode }       from '../../shared/intake-client.js';
 import { t, mountSwitcher, onLangChange } from '../../shared/i18n.js';
+import { enqueueReport }                  from '../../shared/sync.js';
+import { bootstrapOfflineUi }             from '../../shared/sw-register.js';
 import {
   $, $$, escapeHtml,
   renderThermometer, renderCenterCard,
   rankCenters, triageLabel
 } from '../heat-shared.js';
+
+// Register the service worker + mount the sync-status pill in the header.
+bootstrapOfflineUi();
 
 const STEPS = [
   { id: 'where',    name: 'Where'    },

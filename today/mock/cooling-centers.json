@@ -1,0 +1,60 @@
+{
+  "_comment": "Canned mag-hrn-mcp.mag_search_centers output. Subset of the 12 canned Phoenix-metro centers also used by app/heat/mock-responses.json (cooling_centers_lookup). For the aggregated public view we surface a per-county count + 3 nearest centers; the action-menu button deep-links to app/heat/cool-off/ which loads the full list.",
+  "tool": "mag-hrn-mcp.mag_search_centers",
+  "fetched_at": "2026-05-19T14:05:00Z",
+  "radius_km": 5.0,
+  "counts_by_county": {
+    "Maricopa": 12,
+    "Pima":      6,
+    "Coconino":  2,
+    "Yuma":      3,
+    "Pinal":     4
+  },
+  "centers": [
+    {
+      "id": "center.phx_central_library",
+      "name": "Burton Barr Central Library cooling center",
+      "address": "1221 N Central Ave, Phoenix, AZ 85004",
+      "county": "Maricopa",
+      "phone": "+1-602-262-4636",
+      "lat": 33.4707,
+      "lon": -112.0732,
+      "distance_km": 0.6,
+      "open_now": true,
+      "hours_today": "10:00 AM – 8:00 PM",
+      "pets_ok": false,
+      "transport_eligible": true,
+      "maps_url": "https://maps.apple.com/?daddr=1221+N+Central+Ave,+Phoenix,+AZ+85004"
+    },
+    {
+      "id": "center.phx_human_services",
+      "name": "Human Services Campus respite center",
+      "address": "204 S 12th Ave, Phoenix, AZ 85007",
+      "county": "Maricopa",
+      "phone": "+1-602-282-0853",
+      "lat": 33.4459,
+      "lon": -112.0937,
+      "distance_km": 1.2,
+      "open_now": true,
+      "hours_today": "7:00 AM – 10:00 PM",
+      "pets_ok": true,
+      "transport_eligible": true,
+      "maps_url": "https://maps.apple.com/?daddr=204+S+12th+Ave,+Phoenix,+AZ+85007"
+    },
+    {
+      "id": "center.phx_st_vincent",
+      "name": "St Vincent de Paul Dining Room",
+      "address": "420 W Watkins Rd, Phoenix, AZ 85003",
+      "county": "Maricopa",
+      "phone": "+1-602-261-6868",
+      "lat": 33.4180,
+      "lon": -112.0814,
+      "distance_km": 1.8,
+      "open_now": true,
+      "hours_today": "11:00 AM – 5:00 PM",
+      "pets_ok": false,
+      "transport_eligible": false,
+      "maps_url": "https://maps.apple.com/?daddr=420+W+Watkins+Rd,+Phoenix,+AZ+85003"
+    }
+  ]
+}

@@ -9,6 +9,12 @@ The returned :class:`Observation` has its ``triage``, ``enrichments``,
 per-agent :class:`AgentRun` audit trace in ``agent_runs`` so the
 Figure-3 timeliness clock has a place to anchor.
 
+Every per-agent :class:`AgentRun` is also handed to an
+:class:`AuditSink` (default: :class:`InMemoryAuditSink`) so a DuckLake
+deployment can persist the rows into ``kg.agent_run`` -- see
+``schema/deep/audit.sql`` -- without the orchestrator having to know
+how the storage is wired.
+
 Each stage runs inside a ``try``/``except`` boundary. A failing agent
 degrades to ``AgentRun.status='failed'`` plus a flag on the
 observation; it never drops the whole report.
@@ -20,6 +26,7 @@ import asyncio
 from datetime import datetime, timezone
 from typing import Any, Awaitable, Callable, TypeVar
 
+from .audit import AuditSink, InMemoryAuditSink, cost_for_run, hash_for_audit
 from .cluster import ClusterDetectionAgent
 from .contracts import (
     AgentRun,
@@ -41,6 +48,23 @@ from .validation import ValidationAgent
 T = TypeVar("T")
 
 
+# Per-agent default model assignment. Mirrors the cost-shaping policy
+# from plan/03 + plan/05: Haiku on high-volume, Sonnet on the rule-gated
+# triage step, Opus only where stakes are highest. Used to populate the
+# ``model_id`` column of ``kg.agent_run`` when the agent itself does not
+# report which model it used.
+_DEFAULT_MODEL_FOR_AGENT: dict[str, str] = {
+    "intake": "claude-haiku-4-5",
+    "geo_enrichment": "claude-haiku-4-5",
+    "validation": "claude-haiku-4-5",
+    "triage": "claude-sonnet-4-6",
+    "enrichment": "claude-sonnet-4-6",
+    "notification": "claude-haiku-4-5",
+    "cluster_detection": "claude-opus-4-7",
+    "knowledge_update": "claude-haiku-4-5",
+}
+
+
 class Orchestrator:
     """End-to-end pipeline driver.
 
@@ -49,8 +73,13 @@ class Orchestrator:
     :class:`FakeMCPClient` with its canned scenario handlers).
     """
 
-    def __init__(self, mcp: MCPClient | None = None) -> None:
+    def __init__(
+        self,
+        mcp: MCPClient | None = None,
+        audit_sink: AuditSink | None = None,
+    ) -> None:
         self.mcp: MCPClient = mcp or FakeMCPClient.with_default_handlers()
+        self.audit_sink: AuditSink = audit_sink or InMemoryAuditSink()
         self.intake = IntakeAgent()
         self.geo = GeoEnrichmentAgent(self.mcp)
         self.validation = ValidationAgent()

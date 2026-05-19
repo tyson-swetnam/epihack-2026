@@ -6,11 +6,16 @@
 import { requestLocation, isPlausibleZip } from '../../shared/geo.js';
 import { submitIntake, isMockMode }       from '../../shared/intake-client.js';
 import { t, mountSwitcher, onLangChange } from '../../shared/i18n.js';
+import { enqueueReport }                  from '../../shared/sync.js';
+import { bootstrapOfflineUi }             from '../../shared/sw-register.js';
 import {
   $, $$, escapeHtml,
   attachConfirm, renderThermometer, renderCenterCard,
   rankCenters, triageLabel
 } from '../heat-shared.js';
+
+// Register the service worker + mount the sync-status pill in the header.
+bootstrapOfflineUi();
 
 // ---------------------------------------------------------------------------
 // Step orchestration
@@ -364,13 +369,41 @@ async function doSubmit() {
 
   try {
     const payload = buildPayload();
+    const mockKey = pickMockKey();
+
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      await enqueueReport({
+        flow: 'heat_chw_checkin', vertical: 'heat', mock_key: mockKey, payload
+      });
+      pend.hidden = true;
+      renderQueuedResult();
+      return;
+    }
+
     const res = await submitIntake('heat_chw_checkin', payload, {
       vertical: 'heat',
-      mockKey:  pickMockKey()
+      mockKey
     });
+    if (res && res.queued) {
+      await enqueueReport({
+        flow: 'heat_chw_checkin', vertical: 'heat', mock_key: mockKey, payload
+      });
+      pend.hidden = true;
+      renderQueuedResult();
+      return;
+    }
     pend.hidden = true;
     renderResult(res);
   } catch (e) {
+    try {
+      await enqueueReport({
+        flow: 'heat_chw_checkin', vertical: 'heat',
+        mock_key: pickMockKey(), payload: buildPayload()
+      });
+      pend.hidden = true;
+      renderQueuedResult();
+      return;
+    } catch (_) { /* fall through */ }
     pend.hidden = true;
     pre.hidden  = false;
     stick.hidden = false;
@@ -378,6 +411,31 @@ async function doSubmit() {
     error.textContent =
       `Submit failed: ${e.message}. Try again, or come back later.`;
   }
+}
+
+function renderQueuedResult() {
+  const el = $('submit-result');
+  el.hidden = false;
+  el.innerHTML = `
+    <div class="result-card" role="status" aria-live="polite"
+         style="border-left:6px solid #FFB300;background:#fff8e6">
+      <h3>Saved offline.</h3>
+      <p>You're offline (or the server isn't reachable). This check-in is
+         safely stored on this device and will upload automatically when
+         a network is available. Cooling-center routing and 211 dispatch
+         resume once the report reaches the Triage Agent.</p>
+      <p class="muted small">
+        If this is a <strong>911</strong> case, do not wait for sync &mdash;
+        call now. Offline mode does not interfere with the phone's
+        emergency dialer.
+      </p>
+    </div>
+    <div class="cta-grid">
+      <a class="btn danger block" href="tel:911"
+         aria-label="Call 911 now">Call 911</a>
+      <a class="btn ghost" href="../../index.html">${escapeHtml(t('nav.home'))}</a>
+    </div>
+  `;
 }
 
 function renderResult(res) {
