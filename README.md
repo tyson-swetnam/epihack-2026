@@ -62,7 +62,15 @@ Everything in this repository is also a page on the published site at
 - [AZ One Health Sentinel — plan](./plan/) &mdash; five-document plan for a mobile-first participatory-surveillance app spanning Vector-Borne Disease and Heat. Covers Figure 2 parameter mapping by vertical, the MCP integration topology, the eight-agent architecture, four worked end-to-end data flows, and a phased roadmap tied to the [Figure 3 timeliness milestones](./figures/03-outbreak-timeliness-metrics.md).
 
 ### MCP servers (live data ingestion for LLMs)
-- [`vectorsurv-mcp`](./mcp/vectorsurv/) &mdash; Python MCP server wrapping the [VectorSurv](https://vectorsurv.org/) API ([spec v1.0.44](./mcp/vectorsurv/openapi/)). Exposes 13 tools including `vectorsurv_agency_region_intersect` (the fastest way to enumerate AZ agencies), `vectorsurv_get_pools`, `vectorsurv_pools_are_positive`, `vectorsurv_get_case_counts`, and client-side abundance / infection-rate / vector-index calculators.
+- [`vectorsurv-mcp`](./mcp/vectorsurv/) &mdash; Wraps the [VectorSurv](https://vectorsurv.org/) API ([spec v1.0.44](./mcp/vectorsurv/openapi/)). 13 tools including `vectorsurv_agency_region_intersect` (the fastest way to enumerate AZ agencies), `vectorsurv_get_pools`, `vectorsurv_pools_are_positive`, `vectorsurv_get_case_counts`, and client-side abundance / infection-rate / vector-index calculators.
+- [`knowledge-graph-mcp`](./mcp/knowledge-graph-mcp/) &mdash; Read-only DuckDB query MCP over the EpiHack knowledge graph (572 nodes / 791 edges / 1027 properties at last load). 12 tools (`kg_node_lookup`, `kg_neighborhood`, `kg_path`, `kg_pathogens_by_vector`, `kg_outbreak_check`, …) plus a SELECT-only SQL escape-hatch.
+- [`great-az-tick-check-mcp`](./mcp/great-az-tick-check-mcp/) &mdash; Mock submission tracking for the Great Arizona Tick Check (UA Cooperative Extension / Walker lab) until the real API arrives. 5 tools incl. mailing-label generation.
+- [`nws-heatrisk-mcp`](./mcp/nws-heatrisk-mcp/) &mdash; NWS HeatRisk + active heat alerts + Rothfusz heat-index calculator (no auth, just a `User-Agent` header). 7 tools.
+
+### Application (Phase 0)
+- [`app/`](./app/) &mdash; Vanilla HTML+JS+CSS prototype of the AZ One Health Sentinel app. Hosts the Scenario-A tick mail-in flow end-to-end (GPS, photo capture, symptoms, consent, mailing label) against a mock backend.
+- [`agents/`](./agents/) &mdash; Python package implementing the 8-agent pipeline (Intake → Geo-Enrichment → Validation → Triage → Enrichment → Notification → Cluster Detection → Knowledge Update) with typed pydantic contracts. Scenarios A and C from the plan run end-to-end through the stub agents.
+- See [`plan/EXECUTION-STATUS.md`](./plan/EXECUTION-STATUS.md) for the verification matrix and the small list of doc / schema follow-ups.
 
 ### Knowledge-graph SQL
 - [`schema/`](./schema/) &mdash; core graph (frameworks) plus worksheet template, focus areas, designs, World Café cards, and the two focus-group seeds.
