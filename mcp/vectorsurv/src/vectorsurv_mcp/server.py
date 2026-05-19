@@ -1,17 +1,22 @@
 """FastMCP server exposing the VectorSurv API as MCP tools.
 
-Each tool is a thin wrapper around either a `VectorSurvClient` call
-or one of the surveillance calculations (`abundance`,
-`infection_rate`, `vector_index`).
+Paths and parameter conventions verified against the OpenAPI spec at
+https://api.vectorsurv.org/openapi (v1.0.44 at time of writing).
 
-Designed for EpiHack Arizona 2026's wildlife and vector-borne
-diseases focus group. The intent is that an LLM client (Claude
-Desktop, Claude Code, etc.) can answer questions like:
+Designed for EpiHack Arizona 2026's wildlife and vector-borne diseases
+focus group. An LLM client (Claude Desktop, Claude Code, ...) can
+answer questions like:
 
-    "What was the West Nile vector index in Maricopa County during
-    biweek 18 of 2025?"
+    "Show me the WNV pool-positivity rate for Maricopa County mosquito
+    collections during biweek 18 of 2025."
 
-by calling the appropriate tools in sequence.
+by calling the appropriate tools in sequence:
+
+  1. vectorsurv_list_test_targets  -> find the WNV pathogen ID
+  2. vectorsurv_agency_region_intersect / vectorsurv_list_agencies
+     -> find the agency ID(s) for Maricopa County Vector Control
+  3. vectorsurv_get_pools           -> pull pools in the window
+  4. vectorsurv_calculate_infection_rate -> compute the MIR / bc-MLE
 """
 
 from __future__ import annotations
@@ -31,10 +36,12 @@ mcp = FastMCP(
     "vectorsurv",
     instructions=(
         "Programmatic access to the VectorSurv vector-borne disease "
-        "surveillance API (mosquitoes, ticks, arboviruses). "
-        "Use `vectorsurv_list_agencies` first to discover which "
-        "agency IDs the authenticated user has access to, then call "
-        "the collections / pools / calculation tools to pull data."
+        "surveillance API (mosquitoes, ticks, arboviruses, human/equine "
+        "case counts). Start with `vectorsurv_list_agencies` and "
+        "`vectorsurv_list_test_targets` to discover the IDs you need to "
+        "filter by, then call collection / pool / calculation tools. "
+        "Paths and parameter syntax follow the OpenAPI spec at "
+        "https://api.vectorsurv.org/openapi."
     ),
 )
 
@@ -49,32 +56,79 @@ def _get_client() -> VectorSurvClient:
     return _client
 
 
+# ---------------------------------------------------------------- meta
+@mcp.tool()
+async def vectorsurv_version() -> dict:
+    """Return the VectorSurv API version string."""
+    return {"version": await _get_client().get_version()}
+
+
 # ---------------------------------------------------------------- discovery
 @mcp.tool()
-async def vectorsurv_list_agencies() -> dict:
-    """List VectorSurv agencies the authenticated user has access to.
-
-    Run this first to discover the `agency_ids` to filter by in
-    subsequent calls.
-    """
-    return {"agencies": await _get_client().list_agencies()}
-
-
-@mcp.tool()
-async def vectorsurv_list_sites(
-    agency_ids: Annotated[
-        list[int] | None,
-        Field(description="Restrict to these agency IDs; omit for all accessible."),
+async def vectorsurv_list_agencies(
+    populate: Annotated[
+        list[str] | None,
+        Field(description='Eager-load related fields; allowed: "region", "state", "aggregate".'),
     ] = None,
     page: int = 1,
     page_size: Annotated[int, Field(ge=1, le=500)] = 100,
 ) -> dict:
-    """List trap sites (bookmarked trap locations) the user has access to."""
-    return {
-        "sites": await _get_client().list_sites(
-            agency_ids=agency_ids, page=page, page_size=page_size
-        )
-    }
+    """Agencies the authenticated user has access to."""
+    return await _get_client().list_agencies(
+        page=page, page_size=page_size, populate=populate
+    )
+
+
+@mcp.tool()
+async def vectorsurv_agency_region_intersect() -> dict:
+    """Agencies whose service area intersects each region.
+
+    The fastest way to find every VectorSurv agency reporting from a
+    given U.S. state or county (e.g. Arizona, Maricopa County).
+    """
+    return {"intersections": await _get_client().agency_region_intersect()}
+
+
+@mcp.tool()
+async def vectorsurv_list_regions(
+    search: str | None = None,
+    page: int = 1,
+    page_size: Annotated[int, Field(ge=1, le=500)] = 100,
+) -> dict:
+    """Geographic regions (states, counties, custom polygons)."""
+    return await _get_client().list_regions(
+        page=page, page_size=page_size, search=search
+    )
+
+
+@mcp.tool()
+async def vectorsurv_list_test_targets(
+    page: int = 1,
+    page_size: Annotated[int, Field(ge=1, le=500)] = 200,
+) -> dict:
+    """List of pathogens / test targets VectorSurv tracks.
+
+    Each row carries ``acronym`` (e.g. ``WNV``), ``vector``
+    (``mosquito``/``tick``/``both``), and an ICD-10 code where
+    applicable.
+    """
+    return await _get_client().list_test_targets(page=page, page_size=page_size)
+
+
+@mcp.tool()
+async def vectorsurv_list_sites(
+    agency_ids: list[int] | None = None,
+    populate: list[str] | None = None,
+    page: int = 1,
+    page_size: Annotated[int, Field(ge=1, le=500)] = 100,
+) -> dict:
+    """List trap-location bookmarks (sites)."""
+    return await _get_client().list_sites(
+        agency_ids=agency_ids,
+        populate=populate,
+        page=page,
+        page_size=page_size,
+    )
 
 
 # ----------------------------------------------------------------- raw data
@@ -82,75 +136,120 @@ async def vectorsurv_list_sites(
 async def vectorsurv_get_collections(
     start_date: Annotated[str, Field(description="ISO date, e.g. '2025-05-01'.")],
     end_date: Annotated[str, Field(description="ISO date, e.g. '2025-09-30'.")],
-    arthropod: Annotated[str, Field(description="'mosquito' or 'tick'.")] = "mosquito",
+    arthropod: Annotated[
+        str,
+        Field(description='"mosquito" / "nontick" hit /v1/arthropod/collection; "tick" hits /v1/tick/collection.'),
+    ] = "mosquito",
     agency_ids: list[int] | None = None,
     page: int = 1,
     page_size: Annotated[int, Field(ge=1, le=5000)] = 1000,
+    populate: list[str] | None = None,
 ) -> dict:
-    """Arthropod collection records (raw trap captures, not pooled testing)."""
-    return {
-        "collections": await _get_client().get_collections(
-            start_date=start_date,
-            end_date=end_date,
-            arthropod=arthropod,
-            agency_ids=agency_ids,
-            page=page,
-            page_size=page_size,
-        )
-    }
+    """Arthropod or tick collection records."""
+    return await _get_client().get_collections(
+        start_date=start_date,
+        end_date=end_date,
+        arthropod=arthropod,
+        agency_ids=agency_ids,
+        page=page,
+        page_size=page_size,
+        populate=populate,
+    )
 
 
 @mcp.tool()
 async def vectorsurv_get_pools(
     start_date: str,
     end_date: str,
-    arthropod: str = "mosquito",
-    target_acronym: Annotated[
-        str | None,
-        Field(description="Disease acronym (e.g. 'WNV', 'SLEV')."),
-    ] = None,
+    arthropod: Annotated[
+        str, Field(description='"mosquito", "tick", or "nontick".')
+    ] = "mosquito",
     agency_ids: list[int] | None = None,
     page: int = 1,
     page_size: Annotated[int, Field(ge=1, le=5000)] = 1000,
+    populate: list[str] | None = None,
 ) -> dict:
-    """Pooled-test results for arboviruses tested against mosquito pools."""
+    """Pooled-test results for arboviruses tested against mosquito or tick pools."""
+    return await _get_client().get_pools(
+        start_date=start_date,
+        end_date=end_date,
+        arthropod=arthropod,
+        agency_ids=agency_ids,
+        page=page,
+        page_size=page_size,
+        populate=populate,
+    )
+
+
+@mcp.tool()
+async def vectorsurv_pools_are_positive(
+    pool_ids: list[int],
+    pathogen_ids: Annotated[
+        list[int],
+        Field(description="Test-target IDs (from vectorsurv_list_test_targets)."),
+    ],
+    presumptive: bool = False,
+) -> dict:
+    """Bulk-check pools for definitive-positive pathogen results."""
     return {
-        "pools": await _get_client().get_pools(
-            start_date=start_date,
-            end_date=end_date,
-            arthropod=arthropod,
-            agency_ids=agency_ids,
-            target_acronym=target_acronym,
-            page=page,
-            page_size=page_size,
+        "results": await _get_client().pools_are_positive(
+            pool_ids=pool_ids,
+            pathogen_ids=pathogen_ids,
+            presumptive=presumptive,
         )
     }
 
 
+@mcp.tool()
+async def vectorsurv_get_case_counts(
+    agency_ids: list[int] | None = None,
+    search: str | None = None,
+    page: int = 1,
+    page_size: Annotated[int, Field(ge=1, le=500)] = 100,
+) -> dict:
+    """Human / equine arbovirus case-count records by week, month, county."""
+    return await _get_client().get_case_counts(
+        agency_ids=agency_ids,
+        search=search,
+        page=page,
+        page_size=page_size,
+    )
+
+
 # ---------------------------------------------------------------- analytics
+def _rows(envelope):
+    """VectorSurv responses are usually {rows, total, page, ...}; passthrough lists."""
+    if isinstance(envelope, list):
+        return envelope
+    if isinstance(envelope, dict):
+        return envelope.get("rows") or envelope.get("data") or []
+    return []
+
+
 @mcp.tool()
 async def vectorsurv_calculate_abundance(
     start_date: str,
     end_date: str,
     interval: Annotated[
-        str, Field(description="'collection_date', 'Week', 'Biweek', or 'Month'.")
+        str, Field(description='"collection_date", "Week", "Biweek", or "Month".')
     ] = "Biweek",
+    arthropod: str = "mosquito",
     species: str | None = None,
     trap: str | None = None,
     agency_ids: list[int] | None = None,
 ) -> dict:
     """Abundance per interval = total arthropods / total trap-nights."""
-    client = _get_client()
-    raw = await client.get_collections(
+    coll = await _get_client().get_collections(
         start_date=start_date,
         end_date=end_date,
+        arthropod=arthropod,
         agency_ids=agency_ids,
         page_size=5000,
+        populate=["arthropods", "trap", "site"],
     )
-    rows = raw if isinstance(raw, list) else raw.get("data", raw.get("rows", raw))
     return {
         "abundance": calc_abundance(
-            rows, interval=interval, species=species, trap=trap
+            _rows(coll), interval=interval, species=species, trap=trap
         )
     }
 
@@ -159,27 +258,27 @@ async def vectorsurv_calculate_abundance(
 async def vectorsurv_calculate_infection_rate(
     start_date: str,
     end_date: str,
-    target_disease: Annotated[str, Field(description="Disease acronym, e.g. 'WNV'.")],
+    target_disease: Annotated[str, Field(description='Disease acronym, e.g. "WNV".')],
     interval: str = "Biweek",
-    method: Annotated[str, Field(description="'mir' or 'bc-mle'.")] = "mir",
+    method: Annotated[str, Field(description='"mir" or "bc-mle".')] = "mir",
     scale: float = 1000.0,
+    arthropod: str = "mosquito",
     species: str | None = None,
     trap: str | None = None,
     agency_ids: list[int] | None = None,
 ) -> dict:
     """Estimated arbovirus infection rate per `scale` mosquitoes per interval."""
-    client = _get_client()
-    raw = await client.get_pools(
+    pools = await _get_client().get_pools(
         start_date=start_date,
         end_date=end_date,
-        target_acronym=target_disease,
+        arthropod=arthropod,
         agency_ids=agency_ids,
         page_size=5000,
+        populate=["test", "species", "trap"],
     )
-    rows = raw if isinstance(raw, list) else raw.get("data", raw.get("rows", raw))
     return {
         "infection_rate": calc_infection_rate(
-            rows,
+            _rows(pools),
             target_disease=target_disease,
             interval=interval,
             method=method,
@@ -198,38 +297,32 @@ async def vectorsurv_calculate_vector_index(
     interval: str = "Biweek",
     method: str = "mir",
     scale: float = 1000.0,
+    arthropod: str = "mosquito",
     species: str | None = None,
     trap: str | None = None,
     agency_ids: list[int] | None = None,
 ) -> dict:
-    """Vector Index = abundance × infection-rate per interval.
-
-    Expected number of infected mosquitoes per trap-night.
-    """
-    client = _get_client()
-    coll_raw = await client.get_collections(
+    """Vector Index = abundance × infection rate (expected infected mosquitoes per trap-night)."""
+    coll = await _get_client().get_collections(
         start_date=start_date,
         end_date=end_date,
+        arthropod=arthropod,
         agency_ids=agency_ids,
         page_size=5000,
+        populate=["arthropods", "trap", "site"],
     )
-    pools_raw = await client.get_pools(
+    pools = await _get_client().get_pools(
         start_date=start_date,
         end_date=end_date,
-        target_acronym=target_disease,
+        arthropod=arthropod,
         agency_ids=agency_ids,
         page_size=5000,
-    )
-    collections = (
-        coll_raw if isinstance(coll_raw, list) else coll_raw.get("data", coll_raw.get("rows", coll_raw))
-    )
-    pools = (
-        pools_raw if isinstance(pools_raw, list) else pools_raw.get("data", pools_raw.get("rows", pools_raw))
+        populate=["test", "species", "trap"],
     )
     return {
         "vector_index": calc_vector_index(
-            collections,
-            pools,
+            _rows(coll),
+            _rows(pools),
             target_disease=target_disease,
             interval=interval,
             method=method,
@@ -245,14 +338,31 @@ async def vectorsurv_calculate_vector_index(
 def disease_acronyms() -> str:
     """Common arbovirus / vector-borne disease acronyms recognized by VectorSurv."""
     return (
-        "WNV  = West Nile virus\n"
-        "SLEV = St. Louis encephalitis virus\n"
-        "WEEV = Western equine encephalitis virus\n"
-        "EEEV = Eastern equine encephalitis virus\n"
-        "DENV = Dengue virus\n"
-        "ZIKV = Zika virus\n"
+        "WNV   = West Nile virus\n"
+        "SLEV  = St. Louis encephalitis virus\n"
+        "WEEV  = Western equine encephalitis virus\n"
+        "EEEV  = Eastern equine encephalitis virus\n"
+        "DENV  = Dengue virus\n"
+        "ZIKV  = Zika virus\n"
         "CHIKV = Chikungunya virus\n"
-        "BORR = Borrelia (Lyme)\n"
-        "ANAP = Anaplasma phagocytophilum\n"
-        "BABE = Babesia\n"
+        "BORR  = Borrelia (Lyme)\n"
+        "ANAP  = Anaplasma phagocytophilum\n"
+        "BABE  = Babesia\n"
+        "(call vectorsurv_list_test_targets for the authoritative list)"
+    )
+
+
+@mcp.resource("vectorsurv://query-syntax")
+def query_syntax() -> str:
+    """Cheat-sheet for VectorSurv API query parameters."""
+    return (
+        "VectorSurv uses Mongoose-style query strings:\n"
+        "  query[collection_date][$gte]=2024-05-01\n"
+        "  query[collection_date][$lte]=2024-09-30\n"
+        "  query[agency]=55\n"
+        "  query[agency][$in][0]=55&query[agency][$in][1]=72\n"
+        "  query[surv_year]=2024\n"
+        "Eager-load related records: populate[0]=test&populate[1]=site\n"
+        "Pagination: page=1&pageSize=100   (lower pageSize if MAX_PAYLOAD_EXCEEDED).\n"
+        "Sort: sort=-collection_date,id\n"
     )

@@ -21,7 +21,7 @@ INSERT INTO kg.node (node_id, node_type, label, description, source_fig) VALUES
   ('api.vectorsurv',
      'api',
      'VectorSurv REST API',
-     'Bearer-authenticated REST API at api.vectorsurv.org. Endpoints include /login, /agency, /v1/site/, /v1/arthropod/collection, /v1/arthropod/pool. Tokens expire hourly.',
+     'OpenAPI 3.0 REST API at api.vectorsurv.org (spec v1.0.44). HTTP Bearer (JWT). Endpoints include /login, /version, /v1/agency, /v1/agency-region-intersect, /v1/site, /v1/region, /v1/arthropod/collection, /v1/tick/collection, /v1/arthropod/pool, /v1/tick/pool, /v1/arthropod/pool/are-positive, /v1/arthropod/abundance/flat, /v1/case-count, /v1/test/target, /v1/test/method, /v1/tick/calculation/abundance. Tokens expire hourly. Filters use Mongoose-style query[field][$gte]/[$lte]/[$in] operators.',
      'mcp-vectorsurv')
 ON CONFLICT DO NOTHING;
 
@@ -76,22 +76,37 @@ ON CONFLICT DO NOTHING;
 -- The tools exposed by the MCP server (one node per tool)
 -- ---------------------------------------------------------------------------
 INSERT INTO kg.node (node_id, node_type, label, description, source_fig) VALUES
-  ('mcp_tool.vs_list_agencies',     'mcp_tool', 'vectorsurv_list_agencies',         'List agencies the authenticated user has access to.', 'mcp-vectorsurv'),
-  ('mcp_tool.vs_list_sites',        'mcp_tool', 'vectorsurv_list_sites',            'List trap-location bookmarks (sites).',               'mcp-vectorsurv'),
-  ('mcp_tool.vs_get_collections',   'mcp_tool', 'vectorsurv_get_collections',       'Raw arthropod collection records from traps.',         'mcp-vectorsurv'),
-  ('mcp_tool.vs_get_pools',         'mcp_tool', 'vectorsurv_get_pools',             'Pooled-test results with arbovirus targets.',          'mcp-vectorsurv'),
-  ('mcp_tool.vs_calc_abundance',    'mcp_tool', 'vectorsurv_calculate_abundance',   'Abundance per interval = total / trap-nights.',        'mcp-vectorsurv'),
-  ('mcp_tool.vs_calc_ir',           'mcp_tool', 'vectorsurv_calculate_infection_rate', 'MIR or bias-corrected MLE infection rate.',         'mcp-vectorsurv'),
-  ('mcp_tool.vs_calc_vi',           'mcp_tool', 'vectorsurv_calculate_vector_index','Vector Index = abundance × infection rate.',           'mcp-vectorsurv')
+  ('mcp_tool.vs_version',                'mcp_tool', 'vectorsurv_version',                  'GET /version.',                                       'mcp-vectorsurv'),
+  ('mcp_tool.vs_list_agencies',          'mcp_tool', 'vectorsurv_list_agencies',            'GET /v1/agency.',                                     'mcp-vectorsurv'),
+  ('mcp_tool.vs_agency_region',          'mcp_tool', 'vectorsurv_agency_region_intersect',  'GET /v1/agency-region-intersect (geospatial).',       'mcp-vectorsurv'),
+  ('mcp_tool.vs_list_regions',           'mcp_tool', 'vectorsurv_list_regions',             'GET /v1/region.',                                     'mcp-vectorsurv'),
+  ('mcp_tool.vs_list_test_targets',      'mcp_tool', 'vectorsurv_list_test_targets',        'GET /v1/test/target (pathogen reference + ICD-10).',  'mcp-vectorsurv'),
+  ('mcp_tool.vs_list_sites',             'mcp_tool', 'vectorsurv_list_sites',               'GET /v1/site.',                                       'mcp-vectorsurv'),
+  ('mcp_tool.vs_get_collections',        'mcp_tool', 'vectorsurv_get_collections',          'GET /v1/arthropod/collection or /v1/tick/collection.','mcp-vectorsurv'),
+  ('mcp_tool.vs_get_pools',              'mcp_tool', 'vectorsurv_get_pools',                'GET /v1/arthropod/pool with type=mosquito|tick|nontick.','mcp-vectorsurv'),
+  ('mcp_tool.vs_pools_are_positive',     'mcp_tool', 'vectorsurv_pools_are_positive',       'GET /v1/arthropod/pool/are-positive (bulk pathogen status).','mcp-vectorsurv'),
+  ('mcp_tool.vs_get_case_counts',        'mcp_tool', 'vectorsurv_get_case_counts',          'GET /v1/case-count (human/equine arbovirus cases).',  'mcp-vectorsurv'),
+  ('mcp_tool.vs_calc_abundance',         'mcp_tool', 'vectorsurv_calculate_abundance',      'Client-side: total arthropods / trap-nights.',         'mcp-vectorsurv'),
+  ('mcp_tool.vs_calc_ir',                'mcp_tool', 'vectorsurv_calculate_infection_rate', 'Client-side: MIR or bias-corrected MLE.',              'mcp-vectorsurv'),
+  ('mcp_tool.vs_calc_vi',                'mcp_tool', 'vectorsurv_calculate_vector_index',   'Client-side: abundance × infection rate.',             'mcp-vectorsurv')
 ON CONFLICT DO NOTHING;
 
+-- Base bumped from 16100 to 16200 so a pre-existing partial seed (with
+-- the old 7-tool list at 16100-16106) doesn't collide and shadow the
+-- new edges via ON CONFLICT DO NOTHING.
 INSERT INTO kg.edge (edge_id, subject_id, predicate, object_id, source_fig)
-SELECT 16100 + row_number() OVER (), subject_id, 'exposedBy', 'mcp.vectorsurv', 'mcp-vectorsurv'
+SELECT 16200 + row_number() OVER (), subject_id, 'exposedBy', 'mcp.vectorsurv', 'mcp-vectorsurv'
 FROM (VALUES
+  ('mcp_tool.vs_version'),
   ('mcp_tool.vs_list_agencies'),
+  ('mcp_tool.vs_agency_region'),
+  ('mcp_tool.vs_list_regions'),
+  ('mcp_tool.vs_list_test_targets'),
   ('mcp_tool.vs_list_sites'),
   ('mcp_tool.vs_get_collections'),
   ('mcp_tool.vs_get_pools'),
+  ('mcp_tool.vs_pools_are_positive'),
+  ('mcp_tool.vs_get_case_counts'),
   ('mcp_tool.vs_calc_abundance'),
   ('mcp_tool.vs_calc_ir'),
   ('mcp_tool.vs_calc_vi')

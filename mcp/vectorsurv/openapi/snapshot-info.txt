@@ -1,0 +1,20 @@
+The full OpenAPI JSON snapshot pasted by a maintainer (the build
+sandbox cannot reach api.vectorsurv.org). To refresh, run:
+
+    curl -sS https://api.vectorsurv.org/openapi | jq . \
+      > openapi-$(date +%Y%m%d).json
+
+Spec version at time of MCP-client rewrite: 1.0.44.
+Servers documented in the spec:
+  - https://api.vectorsurv.org/         (production)
+  - https://sandbox.api.vectorsurv.org/ (sandbox)
+  - https://dev.api.vectorsurv.org/     (development)
+
+Auth: HTTP bearer (JWT). Tokens are issued by POST /login with a JSON
+body { username, password } and expire 1 hour after issue.
+
+Query convention: Mongoose-style operators in query string, e.g.
+    query[collection_date][$gte]=2024-05-01
+    query[collection_date][$lte]=2024-09-30
+    query[agency]=55
+    query[agency][$in][0]=55&query[agency][$in][1]=72
