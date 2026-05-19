@@ -35,11 +35,13 @@
 
   <div class="hero">
     <h1>What did you see today?</h1>
-    <p>A two-vertical participatory surveillance prototype.
-       Submit a tick now; heat check-ins land next.</p>
+    <p>A two-vertical participatory surveillance prototype:
+       tick mail-in (Phase&nbsp;0) plus three heat-vertical flows
+       (Phase&nbsp;1).</p>
   </div>
 
-  <a class="card" href="tick/index.html" aria-label="Submit a tick: report a tick you have removed and mail it to the Great Arizona Tick Check lab">
+  <a class="card" href="tick/index.html"
+     aria-label="Submit a tick: report a tick you have removed and mail it to the Great Arizona Tick Check lab">
     <h2>Submit a tick</h2>
     <p>Mail in a tick for species identification and get a 14-day symptom watchlist.
        Takes about 3 minutes on a phone.</p>
@@ -50,14 +52,46 @@
     </div>
   </a>
 
-  <a class="card heat stub" href="heat/index.html" aria-label="Heat check-in: coming in Phase 1">
-    <h2>Heat check-in</h2>
-    <p>Rapid heat-illness check-in for CHWs and self-report.
-       Wired up in <a href="../plan/05-roadmap.html#phase-1--heat-vertical-month-12">Phase 1</a>.</p>
+  <a class="card heat-chw" href="heat/check-in/index.html"
+     aria-label="CHW heat check-in: block-by-block outreach flow with vulnerability scoring and transport dispatch">
+    <h2>Heat check-in <span style="font-weight:400;font-size:.85rem">(CHW)</span></h2>
+    <p>Six-step field flow for community health workers.
+       Computes the heat-vulnerability score, finds the nearest open
+       cooling center, and offers one-tap transport via 211 Arizona.</p>
     <div>
-      <span class="badge warn">Phase 1 — stub</span>
+      <span class="badge magenta">Phase 1</span>
       <span class="badge">Heat</span>
+      <span class="badge">Scenario C</span>
     </div>
+  </a>
+
+  <a class="card heat-self" href="heat/self-report/index.html"
+     aria-label="Heat self-report: anonymous self-report flow with a vulnerability score and 211 phone link">
+    <h2>Heat self-report</h2>
+    <p>Five-step anonymous flow for community members.
+       Same vulnerability scoring as the CHW flow; offers a phone link
+       to 211 instead of dispatching a vehicle.</p>
+    <div>
+      <span class="badge heat">Phase 1</span>
+      <span class="badge">Heat</span>
+      <span class="badge">anonymous</span>
+    </div>
+  </a>
+
+  <a class="card heat-cool" href="heat/cool-off/index.html"
+     aria-label="Where can I cool off: ranked list of nearby cooling centers">
+    <h2>Where can I cool off?</h2>
+    <p>Top-5 nearest open cooling centers ranked by distance,
+       with pet-friendly and transport-eligible flags up front.</p>
+    <div>
+      <span class="badge cool">lookup</span>
+      <span class="badge">mag-hrn-mcp</span>
+    </div>
+  </a>
+
+  <a class="card about" href="heat/index.html"
+     aria-label="About this app: heat focus-group materials and the Phase 1 roadmap entry">
+    <h2>About these flows &middot; roadmap</h2>
   </a>
 
   <hr class="rule" />
