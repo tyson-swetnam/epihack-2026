@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Submit a tick — AZ One Health Sentinel</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#1F3A93" />
+<meta name="description" content="Mail in a tick for species identification and a 14-day symptom watchlist. Part of the AZ One Health Sentinel prototype." />
+<link rel="stylesheet" href="../shared/style.css" />
+<link rel="stylesheet" href="tick.css" />
+</head>
+<!-- data-api-base="mock" makes this page short-circuit /api/intake to
+     the local mock-responses.json so the demo works on GitHub Pages,
+     which has no backend. Point at a real backend by changing the
+     attribute value, e.g. data-api-base="https://sentinel.example.org" -->
+<body data-api-base="mock">
+
+<header class="app-header">
+  <div class="crumbs"><a href="../index.html">&laquo; AZ One Health Sentinel</a></div>
+  <h1>Submit a tick</h1>
+</header>
+
+<!-- Progress bar (hidden until JS upgrades the page) -->
+<div class="progress" id="progress" hidden>
+  <div class="label">
+    <span><span class="step-name" id="step-name">Welcome</span></span>
+    <span id="step-count">Step 1 of 6</span>
+  </div>
+  <div class="bar"><div class="fill" id="progress-fill"></div></div>
+</div>
+
+<main class="container" id="main">
+
+  <!-- ------------------------------------------------------------------- -->
+  <!-- Step 1: Welcome. Renders usefully without JS (accessibility req).   -->
+  <!-- ------------------------------------------------------------------- -->
+  <section class="step active" id="step-welcome" data-step="welcome" data-step-name="Welcome">
+    <h2>You found a tick. Now what?</h2>
+    <p class="lead">
+      Mail the tick to the
+      <a href="https://acis.cals.arizona.edu/the-great-arizona-tick-check/" rel="noopener">Great Arizona Tick Check</a>
+      lab. They'll identify the species and test it for the pathogens
+      it can carry. In the meantime, we'll set you up with a 14-day
+      symptom watchlist.
+    </p>
+    <p>What we'll ask you for, in order:</p>
+    <ol>
+      <li><strong>Where and when</strong> you found it (GPS, date, hours attached, body location).</li>
+      <li>A <strong>photo</strong> of the tick (use the back camera if you can).</li>
+      <li>Any <strong>symptoms</strong> you already have (skip this if none — most people will).</li>
+      <li>What we <strong>do and don't keep</strong> from your report.</li>
+    </ol>
+    <p class="muted small">
+      Takes about 3 minutes. You can stop at any step &mdash; nothing is
+      saved until you tap <em>Submit</em>.
+    </p>
+    <!-- noscript fallback: a static link to the lab page so the
+         welcome page is useful even without JavaScript. -->
+    <noscript>
+      <div class="error-banner" role="status">
+        This prototype needs JavaScript to capture the report. In the
+        meantime, you can go straight to the
+        <a href="https://acis.cals.arizona.edu/the-great-arizona-tick-check/" rel="noopener">Great Arizona Tick Check</a>
+        page to request a kit.
+      </div>
+    </noscript>
+  </section>
+
+  <!-- ------------------------------------------------------------------- -->
+  <!-- Step 2: Where + when                                                -->
+  <!-- ------------------------------------------------------------------- -->
+  <section class="step" id="step-where" data-step="where" data-step-name="Where &amp; when" hidden>
+    <h2>Where and when did you find it?</h2>
+    <p class="muted small">
+      Powers the General + Exposure parts of the
+      <a href="../../plan/01-parameter-mapping.html" rel="noopener">Minimum Dataset</a>.
+    </p>
+
+    <label class="field" for="zip">
+      Your location
+      <span class="hint">We'll try GPS first. ZIP is fine if you'd rather not share GPS.</span>
+    </label>
+    <div class="geo-status" id="geo-status" role="status" aria-live="polite">
+      <span class="dot"></span>
+      <span id="geo-status-text">Tap &ldquo;Use my location&rdquo; or enter a ZIP below.</span>
+    </div>
+    <div class="field-row" style="margin-top:.5rem">
+      <button type="button" class="btn secondary" id="geo-btn">Use my location</button>
+      <input type="text" id="zip" inputmode="numeric" maxlength="10" placeholder="ZIP (e.g. 85001)"
+             autocomplete="postal-code" aria-label="ZIP code" />
+    </div>
+
+    <label class="field" for="date-attached">
+      Date you noticed the tick
+      <input type="date" id="date-attached" required />
+    </label>
+
+    <label class="field" for="hours-attached">
+      Approximate hours attached
+      <span class="hint">Best guess is fine. Risk of pathogen transmission rises after about 24 hours.</span>
+      <select id="hours-attached">
+        <option value="">Choose one&hellip;</option>
+        <option value="0-2">Less than 2 hours</option>
+        <option value="2-6">2 to 6 hours</option>
+        <option value="6-24">6 to 24 hours</option>
+        <option value="24-48">1 to 2 days</option>
+        <option value="48+">More than 2 days</option>
+        <option value="unknown">I don't know</option>
+      </select>
+    </label>
+
+    <label class="field" for="body-location">
+      Where on your body was it attached?
+      <select id="body-location">
+        <option value="">Choose one&hellip;</option>
+        <option value="head_neck">Head or neck</option>
+        <option value="torso">Torso (chest, back, abdomen)</option>
+        <option value="arm">Arm</option>
+        <option value="hand">Hand</option>
+        <option value="groin">Groin / waistline</option>
+        <option value="leg">Leg</option>
+        <option value="foot">Foot</option>
+        <option value="other">Other / multiple</option>
+      </select>
+    </label>
+  </section>
+
+  <!-- ------------------------------------------------------------------- -->
+  <!-- Step 3: Photo                                                       -->
+  <!-- ------------------------------------------------------------------- -->
+  <section class="step" id="step-photo" data-step="photo" data-step-name="Photo" hidden>
+    <h2>Photo of the tick</h2>
+    <p>If you can, put it next to a coin or a fingertip for scale. The
+       lab still needs the physical tick, but the photo helps us give you
+       a first-pass species estimate now.</p>
+
+    <label class="photo-input" id="photo-label" for="photo">
+      <span class="icon" aria-hidden="true">&#128247;</span>
+      <span id="photo-prompt">Tap to take a photo or upload from your gallery</span>
+      <!-- capture="environment" tells phones to open the back camera. -->
+      <input type="file" id="photo" name="photo" accept="image/*" capture="environment" />
+    </label>
+    <img id="photo-preview" class="photo-preview" alt="" hidden />
+    <button type="button" class="btn ghost" id="photo-clear" hidden
+            aria-label="Remove this photo and choose another">Remove photo</button>
+
+    <p class="muted small" style="margin-top:1rem">
+      A photo is optional but strongly recommended. You can submit without one.
+    </p>
+  </section>
+
+  <!-- ------------------------------------------------------------------- -->
+  <!-- Step 4: Optional symptoms                                           -->
+  <!-- ------------------------------------------------------------------- -->
+  <section class="step" id="step-symptoms" data-step="symptoms" data-step-name="Symptoms" hidden>
+    <h2>Any symptoms yet?</h2>
+    <p>If you feel fine, skip this &mdash; that's the most common case.
+       If anything starts up in the next two weeks, we'll remind you what
+       to watch for on the next screen.</p>
+
+    <div class="check-grid" id="symptoms-grid" role="group" aria-label="Symptoms checklist">
+      <label><input type="checkbox" value="fever">Fever</label>
+      <label><input type="checkbox" value="headache">Headache</label>
+      <label><input type="checkbox" value="rash">Rash</label>
+      <label><input type="checkbox" value="muscle_aches">Muscle aches</label>
+    </div>
+    <p class="muted small" style="margin-top:1rem">
+      Skipping is fine. One tap of <em>Next</em> moves on.
+    </p>
+  </section>
+
+  <!-- ------------------------------------------------------------------- -->
+  <!-- Step 5: Consent                                                     -->
+  <!-- ------------------------------------------------------------------- -->
+  <section class="step" id="step-consent" data-step="consent" data-step-name="Consent" hidden>
+    <h2>What we keep and what we don't</h2>
+    <p>This is the <code>consent.tick_mailin</code> profile from
+       <a href="../../plan/01-parameter-mapping.html#suppression-rules" rel="noopener">plan&nbsp;01</a>.
+       Fields the app doesn't ask for are marked &ldquo;not collected&rdquo;
+       and are dropped at the Intake&nbsp;Agent boundary.</p>
+
+    <table class="consent-table" aria-label="Fields kept vs. fields not collected">
+      <thead>
+        <tr><th>Field</th><th>Kept</th><th>Why / not why</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>GPS or ZIP</td><td class="y">Yes</td><td>For county routing and the responsible vector-control agency.</td></tr>
+        <tr><td>Date attached</td><td class="y">Yes</td><td>Drives the Detect milestone clock.</td></tr>
+        <tr><td>Hours attached</td><td class="y">Yes</td><td>Pathogen-transmission risk window.</td></tr>
+        <tr><td>Location on body</td><td class="y">Yes</td><td>Triage context (engorgement, exposure pattern).</td></tr>
+        <tr><td>Photo</td><td class="y">If provided</td><td>First-pass species ID, attached to the lab submission.</td></tr>
+        <tr><td>Symptoms (if any)</td><td class="y">Yes</td><td>Triage class and watchlist tuning.</td></tr>
+        <tr><td>Name, age, sex</td><td class="n">Not collected</td><td>Not needed for a tick-mail-in flow.</td></tr>
+        <tr><td>Phone, email</td><td class="n">Not collected</td><td>Mailing label is downloaded inline; no notifications channel is opened here.</td></tr>
+        <tr><td>Household member ID</td><td class="n">Not collected</td><td>Out of scope for this flow.</td></tr>
+      </tbody>
+    </table>
+
+    <label class="field" style="margin-top:1.25rem;display:flex;gap:.65rem;align-items:flex-start;font-weight:400">
+      <input type="checkbox" id="consent-ok" style="width:22px;height:22px;margin-top:.15rem;flex:0 0 auto" />
+      <span>
+        I agree to share the fields marked &ldquo;Yes&rdquo; above with the
+        AZ One Health Sentinel pipeline and the Great Arizona Tick Check lab.
+      </span>
+    </label>
+  </section>
+
+  <!-- ------------------------------------------------------------------- -->
+  <!-- Step 6: Submitting / Result                                         -->
+  <!-- ------------------------------------------------------------------- -->
+  <section class="step" id="step-submit" data-step="submit" data-step-name="Submit" hidden>
+    <!-- Pre-submit summary; replaced in-place once the user taps Submit. -->
+    <div id="submit-pre">
+      <h2>Ready to submit?</h2>
+      <p>Tap submit to send this through the agent pipeline:
+        <strong>Intake &rarr; Geo-Enrichment &rarr; Validation &rarr;
+        Triage &rarr; Enrichment &rarr; Notification</strong>.</p>
+      <div id="summary" class="section-block">
+        <h3>Summary</h3>
+        <div id="summary-body" class="muted small">Loading&hellip;</div>
+      </div>
+    </div>
+
+    <!-- Spinner shown while the (mock) agent chain runs. -->
+    <div id="submit-pending" class="submitting" hidden role="status" aria-live="polite">
+      <div class="big-spinner" aria-hidden="true"></div>
+      <div><strong>Running the agent pipeline&hellip;</strong></div>
+      <div class="agent-log" id="agent-log">
+        <div class="line pending" data-agent="intake">Intake Agent: parsing Minimum Dataset</div>
+        <div class="line pending" data-agent="geo">Geo-Enrichment Agent: resolving county</div>
+        <div class="line pending" data-agent="validation">Validation Agent: photo quality check</div>
+        <div class="line pending" data-agent="triage">Triage Agent (VBD): matching candidate pathogens</div>
+        <div class="line pending" data-agent="enrichment">Enrichment Agent: vectorsurv-mcp + great-az-tick-check-mcp</div>
+        <div class="line pending" data-agent="notification">Notification Agent: building response card</div>
+      </div>
+    </div>
+
+    <!-- Result card rendered by tick.js on success. -->
+    <div id="submit-result" hidden></div>
+
+    <!-- Error fallback. -->
+    <div id="submit-error" class="error-banner" hidden role="alert"></div>
+  </section>
+
+</main>
+
+<!-- Sticky next/back bar (hidden on the final success card). -->
+<div class="sticky-bar" id="sticky-bar" hidden>
+  <button type="button" class="btn secondary back" id="back-btn" aria-label="Go to previous step">Back</button>
+  <button type="button" class="btn" id="next-btn" aria-label="Go to next step">Next</button>
+</div>
+
+<footer class="app-footer" style="margin-bottom:6rem">
+  Prototype &middot; no real data is sent. See the
+  <a href="../README.html">app README</a> for how to wire a real backend.
+</footer>
+
+<script type="module" src="tick.js"></script>
+
+</body>
+</html>

@@ -45,11 +45,18 @@ TOP_LEVEL_ORDER = (
 
 
 def _default_schema_path() -> Path:
-    """Resolve the default schema path: ``<repo>/schema`` two levels up."""
-    # src/knowledge_graph_mcp/loader.py -> mcp/knowledge-graph-mcp ->
-    # mcp -> repo root, then `schema/`.
+    """Resolve the default schema path: ``<repo>/schema``.
+
+    From this file ``src/knowledge_graph_mcp/loader.py`` the parent
+    chain runs:
+      parents[0] = knowledge_graph_mcp/
+      parents[1] = src/
+      parents[2] = knowledge-graph-mcp/
+      parents[3] = mcp/
+      parents[4] = <repo root>
+    """
     here = Path(__file__).resolve()
-    return here.parents[3] / "schema"
+    return here.parents[4] / "schema"
 
 
 def discover_schema_files(schema_root: Path) -> list[Path]:
