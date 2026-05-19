@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>DuckLake schema — EpiHack Arizona 2026</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    max-width: 1100px;
+    margin: 2rem auto;
+    padding: 0 1.25rem;
+    color: #1a1a1a;
+    line-height: 1.55;
+  }
+  nav.crumbs { font-size: .9rem; color: #555; margin-bottom: 1rem; }
+  nav.crumbs a { color: #1F3A93; text-decoration: none; }
+  h1 { border-bottom: 3px solid #1F3A93; padding-bottom: .35rem; }
+  h2 { margin-top: 2.25rem; color: #1F3A93; }
+  h3 { color: #2C5F2D; margin-top: 1.5rem; }
+  .hero {
+    background: linear-gradient(135deg, #1F3A93 0%, #2C5F2D 100%);
+    color: #fff;
+    padding: 1.75rem;
+    border-radius: 10px;
+    margin: 1rem 0 2rem;
+  }
+  .hero h1 { color: #fff; border: none; margin: 0 0 .4rem 0; }
+  .hero p  { margin: 0; opacity: .95; }
+  .doc-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem;
+    margin: 1.25rem 0;
+  }
+  .doc-card {
+    border: 1px solid #d0d7e2;
+    border-left: 6px solid var(--c, #1F3A93);
+    border-radius: 6px;
+    padding: 1rem 1.1rem;
+    background: #fff;
+    text-decoration: none;
+    color: inherit;
+  }
+  .doc-card:hover { background: #f6f8fc; }
+  .doc-card h3 {
+    margin: 0 0 .35rem 0;
+    font-size: 1rem;
+    color: #1F3A93;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  .doc-card p  { margin: 0; color: #555; font-size: .9rem; }
+  .doc-card .meta {
+    margin-top: .5rem;
+    font-size: .75rem;
+    color: #888;
+  }
+  pre {
+    background: #f4f6fb;
+    padding: 1rem;
+    border-radius: 6px;
+    overflow-x: auto;
+    font-size: .82rem;
+    line-height: 1.45;
+  }
+  code { background: #f1f3f7; padding: 1px 5px; border-radius: 3px; font-size: .9em; }
+  pre code { background: transparent; padding: 0; }
+  table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: .92rem; }
+  th, td { border: 1px solid #ddd; padding: .5rem .75rem; text-align: left; vertical-align: top; }
+  th { background: #f0f3f8; }
+  footer { margin-top: 4rem; padding-top: 1rem; border-top: 1px solid #ddd; color: #666; font-size: .85rem; }
+</style>
+</head>
+<body>
+
+<nav class="crumbs"><a href="../index.html">EpiHack AZ 2026</a> &raquo; DuckLake schema</nav>
+
+<div class="hero">
+  <h1>DuckLake schema</h1>
+  <p>SQL seeds for the EpiHack Arizona 2026 knowledge graph &mdash; a
+     property graph encoded as <code>kg.node</code> / <code>kg.edge</code>
+     / <code>kg.property</code> tables, stored in DuckLake (Postgres
+     catalog + Parquet data), queried with DuckDB.</p>
+</div>
+
+<h2>Why DuckLake + DuckDB + Postgres</h2>
+<table>
+  <thead><tr><th>Layer</th><th>Role</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><strong>Postgres</strong></td>
+      <td>DuckLake catalog: snapshot metadata, schema evolution, ACID
+          transactions over the lakehouse.</td>
+    </tr>
+    <tr>
+      <td><strong>DuckLake</strong></td>
+      <td>Open lakehouse format on top of Parquet, catalog in Postgres.
+          Time travel, branches, and multi-writer concurrency without
+          having to stand up Iceberg/Hudi infrastructure.</td>
+    </tr>
+    <tr>
+      <td><strong>DuckDB</strong></td>
+      <td>Embedded query engine. Reads/writes DuckLake natively; can
+          join Parquet, Postgres, and CSV in a single SQL statement;
+          works on a laptop and at hack-day scale.</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2>Bootstrap</h2>
+<pre><code># 1. Postgres for the DuckLake catalog
+createdb epihack
+
+# 2. DuckDB session
+duckdb</code></pre>
+
+<pre><code>-- Inside DuckDB:
+INSTALL ducklake;  INSTALL postgres;
+LOAD    ducklake;  LOAD    postgres;
+
+ATTACH 'ducklake:postgres:dbname=epihack host=localhost user=epihack'
+  AS epihack
+  (DATA_PATH 's3://epihack/ducklake/');     -- or a local path for laptop dev
+
+USE epihack;
+
+-- Core graph (run first)
+.read schema/knowledge_graph.sql
+.read schema/system_designs.sql
+.read schema/world_cafe.sql
+.read schema/wildlife_vectors.sql   -- focus group 1
+.read schema/heat.sql               -- focus group 2
+
+-- Deep seeds (any order, except the explicit dependencies below)
+.read schema/deep/counties.sql
+.read schema/deep/tribes.sql
+.read schema/deep/pathogens.sql
+.read schema/deep/outbreaks.sql
+.read schema/deep/datasets_apis.sql
+.read schema/deep/standards.sql
+.read schema/deep/mcp_servers.sql
+.read schema/deep/outbreaks_near_me.sql
+.read schema/deep/application.sql       -- depends on knowledge_graph.sql
+.read schema/deep/audit.sql             -- depends on application.sql
+.read schema/deep/followups.sql         -- run last (idempotent patches)
+.read schema/deep/cluster_followups.sql</code></pre>
+
+<h2>Core graph &mdash; <code>schema/</code></h2>
+<p>Frameworks from the reference figures plus the two focus-group seeds.
+   Load these first.</p>
+<div class="doc-grid">
+  <a class="doc-card" href="knowledge_graph.sql" style="--c: #1F3A93">
+    <h3>knowledge_graph.sql</h3>
+    <p>Core <code>kg.node</code> / <code>kg.edge</code> / <code>kg.property</code>
+       tables plus the seed nodes from Figures 1&ndash;4 (purpose,
+       minimum dataset, timeliness milestones, design lifecycle).</p>
+    <p class="meta">315 lines &middot; 11 INSERT blocks</p>
+  </a>
+  <a class="doc-card" href="system_designs.sql" style="--c: #1F3A93">
+    <h3>system_designs.sql</h3>
+    <p>Worksheet template (Figure 5), focus-area catalog, and a few
+       completed example designs.</p>
+    <p class="meta">148 lines &middot; 8 INSERT blocks</p>
+  </a>
+  <a class="doc-card" href="world_cafe.sql" style="--c: #1F3A93">
+    <h3>world_cafe.sql</h3>
+    <p>World Caf&eacute; Q4 engagement cards (heat, unhoused, information
+       flow) and the tactics each table produced.</p>
+    <p class="meta">140 lines &middot; 8 INSERT blocks</p>
+  </a>
+  <a class="doc-card" href="wildlife_vectors.sql" style="--c: #2C5F2D">
+    <h3>wildlife_vectors.sql</h3>
+    <p>Wildlife &amp; Vector-Borne Diseases focus group: four guiding
+       questions plus 30+ anchor resources across state, county, tribal,
+       federal, academic, and citizen-science jurisdictions.</p>
+    <p class="meta">360 lines &middot; 14 INSERT blocks</p>
+  </a>
+  <a class="doc-card" href="heat.sql" style="--c: #C0392B">
+    <h3>heat.sql</h3>
+    <p>Heat focus group: four guiding questions, vulnerable populations,
+       and 30+ heat-specific resources (ADHS BRACE, MAG HRN, Phoenix OHRM,
+       NWS HeatRisk, UA Heat Resilience Initiative, CLIMAS, 211 Arizona).</p>
+    <p class="meta">328 lines &middot; 13 INSERT blocks</p>
+  </a>
+</div>
+
+<h2>Deep seeds &mdash; <code>schema/deep/</code></h2>
+<p>Per-domain seeds produced by parallel deep-research sub-agents. Each
+   file documents its own dependencies and reserves a numeric range of
+   <code>edge_id</code> values to avoid collisions.</p>
+<div class="doc-grid">
+  <a class="doc-card" href="deep/counties.sql" style="--c: #1F3A93">
+    <h3>deep/counties.sql</h3>
+    <p>All 15 Arizona counties: FIPS, seat, area, population, vector
+       control program, and the agency-to-county edges.</p>
+    <p class="meta">364 lines &middot; 11 INSERT blocks</p>
+  </a>
+  <a class="doc-card" href="deep/tribes.sql" style="--c: #1F3A93">
+    <h3>deep/tribes.sql</h3>
+    <p>All 22 federally recognized AZ tribes: enrollment, land base,
+       epidemiology contacts, ITCA-TEC affiliation, and tribal-data
+       sovereignty annotations.</p>
+    <p class="meta">519 lines &middot; 16 INSERT blocks</p>
+  </a>
+  <a class="doc-card" href="deep/pathogens.sql" style="--c: #6A1B9A">
+    <h3>deep/pathogens.sql</h3>
+    <p>Pathogens with their vectors, reservoirs, AZ presence, ICD-10
+       codes, and surveilling agencies. Drives the
+       <a href="../graph/index.html">Cytoscape pathogen graph</a>.</p>
+    <p class="meta">590 lines &middot; 13 INSERT blocks</p>
+  </a>
+  <a class="doc-card" href="deep/outbreaks.sql" style="--c: #C0392B">
+    <h3>deep/outbreaks.sql</h3>
+    <p>Historical AZ outbreaks (hantavirus, plague, WNV, etc.) with the
+       Figure-3 timeliness-milestone dates (Detect &rarr; Notify &rarr;
+       Verify &rarr; Lab &rarr; Respond).</p>
+    <p class="meta">528 lines &middot; 7 INSERT blocks</p>
+  </a>
+  <a class="doc-card" href="deep/datasets_apis.sql" style="--c: #2C5F2D">
+    <h3>deep/datasets_apis.sql</h3>
+    <p>Upstream datasets and APIs (NEON DPs, WHISPers, NWS, GBIF, iNat,
+       VectorSurv, AZGFD, ArcGIS Feature Services, etc.) modeled as
+       <code>resource</code> and <code>api</code> nodes.</p>
+    <p class="meta">578 lines &middot; 14 INSERT blocks</p>
+  </a>
+  <a class="doc-card" href="deep/standards.sql" style="--c: #2C5F2D">
+    <h3>deep/standards.sql</h3>
+    <p>Interop standards used by the agentic pipeline: FHIR, OMOP CDM,
+       ICD-10, SNOMED CT, LOINC, Darwin Core, GeoSPARQL.</p>
+    <p class="meta">550 lines &middot; 14 INSERT blocks</p>
+  </a>
+  <a class="doc-card" href="deep/mcp_servers.sql" style="--c: #2C5F2D">
+    <h3>deep/mcp_servers.sql</h3>
+    <p>MCP servers and their exposed tools as graph nodes
+       (<code>mcp_server</code>, <code>mcp_tool</code>, <code>api</code>),
+       wired up with <code>wraps</code> / <code>exposedBy</code> /
+       <code>informs</code> edges. Backs the
+       <a href="../mcp/vectorsurv-mcp/README.html">vectorsurv-mcp</a> family.</p>
+    <p class="meta">133 lines &middot; 8 INSERT blocks</p>
+  </a>
+  <a class="doc-card" href="deep/outbreaks_near_me.sql" style="--c: #6A1B9A">
+    <h3>deep/outbreaks_near_me.sql</h3>
+    <p>Boston Children's / HealthMap Outbreaks Near Me as a
+       <code>resource_org</code> + dataset, with edges to the
+       vector-borne and zoonotic focus areas and to the Figure-3
+       Detect milestone.</p>
+    <p class="meta">58 lines &middot; 3 INSERT blocks</p>
+  </a>
+  <a class="doc-card" href="deep/application.sql" style="--c: #1F6FB0">
+    <h3>deep/application.sql</h3>
+    <p>Application runtime types: the <code>observation</code> node type
+       that every report lands in, plus heat / VBD symptom and exposure
+       enumerations, consent profiles, wearable metrics, and the
+       triage-class enum (<code>tc.*</code>).</p>
+    <p class="meta">540 lines &middot; 15 INSERT blocks</p>
+  </a>
+  <a class="doc-card" href="deep/audit.sql" style="--c: #1F6FB0">
+    <h3>deep/audit.sql</h3>
+    <p>Agent-runtime audit log: one row per agent invocation, written
+       by the orchestrator's audit sink, plus a per-observation
+       timeliness pivot view that anchors the Figure-3 milestones.</p>
+    <p class="meta">158 lines &middot; views only</p>
+  </a>
+  <a class="doc-card" href="deep/followups.sql" style="--c: #888">
+    <h3>deep/followups.sql</h3>
+    <p>Idempotent patch file: small gaps the Phase 0 sub-agents flagged
+       (missing SNOMED codes, county aliases, etc.). Safe to re-run.</p>
+    <p class="meta">165 lines &middot; 7 INSERT blocks</p>
+  </a>
+  <a class="doc-card" href="deep/cluster_followups.sql" style="--c: #888">
+    <h3>deep/cluster_followups.sql</h3>
+    <p>Closes the eight historical-outbreak gaps the cluster-detection
+       calibration sub-agent itemised in
+       <a href="../plan/CLUSTER-CALIBRATION.html">plan/CLUSTER-CALIBRATION</a>.
+       Adds <code>single_case_alertable</code> flags read by the
+       Tier-A detector at runtime.</p>
+    <p class="meta">146 lines &middot; 4 INSERT blocks</p>
+  </a>
+</div>
+
+<h2>Example queries</h2>
+
+<p>After loading, the graph is queryable in plain SQL. A few starters:</p>
+
+<pre><code>-- All parameters in the Exposure class (Figure 2)
+SELECT n.label
+FROM   kg.edge e
+JOIN   kg.node n ON n.node_id = e.subject_id
+WHERE  e.predicate = 'belongsTo'
+  AND  e.object_id = 'category.exposure';
+
+-- Outbreak timeliness intervals (Figure 3)
+SELECT * FROM kg.v_outbreak_timeliness;
+
+-- Which MCP tools answer Wildlife Q1?
+SELECT s.label AS mcp_server, t.label AS mcp_tool
+FROM   kg.edge ei
+JOIN   kg.node t ON t.node_id = ei.subject_id
+JOIN   kg.edge eb ON eb.subject_id = t.node_id AND eb.predicate = 'exposedBy'
+JOIN   kg.node s ON s.node_id = eb.object_id
+WHERE  ei.predicate = 'informs'
+  AND  ei.object_id = 'wv.q1';
+
+-- Convenience: every MCP server with the API it wraps
+SELECT * FROM kg.v_mcp_servers;</code></pre>
+
+<h2>Conventions for new seeds</h2>
+<ul>
+  <li><strong>Idempotent</strong>: every <code>INSERT</code> uses
+      <code>ON CONFLICT DO NOTHING</code>, so re-running a seed is safe.</li>
+  <li><strong>Edge ID ranges</strong>: each file reserves a numeric block
+      (e.g. <code>16000&ndash;16999</code> for <code>mcp_servers.sql</code>,
+      <code>40000&ndash;40999</code> for <code>audit.sql</code>,
+      <code>50000&ndash;50999</code> for <code>cluster_followups.sql</code>).
+      New seeds should pick the next free block and document it in the
+      header comment.</li>
+  <li><strong><code>source_fig</code></strong>: every node and edge carries
+      a <code>source_fig</code> tag so any row can be traced back to the
+      figure, focus group, or sub-agent that introduced it.</li>
+  <li><strong>Views in <code>kg.v_*</code></strong>: convenience views are
+      defined in the seed that owns their data and exposed under the
+      <code>kg.v_</code> prefix.</li>
+</ul>
+
+<h2>Cross-links</h2>
+<ul>
+  <li><a href="../README.html">Repository README</a> &mdash; the full
+      bootstrap walk-through plus example queries.</li>
+  <li><a href="../figures/index.html">Reference figures</a> &mdash; the
+      original Figure 1&ndash;5 transcriptions these seeds encode.</li>
+  <li><a href="../plan/index.html">Application plan</a> &mdash; how the
+      schema feeds the agentic pipeline.</li>
+  <li><a href="../graph/index.html">Pathogen graph viewer</a> &mdash;
+      Cytoscape view backed by <code>deep/pathogens.sql</code>.</li>
+  <li><a href="../map/index.html">Arizona map</a> &mdash; MapLibre view
+      backed by <code>deep/counties.sql</code> and
+      <code>deep/tribes.sql</code>.</li>
+  <li><a href="../mcp/">MCP servers</a> &mdash; LLM tooling registered in
+      <code>deep/mcp_servers.sql</code>.</li>
+</ul>
+
+<footer>
+  EpiHack Arizona 2026 &middot; DuckLake schema &middot; Source:
+  Ending Pandemics Academy &middot; University of Arizona Mel &amp;
+  Enid Zuckerman College of Public Health &middot; Global Health
+  Institute.
+</footer>
+
+</body>
+</html>
