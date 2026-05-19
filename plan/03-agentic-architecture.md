@@ -98,6 +98,23 @@ state, and a single MCP-or-graph dependency.
 
 The vertical-specific brain.
 
+**Enumerated triage classes** (canonical source:
+`schema/deep/application.sql` `tc.*` nodes — the LLM step is gated to
+choose only from this enumeration):
+
+| Class | Vertical | Meaning |
+|---|---|---|
+| `tc.self_care` | VBD | Symptoms benign; self-monitor. |
+| `tc.see_clinician` | VBD | Symptoms warrant a routine clinical visit. |
+| `tc.urgent_care` | VBD | Symptoms + local signal warrant same-day care. |
+| `tc.call_911` | Both | Life-threatening — call emergency services. |
+| `tc.report_to_azgfd` | VBD | Wildlife mortality / unusual animal observation. |
+| `tc.mail_to_walker_lab` | VBD | Tick submission for UA Cooperative Extension identification. |
+| `tc.check_in_only` | Heat | Person is fine; outreach logs the contact and moves on. |
+| `tc.drink_water_advisory` | Heat | Mild risk — advisory message + offer cooling-center info. |
+| `tc.go_to_cooling_center` | Heat | Get the person to the nearest open cooling center. |
+| `tc.dispatch_chw` | Heat | Send a Community Health Worker (or, with `tc.go_to_cooling_center`, dispatch transport). |
+
 **VBD branch:**
 - Match observed symptoms to `pathogen.*` nodes via the
   `causes` and `transmittedBy` edges seeded in
@@ -105,8 +122,7 @@ The vertical-specific brain.
 - For each candidate pathogen, fetch nearby pool positivity
   (`vectorsurv-mcp`), recent wildlife mortality
   (`whispers-mcp`), and any active outbreak record.
-- Emit a triage class: `{self-care, see-clinician, urgent-care,
-  report-to-AZGFD, mail-tick-to-walker-lab}`.
+- Emit one (or more) of the VBD / Both triage classes above.
 
 **Heat branch:**
 - Compute an individualized **heat-vulnerability score** from the
@@ -115,8 +131,57 @@ The vertical-specific brain.
   `pop.older_adults`, `pop.outdoor_workers`, etc.).
 - Pull current NWS HeatRisk for the user's location via
   `nws-heatrisk-mcp`.
-- Emit a triage class: `{check-in-only, drink-water-advisory,
-  go-to-cooling-center, call-911, dispatch-CHW}`.
+- Emit one (or more) of the Heat / Both triage classes above.
+
+**Heat vulnerability-score factor table** (the canonical
+`HEAT_SCORE_TABLE` lives in
+`agents/src/onehealth_agents/triage.py`; pin the point values here):
+
+| Factor | Points |
+|---|---|
+| Currently unsheltered | +3 |
+| Age 65+ | +2 |
+| NWS HeatRisk **Magenta** today | +3 |
+| NWS HeatRisk **Red** today | +2 |
+| NWS HeatRisk **Orange** today | +1 |
+| No working AC at home | +2 |
+| Outdoor occupational exposure today (≥ 4 h) | +2 |
+| Energy / utility insecurity | +1 |
+| On thermoregulation-affecting medications | +1 |
+| Chronic cardiovascular / renal disease | +1 |
+| Symptomatic — heat-exhaustion features | +2 |
+| Symptomatic — heat-stroke features (confusion, hot-dry skin) | +4 |
+| No transport / no phone | +1 |
+
+**Triage-class thresholds** (Heat branch, summed score):
+
+| Score | Class |
+|---|---|
+| 0 – 2 | `tc.check_in_only` |
+| 3 – 5 | `tc.drink_water_advisory` |
+| 6 – 9 | `tc.go_to_cooling_center` |
+| 10 – 12 | `tc.go_to_cooling_center` + `tc.dispatch_chw` (transport) |
+| ≥ 13, or any heat-stroke feature | `tc.call_911` |
+
+**Notification-priority set.** The "user-before-agency" rule has
+exactly two exceptions where the agency channel fires first:
+`tc.call_911` and any VBD case where the linked outbreak record is
+lab-confirmed-positive (LCP). All other triage classes notify the user
+first, then the agency dashboard pin (no PII).
+
+**Consent-suppression triggers.**
+- `consent.anonymous_heat` (default for CHW / outreach flows) —
+  suppresses `param.email`, `param.phone_number`,
+  `param.household_member_id`, `param.occupation`,
+  `param.absent_work`, `param.absent_school`.
+- `consent.tick_mailin` — keeps Exposure + Auxiliary; suppresses
+  Human symptom fields **unless** any symptom field is already
+  non-null at intake time (i.e., the submitter has been bitten
+  with symptoms).
+- `consent.wearable_only` — records only `auxiliary.digital_biomarker`
+  + coarse postal-code geo; everything else suppressed.
+- `consent.full_followup` — no suppression; explicit opt-in for the
+  observation to be retrievable by the user later.
 
 ### 5. Enrichment Agent
 
@@ -161,9 +226,23 @@ The vertical-specific brain.
 ## Why agents and not a monolith
 
 - **Auditability.** Every agent's decision is a row in an
-  `agent_run` table with input, output, model id, latency, and
-  cost. The Figure 3 timeliness milestones become joins against
-  that table.
+  `agent_run` table with the schema:
+
+  | Column | Type |
+  |---|---|
+  | `run_id` | uuid |
+  | `agent_name` | text |
+  | `observation_id` | uuid (FK → `observation.*`) |
+  | `started_at` / `ended_at` | timestamp |
+  | `model_id` | text (e.g. `claude-haiku-4-5`, `claude-sonnet-4-6`) |
+  | `prompt_tokens` / `completion_tokens` / `cache_read_tokens` / `cache_creation_tokens` | int |
+  | `cost_usd` | numeric |
+  | `latency_ms` | int |
+  | `outcome` | text (`success` / `degraded` / `error`) |
+  | `input_digest` / `output_digest` | text (sha256 of canonical JSON) |
+  | `error_message` | text (nullable) |
+
+  Figure 3 timeliness milestones become joins against this table.
 - **Failure isolation.** If `whispers-mcp` is down, the Enrichment
   Agent drops that edge but the observation still lands. A
   monolithic prompt would refuse the whole report.
