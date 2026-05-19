@@ -300,6 +300,40 @@ SELECT * FROM chain;
 - [ ] Track the lifecycle (Figure 4) as project state for each pilot
       community deployment.
 
+## Contributing + governance
+
+The repository is now stewarded by a standing review board (ADHS,
+AZGFD, ITCA-TEC, Maricopa Vector Control) per the cross-cutting
+governance track in [`plan/05-roadmap.md`](./plan/05-roadmap.md).
+Contributions are welcome through pull requests; the six documents
+below describe the conventions, the review structure, the security
+posture, and the version history.
+
+- [`CONTRIBUTING.md`](./CONTRIBUTING.md) &mdash; local environment
+  setup, PR workflow, MCP-server and schema-seed templates, coding
+  style, and the privacy + data-sovereignty checklist every PR
+  touching observation data must pass.
+- [`GOVERNANCE.md`](./GOVERNANCE.md) &mdash; standing review board
+  membership, proposal-then-merge cadence, tribal-partner veto,
+  opt-in posture for tribal data, conflict-of-interest disclosure,
+  and sunset clauses for MCP servers that proxy tribal data.
+- [`SECURITY.md`](./SECURITY.md) &mdash; private-disclosure channel,
+  the five-class threat model
+  (re-identification / credential leakage / token reuse /
+  prompt-injection / cluster-detection false positives), mitigations
+  in place, and an itemised list of known security gaps.
+- [`CHANGELOG.md`](./CHANGELOG.md) &mdash; per-phase rollup of what
+  landed and when (PRs #1 through #8), plus the "Next" backlog from
+  [`plan/EXECUTION-STATUS-PHASE-1-2.md`](./plan/EXECUTION-STATUS-PHASE-1-2.md)
+  and [`plan/CLUSTER-CALIBRATION.md`](./plan/CLUSTER-CALIBRATION.md).
+- [`mcp/README.md`](./mcp/README.md) &mdash; index of all 11 MCP
+  servers with tool counts, auth posture, and test counts, plus the
+  recipe for adding a new MCP server.
+- [`NOTICE`](./NOTICE) &mdash; third-party attribution for runtime
+  dependencies (MapLibre, Cytoscape, FastMCP / `mcp` SDK, pydantic,
+  httpx, DuckDB / DuckLake), data sources surfaced via MCP, and
+  upstream-spec snapshots.
+
 ## License
 
 See [LICENSE](./LICENSE).

@@ -1022,25 +1022,38 @@ class ClusterDetectionAgent:
                 if norm in self.chronic_baseline_pathogens:
                     tally[(norm, county)].append(obs)
 
+        # Roll county-level tallies up to a statewide total so we don't
+        # under-count a chronic-disease footprint spread across multiple
+        # counties. We emit at the statewide grain (county_id=None) when
+        # the rollup exceeds threshold, and at the county grain when a
+        # single county does so on its own (the more localised, actionable
+        # signal).
+        statewide: dict[str, list[Observation]] = defaultdict(list)
+        for (pid, _county), obs_list in tally.items():
+            statewide[pid].extend(obs_list)
+
         alerts: list[ClusterAlert] = []
-        for (pid, county), obs_list in tally.items():
+        emitted: set[tuple[str, Optional[str]]] = set()
+
+        def _emit(pid: str, county_id: Optional[str],
+                  obs_list: list[Observation]) -> None:
             trailing_count = len(obs_list)
             historical_rate_per_day = self.chronic_baseline_pathogens[pid]
             expected_trailing = historical_rate_per_day * CHRONIC_TRAILING_DAYS
             if expected_trailing <= 0:
-                continue
-            # Per-county expectation is the statewide expectation divided
-            # by the number of counties in the chronic-disease footprint.
-            # Without that footprint encoded here, fall back to "any single
-            # county should not exceed 1.25x the statewide baseline".
+                return
             if trailing_count < self.chronic_drift_multiplier * expected_trailing:
-                continue
+                return
+            key = (pid, county_id)
+            if key in emitted:
+                return
+            emitted.add(key)
             ts_when = max(_parse_obs_ts(o.received_at) or now for o in obs_list)
             alerts.append(
                 ClusterAlert(
                     vertical=vertical,
                     zcta=None,
-                    county_id=county,
+                    county_id=county_id,
                     observation_ids=[o.observation_id for o in obs_list],
                     window_start=trailing_start.isoformat(),
                     window_end=now.isoformat(),
@@ -1051,7 +1064,9 @@ class ClusterDetectionAgent:
                     ),
                     tier1_score=trailing_count / expected_trailing,
                     tier2_posterior=None,
-                    baseline_window_start=(now - timedelta(days=CHRONIC_HISTORICAL_DAYS)).isoformat(),
+                    baseline_window_start=(
+                        now - timedelta(days=CHRONIC_HISTORICAL_DAYS)
+                    ).isoformat(),
                     baseline_window_end=trailing_start.isoformat(),
                     rule_tripped=(
                         f"chronic_baseline_drift/x{self.chronic_drift_multiplier}"
@@ -1059,11 +1074,16 @@ class ClusterDetectionAgent:
                     pathogen_hint=pid,
                     historical_match=_closest_historical(
                         pathogen_hint=pid, is_heat=False,
-                        county_id=county, zcta=None, when=ts_when,
+                        county_id=county_id, zcta=None, when=ts_when,
                     ),
                     cluster_kind="endemic_drift",
                 )
             )
+
+        for pid, obs_list in statewide.items():
+            _emit(pid, None, obs_list)
+        for (pid, county), obs_list in tally.items():
+            _emit(pid, county, obs_list)
         return alerts
 
     # ------------------------------------------------------------------
@@ -1159,6 +1179,49 @@ def _obs_zcta(obs: Observation) -> Optional[str]:
     return obs.dataset.general.postal_code
 
 
+def _obs_county(obs: Observation) -> Optional[str]:
+    if obs.geo and obs.geo.county_id:
+        return obs.geo.county_id
+    return None
+
+
+def _candidate_pathogen_ids(obs: Observation) -> list[str]:
+    """All candidate pathogen slugs attached to ``obs``.
+
+    Pulls from ``triage.candidate_pathogens`` first (the usual path); also
+    surfaces a single inferred ``pathogen.<...>`` slug from
+    ``auxiliary.diagnostic_lab`` if it looks like one (e.g. raw mcp_pull
+    payloads from public lab feeds that bypass Triage)."""
+    out: list[str] = []
+    if obs.triage and obs.triage.candidate_pathogens:
+        out.extend(c.pathogen_id for c in obs.triage.candidate_pathogens)
+    aux = obs.dataset.auxiliary
+    lab = (aux.diagnostic_lab or "").strip()
+    if lab.startswith("pathogen."):
+        out.append(lab)
+    return out
+
+
+def _is_confirmed(obs: Observation) -> bool:
+    """A "confirmed" observation for the Tier-A / travel / chronic detectors.
+
+    Anything not explicitly REJECTED by validation counts, provided we can
+    attach a pathogen slug. (We deliberately *don't* require the upstream
+    validation agent to have run -- raw mcp_pull observations from
+    surveillance feeds are confirmed-by-construction at the source.)
+    """
+    if obs.validation and obs.validation.status.value == "reject":
+        return False
+    if obs.validation_status and obs.validation_status.value == "reject":
+        return False
+    return True
+
+
+def _has_travel_exposure(obs: Observation) -> bool:
+    expo = obs.dataset.exposure
+    return bool(expo and expo.history_of_travel)
+
+
 def _bucket_key(ts: datetime, bucket: str) -> str:
     if bucket == "week":
         return _iso_week_key(ts)
@@ -1218,10 +1281,19 @@ __all__ = [
     "TuningProfile",
     "VBD_PROFILE",
     "HEAT_PROFILE",
+    "VBD_COUNTY_PROFILE",
     "HEAT_SEASON_MONTHS",
     "PRIOR_ALPHA",
     "PRIOR_BETA",
     "EFFECT_SIZE_RR",
+    "SINGLE_CASE_WINDOW_DAYS",
+    "SINGLE_CASE_ALERTABLE",
+    "CHRONIC_DRIFT_MULTIPLIER",
+    "CHRONIC_TRAILING_DAYS",
+    "CHRONIC_HISTORICAL_DAYS",
+    "CHRONIC_BASELINE_PATHOGENS",
+    "TRAVEL_CLUSTER_MIN_OBS",
+    "TRAVEL_CLUSTER_WINDOW_DAYS",
     "HISTORICAL_OUTBREAKS",
     "HistoricalOutbreak",
 ]

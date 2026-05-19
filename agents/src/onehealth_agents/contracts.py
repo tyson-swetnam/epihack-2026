@@ -510,7 +510,8 @@ class ClusterAlert(BaseModel):
         description="Per plan/03 backstop, final declaration is always human.",
     )
     cluster_kind: Literal[
-        "spatial", "travel_import_cluster", "endemic_drift", "single_case"
+        "spatial", "travel_import_cluster", "endemic_drift", "single_case",
+        "federated",
     ] = Field(
         default="spatial",
         description=(
@@ -518,7 +519,17 @@ class ClusterAlert(BaseModel):
             "2h Poisson scan (Tier 1/2). 'single_case' is the high-CFR "
             "single-case alert (Tier A). 'travel_import_cluster' is the "
             "travel-imported scatter detector. 'endemic_drift' is the "
-            "chronic-baseline drift detector (Tier C)."
+            "chronic-baseline drift detector (Tier C). 'federated' is the "
+            "Tier-1/Tier-2 scan run on aggregated sufficient statistics "
+            "from multiple sites (see onehealth_agents.federated)."
+        ),
+    )
+    contributing_sites: list[str] = Field(
+        default_factory=list,
+        description=(
+            "Hashed site identifiers (per onehealth_agents.federated."
+            "hash_site_id) that contributed sufficient statistics to a "
+            "'federated' cluster alert. Empty for non-federated alerts."
         ),
     )
 

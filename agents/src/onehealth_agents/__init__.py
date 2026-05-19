@@ -51,6 +51,15 @@ from .contracts import (  # noqa: F401  (re-exported for convenience)
     to_sms_segment,
 )
 from .enrichment import EnrichmentAgent
+from .federated import (
+    BucketCount,
+    FederatedScanCoordinator,
+    LocalSiteAggregator,
+    SufficientStatistics,
+    apply_laplace_noise,
+    hash_site_id,
+    verify_signed,
+)
 from .geo import GeoEnrichmentAgent
 from .intake import IntakeAgent
 from .mcp_client import FakeMCPClient, MCPClient, StdioMCPClient
@@ -86,6 +95,14 @@ __all__ = [
     "ClusterDetectionAgent",
     "KnowledgeUpdateAgent",
     "HEAT_SCORE_TABLE",
+    # Federated cluster detection (plan/05 Phase 4)
+    "BucketCount",
+    "SufficientStatistics",
+    "LocalSiteAggregator",
+    "FederatedScanCoordinator",
+    "apply_laplace_noise",
+    "hash_site_id",
+    "verify_signed",
     # SMS adapter + shared SMS helpers
     "SmsAdapter",
     "SmsReply",

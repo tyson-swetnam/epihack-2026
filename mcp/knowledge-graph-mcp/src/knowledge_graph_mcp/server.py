@@ -28,7 +28,7 @@ import duckdb
 from mcp.server.fastmcp import FastMCP
 from pydantic import Field
 
-from . import queries
+from . import aggregation, cluster_scan, normalize, queries
 from .loader import bootstrap
 
 log = logging.getLogger(__name__)
@@ -220,6 +220,170 @@ async def kg_resource_lookup(
     return {"question_id": question_id, "results": rows, "count": len(rows)}
 
 
+# --------------------------------------------------------- aggregation tools
+@mcp.tool()
+async def kg_observations_by_window(
+    start_date: Annotated[
+        str, Field(description="Inclusive start date (YYYY-MM-DD or full ISO timestamp).")
+    ],
+    end_date: Annotated[
+        str, Field(description="Inclusive end date (YYYY-MM-DD or full ISO timestamp).")
+    ],
+    vertical: Annotated[
+        str | None,
+        Field(description="Optional filter: 'vbd' / 'heat' / 'both' / 'neither'."),
+    ] = None,
+    county_id: Annotated[
+        str | None,
+        Field(description="Optional county.* slug to filter on (colocatedWith)."),
+    ] = None,
+    pathogen_id: Annotated[
+        str | None,
+        Field(description="Optional pathogen.* slug to filter on (reportsAbout)."),
+    ] = None,
+) -> dict:
+    """Server-side rollup of observations bucketed by (iso_week, county, pathogen).
+
+    Returns rows ``{iso_week, county_id, pathogen_id, observation_count,
+    severity_max, triage_class_breakdown: {tc.x: n, ...}}``. Use this
+    instead of crafting a custom ``kg_sql`` GROUP BY when you want a
+    weekly heat-map / dashboard view.
+    """
+    try:
+        rows = await _run(
+            aggregation.observations_by_window,
+            start_date,
+            end_date,
+            vertical,
+            county_id,
+            pathogen_id,
+        )
+    except ValueError as exc:
+        return {"error": str(exc), "results": [], "count": 0}
+    return {
+        "start_date": start_date,
+        "end_date": end_date,
+        "vertical": vertical,
+        "county_id": county_id,
+        "pathogen_id": pathogen_id,
+        "results": rows,
+        "count": len(rows),
+    }
+
+
+@mcp.tool()
+async def kg_cluster_scan(
+    vertical: Annotated[
+        str,
+        Field(description="Surveillance vertical: 'vbd' / 'heat' / 'both' / 'neither'."),
+    ],
+    lookback_days: Annotated[
+        int,
+        Field(ge=1, le=120, description="Days back from now to load observations."),
+    ] = 14,
+    county_id: Annotated[
+        str | None,
+        Field(description="Optional county.* slug; restricts the scan to that county."),
+    ] = None,
+) -> dict:
+    """Run ``ClusterDetectionAgent`` against recent kg observations.
+
+    Reconstructs lightweight ``Observation`` records from
+    ``kg.node(node_type='observation')`` plus its ``colocatedWith`` /
+    ``reportsAbout`` edges and hands them to the calibrated two-tier
+    detector in ``onehealth_agents.cluster``. Returns one row per
+    emitted ``ClusterAlert`` with ``zcta, observed, expected,
+    tier1_score, tier2_posterior, severity, alert_status, ...``.
+    """
+    try:
+        rows = await _run(
+            cluster_scan.cluster_scan,
+            vertical,
+            lookback_days,
+            county_id,
+        )
+    except ValueError as exc:
+        return {"error": str(exc), "results": [], "count": 0}
+    except ImportError as exc:
+        return {"error": f"onehealth-agents not installed: {exc}", "results": [], "count": 0}
+    return {
+        "vertical": vertical,
+        "lookback_days": lookback_days,
+        "county_id": county_id,
+        "results": rows,
+        "count": len(rows),
+    }
+
+
+@mcp.tool()
+async def kg_milestone_intervals(
+    start_date: Annotated[
+        str, Field(description="Inclusive start date (matches detect_at).")
+    ],
+    end_date: Annotated[
+        str, Field(description="Inclusive end date (matches detect_at).")
+    ],
+    vertical: Annotated[
+        str | None,
+        Field(description="Optional vertical filter (vbd / heat / both / neither)."),
+    ] = None,
+    agency: Annotated[
+        str | None,
+        Field(description="Optional responsible_vector_control_agency filter."),
+    ] = None,
+) -> dict:
+    """Per-observation timeliness pivot joined with the cost rollup.
+
+    Joins ``kg.v_observation_timeliness`` against ``kg.node`` /
+    ``kg.property``, then folds in the per-observation cost summary
+    aggregated from ``kg.agent_run``. Returns one row per observation
+    with the five Figure-3 milestone timestamps + four interval-in-
+    minutes columns + cost + token totals.
+    """
+    try:
+        rows = await _run(
+            aggregation.milestone_intervals,
+            start_date,
+            end_date,
+            vertical,
+            agency,
+        )
+    except ValueError as exc:
+        return {"error": str(exc), "results": [], "count": 0}
+    return {
+        "start_date": start_date,
+        "end_date": end_date,
+        "vertical": vertical,
+        "agency": agency,
+        "results": rows,
+        "count": len(rows),
+    }
+
+
+@mcp.tool()
+async def kg_normalize_diagnosis(
+    diagnosis_text: Annotated[
+        str, Field(description="Free-text diagnosis, e.g. 'plague', 'Y. pestis', 'A20.0'.")
+    ],
+    vocabulary_hint: Annotated[
+        str | None,
+        Field(description="Optional hint: 'icd10' or 'snomed' to narrow the resolver."),
+    ] = None,
+) -> dict:
+    """Fuzzy + alias normalisation of a diagnosis string to a pathogen.* slug.
+
+    Resolution order: exact ICD-10 -> exact SNOMED CT -> curated alias
+    -> substring -> fuzzy similarity. Returns ``{pathogen_id,
+    snomed_code, icd10_code, confidence, match_reason}`` with
+    ``pathogen_id=None`` when nothing crosses the confidence floor.
+    """
+    return await _run(
+        normalize.normalize_diagnosis,
+        diagnosis_text,
+        vocabulary_hint,
+    )
+
+
 # ---------------------------------------------------------------- escape hatch
 @mcp.tool()
 async def kg_sql(
@@ -257,6 +421,59 @@ async def node_types_resource() -> str:
 async def predicates_resource() -> str:
     predicates = await _run(queries.distinct_predicates)
     return "\n".join(predicates) if predicates else "(no edges loaded)"
+
+
+@mcp.resource("kg://aggregation-tools")
+def aggregation_tools_resource() -> str:
+    """Guidance for the four aggregation-MCP tools the dashboard surfaces.
+
+    Lists each tool, its input contract, and when to reach for it vs
+    the lower-level ``kg_sql`` escape hatch.
+    """
+    return (
+        "Aggregation tools (extending kg-mcp; flagged by the agency-dashboard sub-agent)\n"
+        "===============================================================================\n"
+        "\n"
+        "kg_observations_by_window\n"
+        "  Args: start_date, end_date, vertical?, county_id?, pathogen_id?\n"
+        "  Returns: [{iso_week, county_id, pathogen_id, observation_count,\n"
+        "            severity_max, triage_class_breakdown}]\n"
+        "  Use when: building a weekly heat-map or per-county dashboard;\n"
+        "  prefer this over a custom kg_sql GROUP BY because it correctly\n"
+        "  de-dupes observations that have multiple county or pathogen edges.\n"
+        "\n"
+        "kg_cluster_scan\n"
+        "  Args: vertical, lookback_days=14, county_id?\n"
+        "  Returns: [{zcta, observed, expected, tier1_score, tier2_posterior,\n"
+        "            severity, alert_status, pathogen_hint, historical_match, ...}]\n"
+        "  Use when: surfacing live calibrated cluster alerts on the agency\n"
+        "  dashboard. Wraps ClusterDetectionAgent (Tier-1 deterministic + Tier-2\n"
+        "  Gamma-Poisson posterior). Pure-Python call; does not write back to\n"
+        "  the kg.\n"
+        "\n"
+        "kg_milestone_intervals\n"
+        "  Args: start_date, end_date, vertical?, agency?\n"
+        "  Returns: [{observation_id, detect_at, notify_at, verify_at_provisional,\n"
+        "            lab_at_provisional, respond_at, detect_to_notify_min, ...,\n"
+        "            cost_usd_total, run_count, prompt_tokens_total, ...}]\n"
+        "  Use when: rendering the Figure-3 timeliness clock or the cost panel.\n"
+        "  Joins kg.v_observation_timeliness + kg.v_agent_run_cost so the caller\n"
+        "  doesn't have to know the underlying view shape.\n"
+        "\n"
+        "kg_normalize_diagnosis\n"
+        "  Args: diagnosis_text, vocabulary_hint? ('icd10' | 'snomed')\n"
+        "  Returns: {pathogen_id, snomed_code, icd10_code, confidence, match_reason}\n"
+        "  Use when: an inbound report (SMS, voice, agency case) carries a free-\n"
+        "  text diagnosis that needs canonicalising before reportsAbout edges or\n"
+        "  cluster scans can fire. Resolution order: exact ICD-10 -> exact\n"
+        "  SNOMED CT -> curated alias -> substring -> fuzzy similarity.\n"
+        "\n"
+        "When NOT to use these vs kg_sql:\n"
+        "  - kg_sql is the right tool when you need a single ad-hoc query that\n"
+        "    isn't a rollup, isn't a cluster scan, and isn't a normalisation.\n"
+        "    The aggregation tools cap the surface area so dashboards can't\n"
+        "    silently start scanning unbounded data on every render.\n"
+    )
 
 
 @mcp.resource("kg://schema")

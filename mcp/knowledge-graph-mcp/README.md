@@ -22,6 +22,8 @@ Built for EpiHack Arizona 2026 — supports both the
 
 ## What it does
 
+### Core graph tools
+
 | MCP tool | Backed by |
 |---|---|
 | `kg_node_lookup` | `SELECT … FROM kg.node JOIN kg.property` |
@@ -37,13 +39,39 @@ Built for EpiHack Arizona 2026 — supports both the
 | `kg_resource_lookup` | `kg.edge WHERE predicate = 'informs' AND object_id = ?` |
 | `kg_sql` | escape hatch: SELECT-only, 5000-row cap |
 
-Plus three MCP **resources** for discovery:
+### Aggregation tools (agency-dashboard wishlist)
+
+These four tools cover the heavier rollups the agency-dashboard
+sub-agent flagged. Each one would otherwise force a custom `kg_sql`
+GROUP BY (or worse, a client-side scan) per page render; the
+dedicated tools cap the surface area so dashboards can't silently
+start scanning unbounded data.
+
+| MCP tool | Use it for |
+|---|---|
+| `kg_observations_by_window` | Server-side rollup of `kg.node(node_type='observation')` bucketed by `(iso_week, county_id, pathogen_id)`. Returns `{observation_count, severity_max, triage_class_breakdown}` per cell. |
+| `kg_cluster_scan` | Wraps `onehealth_agents.cluster.ClusterDetectionAgent` (Tier-1 deterministic Poisson scan + Tier-2 Gamma-Poisson posterior). Returns the live calibrated `ClusterAlert` rows for a vertical. |
+| `kg_milestone_intervals` | Joins `kg.v_observation_timeliness` against `kg.node`/`kg.property` and folds in per-observation cost totals from `kg.agent_run`. Returns one row per observation with the Figure-3 milestones + interval-in-minutes columns + cost summary. |
+| `kg_normalize_diagnosis` | Maps free-text diagnosis (e.g. `"plague"`, `"Y. pestis"`, `"Yersinia pestis"`, `"A20.0"`, `"58750007"`) to a canonical `pathogen.*` slug. Resolution order: exact ICD-10 → exact SNOMED CT → curated alias → substring → fuzzy SequenceMatcher. |
+
+#### When to use which
+
+| If you want to… | Use | Why not `kg_sql`? |
+|---|---|---|
+| Render a weekly heat-map or per-county chart of observations | `kg_observations_by_window` | The tool de-dupes observations that have multiple county/pathogen edges; a naive `GROUP BY` over `kg.property` will double-count. |
+| Show live cluster alerts on a dashboard | `kg_cluster_scan` | The detector implements a calibrated two-tier rule (deterministic + Bayesian) that cannot be expressed in pure SQL. |
+| Plot the Figure-3 timeliness clock or the cost panel | `kg_milestone_intervals` | Hides the join shape of `kg.v_observation_timeliness` ⨝ `kg.v_agent_run_cost` and applies the vertical/agency filters once on the server. |
+| Canonicalise an inbound SMS/voice/agency free-text diagnosis | `kg_normalize_diagnosis` | Combines ICD-10 + SNOMED lookups, a curated alias table, and difflib fuzzy match — orders of magnitude more compact than re-implementing all five tiers per consumer. |
+| Run a one-off ad-hoc query that doesn't fit any of the above | `kg_sql` | Aggregation tools are intentionally narrow; the escape hatch covers the long tail. |
+
+### Resources
 
 | Resource URI | Returns |
 |---|---|
 | `kg://node-types` | distinct `node_type` values currently loaded |
 | `kg://predicates` | distinct edge `predicate` values currently loaded |
 | `kg://schema` | text rendering of the `kg.node` / `kg.edge` / `kg.property` column shapes |
+| `kg://aggregation-tools` | guidance describing each of the four aggregation tools and when to reach for them vs `kg_sql` |
 
 ## Why this matters for EpiHack
 
@@ -118,10 +146,21 @@ cd mcp/knowledge-graph-mcp
 uv run pytest
 ```
 
-Tests use a synthetic in-memory DuckDB graph (six nodes, five edges)
-and exercise `kg_node_lookup`, `kg_neighborhood`, `kg_path`, the
-domain conveniences, and the SQL escape-hatch's SELECT-only
-enforcement. No live data is required.
+Tests cover three files:
+
+- `tests/test_kg_tools.py` — 22 cases against a six-node synthetic
+  graph exercising `kg_node_lookup`, `kg_neighborhood`, `kg_path`,
+  the domain conveniences, and the SQL escape-hatch's SELECT-only
+  enforcement.
+- `tests/test_aggregation.py` — 7 cases per-tool against synthetic
+  observation + audit-run seeds for `kg_observations_by_window`,
+  `kg_cluster_scan`, and `kg_milestone_intervals`.
+- `tests/test_normalize_diagnosis.py` — 11 cases asserting that the
+  four canonical surface forms (`"plague"` / `"Y. pestis"` /
+  `"Yersinia pestis"` / `"A20.0"`) and the SNOMED 58750007 code all
+  normalise to `pathogen.yersinia_pestis`.
+
+No live data is required.
 
 ## Environment variables
 
