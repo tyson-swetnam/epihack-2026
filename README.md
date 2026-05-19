@@ -58,6 +58,9 @@ Everything in this repository is also a page on the published site at
 - [Map](./map/) &mdash; MapLibre GL map of Arizona surfacing the geospatial slice of the knowledge graph: 15 counties, 22 tribal nations, NEON Domain 14 sites, agency HQs by jurisdiction, federal-land units, and historical outbreak locations. Mobile-responsive with a collapsible panel.
 - [Pathogen knowledge graph](./graph/) &mdash; Cytoscape.js node-edge viewer for the 16 pathogens with their vectors, reservoirs, focus areas, and surveilling agencies. Color- and shape-coded; filter by pathogen class; switch layouts.
 
+### Application plan
+- [AZ One Health Sentinel — plan](./plan/) &mdash; five-document plan for a mobile-first participatory-surveillance app spanning Vector-Borne Disease and Heat. Covers Figure 2 parameter mapping by vertical, the MCP integration topology, the eight-agent architecture, four worked end-to-end data flows, and a phased roadmap tied to the [Figure 3 timeliness milestones](./figures/03-outbreak-timeliness-metrics.md).
+
 ### MCP servers (live data ingestion for LLMs)
 - [`vectorsurv-mcp`](./mcp/vectorsurv/) &mdash; Python MCP server wrapping the [VectorSurv](https://vectorsurv.org/) API ([spec v1.0.44](./mcp/vectorsurv/openapi/)). Exposes 13 tools including `vectorsurv_agency_region_intersect` (the fastest way to enumerate AZ agencies), `vectorsurv_get_pools`, `vectorsurv_pools_are_positive`, `vectorsurv_get_case_counts`, and client-side abundance / infection-rate / vector-index calculators.
 

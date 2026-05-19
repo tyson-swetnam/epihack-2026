@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Application Plan — EpiHack Arizona 2026</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    max-width: 1100px;
+    margin: 2rem auto;
+    padding: 0 1.25rem;
+    color: #1a1a1a;
+    line-height: 1.55;
+  }
+  nav.crumbs { font-size: .9rem; color: #555; margin-bottom: 1rem; }
+  nav.crumbs a { color: #1F3A93; text-decoration: none; }
+  h1 { border-bottom: 3px solid #1F3A93; padding-bottom: .35rem; }
+  h2 { margin-top: 2.25rem; color: #1F3A93; }
+  .hero {
+    background: linear-gradient(135deg, #1F3A93 0%, #2C5F2D 100%);
+    color: #fff;
+    padding: 1.75rem;
+    border-radius: 10px;
+    margin: 1rem 0 2rem;
+  }
+  .hero h1 { color: #fff; border: none; margin: 0 0 .4rem 0; }
+  .hero p  { margin: 0; opacity: .95; }
+  .doc-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem;
+    margin: 1.25rem 0;
+  }
+  .doc-card {
+    border: 1px solid #d0d7e2;
+    border-left: 6px solid #1F3A93;
+    border-radius: 6px;
+    padding: 1rem 1.1rem;
+    background: #fff;
+    text-decoration: none;
+    color: inherit;
+  }
+  .doc-card:hover { background: #f6f8fc; }
+  .doc-card .num {
+    display: inline-block;
+    background: #1F3A93;
+    color: #fff;
+    width: 1.6rem; height: 1.6rem;
+    line-height: 1.6rem;
+    text-align: center;
+    border-radius: 50%;
+    font-weight: bold;
+    font-size: .85rem;
+    margin-right: .35rem;
+  }
+  .doc-card h3 { margin: 0 0 .35rem 0; font-size: 1rem; }
+  .doc-card p  { margin: 0; color: #555; font-size: .9rem; }
+  pre {
+    background: #f4f6fb;
+    padding: 1rem;
+    border-radius: 6px;
+    overflow-x: auto;
+    font-size: .82rem;
+  }
+  footer { margin-top: 4rem; padding-top: 1rem; border-top: 1px solid #ddd; color: #666; font-size: .85rem; }
+  table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: .95rem; }
+  th, td { border: 1px solid #ddd; padding: .5rem .75rem; text-align: left; vertical-align: top; }
+  th { background: #f0f3f8; }
+</style>
+</head>
+<body>
+
+<nav class="crumbs"><a href="../index.html">EpiHack AZ 2026</a> &raquo; Application plan</nav>
+
+<div class="hero">
+  <h1>Application plan</h1>
+  <p>A mobile-first participatory-surveillance + early-warning app for
+     Arizona, spanning two verticals (Vector-Borne Disease and Heat),
+     built on the existing DuckLake knowledge graph and driven by an
+     agentic architecture that consumes real-time data via MCP servers.</p>
+</div>
+
+<h2>The five documents</h2>
+<div class="doc-grid">
+  <a class="doc-card" href="README.html">
+    <h3><span class="num">0</span>Overview &amp; roadmap summary</h3>
+    <p>The thesis in one paragraph, the architecture in one diagram, and
+       the status snapshot of every component.</p>
+  </a>
+  <a class="doc-card" href="01-parameter-mapping.html">
+    <h3><span class="num">1</span>Parameter mapping</h3>
+    <p>How Figure 2's Minimum Set of Key Data Parameters maps to each
+       vertical, with full class-by-class tables and the
+       vertical-specific additions (heat: AC access, wearable skin-temp;
+       VBD: bite location, attached duration).</p>
+  </a>
+  <a class="doc-card" href="02-mcp-integration.html">
+    <h3><span class="num">2</span>MCP integration</h3>
+    <p>The nine-MCP server inventory, a parameter-by-parameter source
+       map, and the multi-MCP joins behind "where can I cool off?" and
+       VBD triage.</p>
+  </a>
+  <a class="doc-card" href="03-agentic-architecture.html">
+    <h3><span class="num">3</span>Agentic architecture</h3>
+    <p>The eight-agent topology — Intake → Geo-Enrichment → Validation
+       → Triage → Enrichment → Notification, plus background Cluster
+       Detection and Knowledge Update — and why agents and not a
+       monolith.</p>
+  </a>
+  <a class="doc-card" href="04-data-flows.html">
+    <h3><span class="num">4</span>End-to-end data flows</h3>
+    <p>Four worked scenarios: hiker mails in a tick; symptomatic patient
+       calls 211; CHW-mediated unsheltered heat check-in; agency-side
+       cluster review.</p>
+  </a>
+  <a class="doc-card" href="05-roadmap.html">
+    <h3><span class="num">5</span>Roadmap</h3>
+    <p>Five phases from hackathon MVP to a 12-month statewide pilot,
+       each tied to a success criterion against the Figure 3
+       timeliness milestones. Risk register included.</p>
+  </a>
+</div>
+
+<h2>Architecture at a glance</h2>
+<pre>   ┌──────────────────────────────────────────────────────────────────┐
+   │                       Community user (mobile)                   │
+   │      VBD UI · Heat UI · SMS fallback · Voice (transcribed)      │
+   └─────────────────────────────────┬───────────────────────────────┘
+                                     │  free-text / photo / geo / form
+                                     ▼
+   ┌──────────────────────────────────────────────────────────────────┐
+   │                           Agentic layer                          │
+   │  Intake → Geo-Enrichment → Validation → Triage → Enrichment      │
+   │                            ↓                                     │
+   │       Notification ← Cluster Detection ← Knowledge Update        │
+   └─────────────┬──────────────────────────┬─────────────────────────┘
+                 │                          │
+                 ▼                          ▼
+   ┌──────────────────────┐     ┌───────────────────────────────────┐
+   │  DuckLake knowledge  │     │           MCP servers              │
+   │  graph (this repo)   │ ←→  │  vectorsurv-mcp ✅                 │
+   │                      │     │  nws-heatrisk-mcp ⏳               │
+   │  observations,       │     │  mag-hrn-mcp ⏳                    │
+   │  pathogens,          │     │  adhs-mcp ⏳                       │
+   │  outbreaks,          │     │  great-az-tick-check-mcp ⏳        │
+   │  resources, regions, │     │  whispers-mcp ⏳                   │
+   │  tribes, ICD-10, …   │     │  inaturalist-mcp ⏳                │
+   │                      │     │  211-az-mcp ⏳                     │
+   └──────────────────────┘     │  knowledge-graph-mcp ⏳            │
+                                └───────────────────────────────────┘</pre>
+
+<h2>The thesis in one paragraph</h2>
+<p>The <a href="../figures/index.html#fig-02">Minimum Dataset (Figure 2)</a>
+is the <strong>shared data contract</strong> that lets one app serve
+both verticals: the <em>General</em> class is identical for VBD and Heat,
+the <em>Human</em> class diverges into infectious symptoms vs.
+heat-illness symptoms, the <em>Exposure</em> and <em>Environmental</em>
+classes pick up domain-specific sub-fields, and the <em>Livestock</em> /
+<em>Wildlife</em> classes matter for VBD but are silent for Heat.
+Treating the dataset as a contract — rather than building two apps —
+means one knowledge graph, one set of MCP integrations, one agentic
+pipeline, and two thin domain-specific UIs on top.</p>
+
+<h2>How this connects back</h2>
+<table>
+<thead><tr><th>This plan references</th><th>Where</th></tr></thead>
+<tbody>
+<tr><td>Figure 2 — Minimum Set of Key Data Parameters</td><td><a href="../figures/index.html#fig-02">figures/index.html#fig-02</a></td></tr>
+<tr><td>Figure 3 — Outbreak Timeliness Milestones</td><td><a href="../figures/index.html#fig-03">figures/index.html#fig-03</a></td></tr>
+<tr><td>Figure 4 — 12-step design lifecycle</td><td><a href="../figures/index.html#fig-04">figures/index.html#fig-04</a></td></tr>
+<tr><td>Wildlife &amp; Vector-Borne Diseases focus group</td><td><a href="../wildlife/index.html">wildlife/</a></td></tr>
+<tr><td>Heat focus group</td><td><a href="../heat/index.html">heat/</a></td></tr>
+<tr><td>vectorsurv-mcp (the only MCP server shipped today)</td><td><a href="../mcp/vectorsurv/README.html">mcp/vectorsurv/</a></td></tr>
+<tr><td>Pathogen knowledge graph</td><td><a href="../graph/index.html">graph/</a></td></tr>
+<tr><td>Arizona map (geospatial slice)</td><td><a href="../map/index.html">map/</a></td></tr>
+<tr><td>DuckLake schema seeds</td><td><a href="../schema/">schema/</a> &middot; <a href="../schema/deep/">schema/deep/</a></td></tr>
+</tbody>
+</table>
+
+<footer>
+  EpiHack Arizona 2026 &middot; Application plan &middot; Source:
+  Ending Pandemics Academy &middot; University of Arizona Mel &amp;
+  Enid Zuckerman College of Public Health &middot; Global Health
+  Institute.
+</footer>
+
+</body>
+</html>
