@@ -10,6 +10,9 @@ import { t, mountSwitcher, onLangChange } from '../../shared/i18n.js';
 import { enqueueReport }                  from '../../shared/sync.js';
 import { bootstrapOfflineUi }             from '../../shared/sw-register.js';
 import {
+  isWearableAvailable, requestPermission, readRecent
+} from '../../shared/wearable.js';
+import {
   $, $$, escapeHtml,
   renderThermometer, renderCenterCard,
   rankCenters, triageLabel
@@ -34,7 +37,12 @@ const state = {
   ac_access:  true,
   last_water: 'under_1h',
   thermo_meds: false,
-  consent: false
+  consent: false,
+  // Phase-4 wearable pairing
+  wearable_enabled: false,
+  wearable_hr_bpm:  null,
+  wearable_skin_c:  null,
+  wearable_loincs:  []
 };
 
 document.addEventListener('DOMContentLoaded', init);
@@ -51,6 +59,7 @@ function init() {
 
   wireWhere();
   wireSymptoms();
+  wireWearable();
   wireExposure();
   wireConsent();
   wireNavigation();
@@ -183,6 +192,63 @@ function wireSymptoms() {
   });
 }
 
+function wireWearable() {
+  const row  = $('wearable-row');
+  const tog  = $('wearable-toggle');
+  const hint = $('wearable-hint');
+  if (!row || !tog) return;
+  const av = isWearableAvailable();
+  if (!av.web) { row.hidden = true; return; }
+  row.hidden = false;
+  hint.textContent = av.healthkit
+    ? 'Pre-fill HR + skin temp from Apple Watch via HealthKit.'
+    : 'Pre-fill HR + skin temp from Health Connect.';
+
+  tog.addEventListener('change', async (e) => {
+    state.wearable_enabled = e.target.checked;
+    if (!state.wearable_enabled) {
+      state.wearable_hr_bpm = null;
+      state.wearable_skin_c = null;
+      state.wearable_loincs = [];
+      const row2 = $('wearable-hr-row');
+      if (row2) row2.hidden = true;
+      const badge = $('core-temp-badge');
+      if (badge) badge.hidden = true;
+      return;
+    }
+    const perm = await requestPermission(['8867-4', '8328-7']);
+    if (perm.granted.length === 0) {
+      e.target.checked = false;
+      state.wearable_enabled = false;
+      alert('Wearable permission denied. You can continue manually.');
+      return;
+    }
+    state.wearable_loincs = perm.granted.slice();
+    const since = new Date(Date.now() - 30 * 60 * 1000).toISOString();
+    if (perm.granted.includes('8867-4')) {
+      const items = await readRecent('8867-4', since);
+      const latest = items[items.length - 1];
+      if (latest) {
+        state.wearable_hr_bpm = Math.round(latest.value);
+        const fld = $('wearable-hr'); const row2 = $('wearable-hr-row');
+        if (fld && row2) { fld.value = state.wearable_hr_bpm; row2.hidden = false; }
+      }
+    }
+    if (perm.granted.includes('8328-7')) {
+      const items = await readRecent('8328-7', since);
+      const latest = items[items.length - 1];
+      if (latest && latest.value != null) {
+        state.wearable_skin_c = latest.value;
+        const f = (latest.value * 9 / 5) + 32;
+        state.core_temp_f = Math.round(f * 10) / 10;
+        $('core-temp').value = state.core_temp_f;
+        const badge = $('core-temp-badge');
+        if (badge) badge.hidden = false;
+      }
+    }
+  });
+}
+
 function wireExposure() {
   const slider = $('outdoor-hours');
   const value  = $('outdoor-hours-value');
@@ -245,7 +311,15 @@ function buildPayload() {
       last_water_bucket:      state.last_water,
       thermo_meds:            state.thermo_meds
     },
-    environmental: {}
+    environmental: {},
+    ...(state.wearable_enabled && state.wearable_loincs.length ? {
+      source: 'wearable_auto',
+      wearable: {
+        loinc_codes:    state.wearable_loincs,
+        heart_rate_bpm: state.wearable_hr_bpm,
+        skin_temp_c:    state.wearable_skin_c
+      }
+    } : {})
   };
 }
 

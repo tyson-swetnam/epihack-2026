@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Wearable monitor — AZ One Health Sentinel</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#E84A2B" />
+<meta name="description" content="One-button continuous wearable monitor for heat stress. Streams heart rate + skin temperature, and auto-files a Heat self-report if the vulnerability score crosses the cooling-center threshold. Phase-4 (Roadmap)." />
+<link rel="manifest" href="../../manifest.webmanifest" />
+<link rel="icon" type="image/svg+xml" href="../../icons/icon.svg" />
+<link rel="apple-touch-icon" href="../../icons/icon-192.png" />
+<link rel="stylesheet" href="../../shared/style.css" />
+<link rel="stylesheet" href="../heat.css" />
+<style>
+  .monitor-card {
+    border: 1px solid #ddd; border-radius: 10px;
+    padding: 1rem; margin: .8rem 0;
+    background: #fff;
+  }
+  .monitor-stat {
+    display: flex; align-items: baseline;
+    gap: .4rem; flex-wrap: wrap;
+  }
+  .monitor-stat .val {
+    font-size: 2.4rem; font-weight: 700; line-height: 1;
+  }
+  .monitor-stat .unit { font-size: 1rem; color: #555; }
+  .monitor-stat .ts   { font-size: .75rem; color: #888; margin-left: auto; }
+  .chart-host {
+    width: 100%; height: 120px; position: relative;
+    background: #f7f7f7; border-radius: 6px;
+    overflow: hidden; margin-top: .5rem;
+  }
+  .chart-host svg { width: 100%; height: 100%; display: block; }
+  .start-stop-bar {
+    position: sticky; bottom: 0;
+    padding: .8rem 0 1.2rem;
+    background: linear-gradient(180deg, rgba(255,255,255,0) 0, #fff 30%);
+  }
+  .start-stop-bar .btn { width: 100%; font-size: 1.05rem; padding: .9rem; }
+  .threshold-banner {
+    border-left: 6px solid var(--c-magenta);
+    background: #fff0fa; color: #5a0d4f;
+    padding: .8rem 1rem; border-radius: 6px;
+    margin: .5rem 0; font-weight: 600;
+  }
+  .alert-log {
+    font-size: .82rem; color: #555;
+    margin: .5rem 0 0;
+  }
+  .alert-log li { margin: .15rem 0; }
+  .no-bridge {
+    border-left: 6px solid #FFB300;
+    background: #fff8e6;
+    padding: 1rem; border-radius: 6px;
+    margin: 1rem 0;
+  }
+</style>
+</head>
+<body data-api-base="mock" data-i18n-default="auto">
+
+<header class="heat-header">
+  <div class="crumbs"><a href="../index.html">&laquo; Heat flows</a></div>
+  <h1>Wearable monitor</h1>
+</header>
+
+<main class="container" id="main">
+
+  <p class="lead">
+    One-tap continuous monitor for heat stress. Streams heart rate +
+    skin temperature from your paired wearable. If your vulnerability
+    score crosses the go-to-cooling-center threshold, a self-report is
+    filed automatically and a 211 link appears below.
+  </p>
+
+  <div id="no-bridge" class="no-bridge" hidden>
+    <strong>No wearable bridge detected.</strong>
+    This page needs an installed iOS PWA with HealthKit access, or an
+    Android device with Health Connect (Origin Trial). On desktop or in
+    a regular browser tab, the page renders but cannot stream readings.
+    See the
+    <a href="../../../plan/05-roadmap.html#phase-4--statewide--evaluation-month-912">Phase&nbsp;4 roadmap entry</a>
+    for context.
+  </div>
+
+  <div class="monitor-card" id="hr-card">
+    <h3 style="margin:0 0 .2rem">Heart rate</h3>
+    <div class="monitor-stat">
+      <span class="val" id="hr-val">—</span>
+      <span class="unit">bpm</span>
+      <span class="ts" id="hr-ts">no data yet</span>
+    </div>
+    <div class="chart-host" id="hr-chart" aria-label="Heart-rate sparkline"></div>
+  </div>
+
+  <div class="monitor-card" id="temp-card">
+    <h3 style="margin:0 0 .2rem">Skin temperature</h3>
+    <div class="monitor-stat">
+      <span class="val" id="temp-val">—</span>
+      <span class="unit">°C</span>
+      <span class="ts" id="temp-ts">no data yet</span>
+    </div>
+    <div class="chart-host" id="temp-chart" aria-label="Skin-temperature sparkline"></div>
+  </div>
+
+  <div class="monitor-card" id="score-card">
+    <h3 style="margin:0 0 .2rem">Vulnerability score (live)</h3>
+    <div class="monitor-stat">
+      <span class="val" id="score-val">0</span>
+      <span class="unit">/ 15</span>
+      <span class="ts" id="score-detail">resting</span>
+    </div>
+    <div id="threshold-host"></div>
+  </div>
+
+  <ul class="alert-log" id="alert-log"></ul>
+
+  <div class="start-stop-bar">
+    <button type="button" class="btn heat" id="start-btn">Start monitoring</button>
+    <button type="button" class="btn danger" id="stop-btn" hidden>Stop monitoring</button>
+  </div>
+
+</main>
+
+<footer class="app-footer" style="margin-bottom:6rem">
+  Prototype &middot; readings stay on your device unless the
+  threshold fires (see app/shared/wearable.js privacy notes).
+</footer>
+
+<script type="module" src="wearable-monitor.js"></script>
+</body>
+</html>

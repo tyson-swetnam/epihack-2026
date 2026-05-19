@@ -129,6 +129,21 @@
        ===================================================================== -->
   <section class="step" id="step-symptoms" data-step="symptoms" data-step-name="Symptoms" hidden>
     <h2 class="magenta" data-i18n="heat.symptoms.heading">What are you seeing?</h2>
+
+    <!-- Phase-4 wearable opt-in. Hidden if no HealthKit / Health Connect
+         bridge is present (e.g. desktop demo). When enabled, the latest
+         heart rate + skin temperature pre-fill the relevant fields. -->
+    <div class="toggle-row" id="wearable-row" hidden style="margin:0 0 1rem">
+      <span>
+        <span class="label">Pair wearable</span>
+        <span class="hint" id="wearable-hint">Pre-fill HR + skin temp from the subject's paired device.</span>
+      </span>
+      <label class="toggle-switch">
+        <input type="checkbox" id="wearable-toggle" />
+        <span class="slider" aria-hidden="true"></span>
+      </label>
+    </div>
+
     <p class="lead" data-i18n="heat.symptoms.lead">Tap all that apply. "None of the above" is a perfectly normal answer.</p>
 
     <div class="check-grid" id="symptoms-grid" role="group" aria-label="Heat symptoms checklist">
@@ -145,7 +160,15 @@
       <span data-i18n="heat.symptoms.coretemp">Core body temperature (°F, if you measured)</span>
       <span class="hint" data-i18n="heat.symptoms.coretemp.hint">Optional. ≥ 104 °F is the heat-stroke threshold.</span>
       <input type="number" id="core-temp" inputmode="decimal" step="0.1" min="90" max="115" placeholder="—" />
+      <span id="core-temp-badge" class="badge cool" hidden style="margin-left:.4rem">from wearable</span>
     </label>
+
+    <div class="field" id="wearable-hr-row" hidden style="margin-top:.6rem">
+      <span>Heart rate (bpm, from wearable)
+        <span id="wearable-hr-badge" class="badge cool">from wearable</span>
+      </span>
+      <input type="number" id="wearable-hr" inputmode="numeric" step="1" min="20" max="240" placeholder="—" />
+    </div>
   </section>
 
   <!-- =====================================================================
