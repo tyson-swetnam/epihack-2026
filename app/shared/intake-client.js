@@ -14,7 +14,13 @@
 //
 // Swapping in a real backend later is changing one HTML attribute.
 
-const MOCK_URL = new URL('../mock-responses.json', import.meta.url).href;
+// Each vertical has its own mock-responses.json next to its top-level
+// folder, so the tick flow can ship without bundling heat fixtures and
+// vice versa. Default vertical is "vbd" (the existing tick mail-in).
+const MOCK_URLS = {
+  vbd:  new URL('../mock-responses.json',          import.meta.url).href,
+  heat: new URL('../heat/mock-responses.json',     import.meta.url).href,
+};
 
 function resolveBase() {
   const attr = document.body && document.body.getAttribute('data-api-base');
@@ -22,12 +28,13 @@ function resolveBase() {
   return attr.replace(/\/+$/, '');
 }
 
-async function loadMockResponse(flow) {
-  const res = await fetch(MOCK_URL, { cache: 'no-store' });
-  if (!res.ok) throw new Error('mock-responses.json missing');
+async function loadMockResponse(flow, vertical) {
+  const url = MOCK_URLS[vertical] || MOCK_URLS.vbd;
+  const res = await fetch(url, { cache: 'no-store' });
+  if (!res.ok) throw new Error(`mock-responses.json missing for ${vertical}`);
   const all = await res.json();
   const r = all[flow];
-  if (!r) throw new Error(`mock response for flow=${flow} not found`);
+  if (!r) throw new Error(`mock response for flow=${flow} not found in ${vertical}`);
   return r;
 }
 
@@ -37,19 +44,29 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 /**
  * Post an intake payload.
  *
- * @param {string} flow   e.g. 'tick_mailin'
- * @param {object} payload Minimum-Dataset shaped object
- * @param {object} opts   { signal?: AbortSignal, photoBlob?: Blob|File }
+ * @param {string} flow      e.g. 'tick_mailin', 'heat_chw_checkin'
+ * @param {object} payload   Minimum-Dataset shaped object
+ * @param {object} opts      { signal?: AbortSignal, photoBlob?: Blob|File,
+ *                             vertical?: 'vbd' | 'heat',
+ *                             mockKey?: string }
+ *
+ *   - vertical selects which mock-responses.json gets loaded in mock mode.
+ *     Defaults to 'vbd' for backward compatibility with the tick flow.
+ *   - mockKey lets a flow request a *specific* canned response (e.g. the
+ *     heat flow has one canned response per tc.* triage class so the
+ *     demo can show each branch). Falls back to `flow` if absent.
+ *
  * @returns {Promise<object>} the IntakeAgent → … → NotificationAgent result
  */
 export async function submitIntake(flow, payload, opts = {}) {
   const base = resolveBase();
+  const vertical = opts.vertical || 'vbd';
 
   if (base === null) {
     // Mock mode: simulate 1.4 s of agent chain latency so the spinner
     // is visible, then merge the canned response with a synthesized id.
     await sleep(1400);
-    const canned = await loadMockResponse(flow);
+    const canned = await loadMockResponse(opts.mockKey || flow, vertical);
     return {
       ...canned,
       observation_id: synthId(),
@@ -61,6 +78,7 @@ export async function submitIntake(flow, payload, opts = {}) {
   // Real mode: multipart so the photo can travel with the JSON.
   const form = new FormData();
   form.append('flow', flow);
+  form.append('vertical', vertical);
   form.append('payload', new Blob([JSON.stringify(payload)],
                                   { type: 'application/json' }));
   if (opts.photoBlob) form.append('photo', opts.photoBlob, 'tick.jpg');
@@ -74,6 +92,14 @@ export async function submitIntake(flow, payload, opts = {}) {
     throw new Error(`intake failed: ${res.status} ${res.statusText}`);
   }
   return await res.json();
+}
+
+/**
+ * Fetch a vertical's mock fixtures directly (used by the cool-off flow,
+ * which is a lookup not an intake).
+ */
+export async function loadMockFixture(key, vertical = 'heat') {
+  return await loadMockResponse(key, vertical);
 }
 
 function synthId() {

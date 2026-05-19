@@ -1,0 +1,13 @@
+{
+  "_comment": "Paste the '211-az' block into your Claude Desktop config under mcpServers. Restart Claude Desktop after editing. Mock-by-default; set AZ211_BACKEND_URL to swap to a real backend when one becomes available.",
+  "mcpServers": {
+    "211-az": {
+      "command": "uvx",
+      "args": ["--from", "/absolute/path/to/epihack-2026/mcp/211-az-mcp", "az211-mcp"],
+      "env": {
+        "_AZ211_BACKEND_URL_HINT": "leave unset to use the in-memory mock; set to point at a real 211 Arizona API when one ships",
+        "MCP_TRANSPORT": "stdio"
+      }
+    }
+  }
+}

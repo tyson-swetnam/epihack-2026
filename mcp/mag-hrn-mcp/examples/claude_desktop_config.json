@@ -1,0 +1,18 @@
+{
+  "_comment": "Paste the 'mag-hrn' block into your Claude Desktop config under mcpServers. Restart Claude Desktop after editing. Leave MAG_HRN_FEATURE_SERVICE_URL empty to run against the canned ~12-site dataset (safe to demo without hitting MAG infrastructure); set it to the active MAG ArcGIS service root (typically https://geo.azmag.gov/arcgis/rest/services/maps/Heat_Relief_Network/MapServer or .../FeatureServer) to switch to live data.",
+  "mcpServers": {
+    "mag-hrn": {
+      "command": "uvx",
+      "args": [
+        "--from",
+        "/absolute/path/to/epihack-2026/mcp/mag-hrn-mcp",
+        "mag-hrn-mcp"
+      ],
+      "env": {
+        "MAG_HRN_FEATURE_SERVICE_URL": "",
+        "MAG_HRN_FEATURE_LAYER": "all",
+        "MAG_HRN_API_TOKEN": ""
+      }
+    }
+  }
+}
