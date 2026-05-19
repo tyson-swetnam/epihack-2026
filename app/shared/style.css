@@ -18,10 +18,13 @@
   --c-navy:   #1F3A93;
   --c-navy-2: #15296a;
   --c-red:    #C0392B;
-  --c-orange: #E84A2B;
+  --c-orange: #E84A2B;     /* Heat vertical accent */
+  --c-orange-2:#b53212;
+  --c-magenta:#962FBF;     /* NWS HeatRisk "Magenta" (worst tier) */
   --c-green:  #4CAF50;
   --c-bg:     #ffffff;
   --c-soft:   #f4f6fb;
+  --c-soft-warm:#fff5f1;   /* warm soft surface for heat flows */
   --c-ink:    #1a1a1a;
   --c-mute:   #555;
   --c-rule:   #d8dde6;

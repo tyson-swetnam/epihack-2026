@@ -90,6 +90,16 @@ def discover_schema_files(schema_root: Path) -> list[Path]:
 
     deep_dir = schema_root / "deep"
     if deep_dir.is_dir():
+        # `deep/standards.sql` and `deep/pathogens.sql` must load before
+        # the files that FK-reference them (`deep/application.sql` ->
+        # SNOMED/ICD-10 codes; `deep/outbreaks.sql` -> pathogens).
+        # Pin those first; everything else stays alphabetical.
+        DEEP_ORDER = ("standards.sql", "pathogens.sql")
+        for name in DEEP_ORDER:
+            candidate = deep_dir / name
+            if candidate.is_file() and candidate not in seen:
+                ordered.append(candidate)
+                seen.add(candidate)
         for p in sorted(deep_dir.glob("*.sql")):
             if p not in seen:
                 ordered.append(p)

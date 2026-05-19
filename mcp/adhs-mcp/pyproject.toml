@@ -1,0 +1,42 @@
+[build-system]
+requires = ["hatchling>=1.21"]
+build-backend = "hatchling.build"
+
+[project]
+name = "adhs-mcp"
+version = "0.1.0"
+description = "Model Context Protocol server for Arizona Department of Health Services public data (arbovirus surveillance, heat mortality, zoonotic case counts). Mock-by-default; ADHS does not yet publish a clean REST API. Built for EpiHack Arizona 2026."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "EpiHack Arizona 2026" }]
+keywords = [
+    "mcp",
+    "adhs",
+    "arizona",
+    "epidemiology",
+    "arbovirus",
+    "heat-mortality",
+    "zoonotic",
+    "one-health",
+    "surveillance",
+]
+
+dependencies = [
+    "mcp[cli]>=1.2.0",
+    "httpx>=0.27",
+    "pydantic>=2.7",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8",
+    "pytest-asyncio>=0.23",
+    "respx>=0.21",
+]
+
+[project.scripts]
+adhs-mcp = "adhs_mcp.__main__:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/adhs_mcp"]
