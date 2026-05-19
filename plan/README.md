@@ -30,6 +30,11 @@ architecture that consumes real-time data via MCP servers.
 5. [`05-roadmap.md`](./05-roadmap.html) — phased delivery: hackathon
    MVP → 6-month pilot → 12-month evaluation against the
    [Figure 3 timeliness milestones](../figures/03-outbreak-timeliness-metrics.html).
+6. [`06-mobile-app.md`](./06-mobile-app.html) — anonymous-first
+   Human / Animal / Environmental reporting app: low-text UI,
+   EXIF-stripped photos, ZIP/km coarsening, "never diagnose" risk
+   boundary, DuckLake snapshots backed by GitHub LFS, web pilot
+   → iOS + Android.
 
 ## The thesis in one paragraph
 
