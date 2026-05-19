@@ -1,0 +1,18 @@
+{
+  "_comment": "Paste the 'inaturalist' block into your Claude Desktop config under mcpServers. Restart Claude Desktop after editing. INAT_USER_AGENT is REQUIRED -- the server refuses to start without it (iNaturalist API policy).",
+  "mcpServers": {
+    "inaturalist": {
+      "command": "uvx",
+      "args": [
+        "--from",
+        "/absolute/path/to/epihack-2026/mcp/inaturalist-mcp",
+        "inaturalist-mcp"
+      ],
+      "env": {
+        "INAT_USER_AGENT": "epihack-az-2026/0.1 (contact: ops@example.org)",
+        "INAT_BASE_URL": "https://api.inaturalist.org/v1",
+        "INAT_OFFLINE": "0"
+      }
+    }
+  }
+}

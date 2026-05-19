@@ -391,16 +391,13 @@ function renderResult(res) {
 
   const cardClass = `result-card tc-${tcSlug}`;
 
-  const thermoHost = document.createElement('div');
-  renderThermometer(thermoHost, res.heat_vulnerability || { total: 0, max_possible: 15, components: [] });
-
   el.innerHTML = `
     <div class="${cardClass}" role="status" aria-live="polite">
       <h3>${escapeHtml(triageLabel(tc))}</h3>
       <p class="muted small" style="margin:.25rem 0 0">
         ${escapeHtml(res.rationale || '')}
       </p>
-      ${thermoHost.innerHTML}
+      <div id="thermo-host"></div>
     </div>
 
     ${nearest ? `
@@ -461,13 +458,9 @@ function renderResult(res) {
     </div>
   `;
 
-  // Re-render thermometer into the real card (innerHTML of an offscreen
-  // element loses the live data binding; renderThermometer is idempotent).
-  const thermoSlot = el.querySelector('.thermo');
-  if (thermoSlot) {
-    const host = thermoSlot.parentElement;
-    renderThermometer(host, res.heat_vulnerability || { total: 0, max_possible: 15, components: [] });
-  }
+  // Render the thermometer into its placeholder slot.
+  renderThermometer(el.querySelector('#thermo-host'),
+    res.heat_vulnerability || { total: 0, max_possible: 15, components: [] });
 
   // Attach the two-tap confirm guard to the dispatch button if present.
   const dispatchBtn = el.querySelector('#dispatch-btn');
