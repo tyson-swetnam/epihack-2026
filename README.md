@@ -77,6 +77,9 @@ Everything in this repository is also a page on the published site at
 - [`agents/`](./agents/) &mdash; 8-agent pipeline (Intake → Geo-Enrichment → Validation → Triage → Enrichment → Notification → Cluster Detection → Knowledge Update). 29 tests; Scenarios A and C run end-to-end against shipped MCP-tool names.
 - See [`plan/EXECUTION-STATUS.md`](./plan/EXECUTION-STATUS.md) and [`plan/EXECUTION-STATUS-PHASE-1-2.md`](./plan/EXECUTION-STATUS-PHASE-1-2.md) for the verification matrix.
 
+### Agency dashboard (Phase 3)
+- [`dashboard/`](./dashboard/) &mdash; Read-only analyst workspace for ADHS Vector-Borne &amp; Zoonotic Diseases, Maricopa County DPH Heat Surveillance, AZ Game &amp; Fish Wildlife Health Program, and Coconino HHS. Four-audience landing pages, status cards, Cluster Detection Agent feed, lazy-loaded MapLibre embed, sparkline case-count tables, and a SQL preview that round-trips to `knowledge-graph-mcp`. Implements Scenario D from [`plan/04-data-flows.md`](./plan/04-data-flows.md).
+
 ### Knowledge-graph SQL
 - [`schema/`](./schema/) &mdash; core graph (frameworks) plus worksheet template, focus areas, designs, World Café cards, and the two focus-group seeds.
 - [`schema/deep/`](./schema/deep/) &mdash; sub-agent deep-research seeds: all 15 AZ counties, all 22 federally recognized AZ tribes, pathogens (with vectors / reservoirs / ICD-10), historical AZ outbreaks (with Figure 3 milestone dates), datasets &amp; APIs (NEON DPs, WHISPers, NWS, GBIF, iNat), interop standards (FHIR, OMOP, ICD-10, Darwin Core), MCP servers.
@@ -122,6 +125,14 @@ heat/           Focus group 2 -- Heat
   ├── 04-vulnerable-populations.md
   ├── resources.md                          -- 30+ AZ heat-resource catalog
   └── index.html
+dashboard/      Phase-3 agency-side read-only analyst workspace
+  ├── index.html                            -- four-audience landing page
+  ├── adhs/                                 -- ADHS VBZD: statewide arbovirus + heat-mortality
+  ├── mcdph/                                -- Maricopa heat surveillance + WNV vector index
+  ├── azgfd/                                -- WHISPers + AZGFD mortality + iNaturalist
+  ├── coconino/                             -- plague + hantavirus + Grand-Canyon NPS
+  ├── shared/                               -- style.css, kg-client.js, cluster-feed.js, map-embed.js, sparkline.js, auth-stub.js
+  └── mock/                                 -- canned cluster / arbovirus / heat / wildlife JSON
 worksheets/     Completed design worksheets from EpiHack breakouts
   ├── 01-animal-health-events.md
   └── 02-desert-wildlife-interface.md
