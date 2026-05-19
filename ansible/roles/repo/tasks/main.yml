@@ -1,0 +1,19 @@
+---
+# Clone the repo to {{ onehealth_repo_path }}. Idempotent — re-runs pull.
+
+- name: Clone the repo
+  become_user: "{{ onehealth_user }}"
+  ansible.builtin.git:
+    repo: "{{ onehealth_repo_url }}"
+    dest: "{{ onehealth_repo_path }}"
+    version: "{{ onehealth_repo_branch }}"
+    update: true
+    force: false                  # never overwrite a dirty tree
+  register: repo_clone
+
+- name: Record the deployed SHA in {{ onehealth_root }}/DEPLOYED_SHA
+  become_user: "{{ onehealth_user }}"
+  ansible.builtin.copy:
+    content: "{{ repo_clone.after }}\n"
+    dest: "{{ onehealth_root }}/DEPLOYED_SHA"
+    mode: "0644"

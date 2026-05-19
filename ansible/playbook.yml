@@ -1,0 +1,53 @@
+# =============================================================================
+# AZ One Health Sentinel — VM deployment
+#
+# Run with:
+#   ansible-playbook -i inventory.yml playbook.yml --ask-vault-pass
+#
+# Tag any subset to skip the rest:
+#   --tags repo,app                 # just rebuild and redeploy the React app
+#   --tags claude_code              # just rotate the Anthropic API key
+#   --tags mcp_servers              # just refresh the MCP server installs
+#
+# Roles run sequentially because each depends on the last. See
+# ansible/README.md and deploy/README.md for the longer write-up.
+# =============================================================================
+
+- name: Deploy AZ One Health Sentinel
+  hosts: onehealth
+  become: true
+  gather_facts: true
+
+  vars_files:
+    - group_vars/all.yml
+    - group_vars/all.vault.yml
+
+  pre_tasks:
+    - name: Sanity-check the target is Ubuntu/Debian
+      ansible.builtin.assert:
+        that:
+          - ansible_os_family == "Debian"
+        fail_msg: >-
+          This playbook supports Ubuntu 24.04 / 22.04 / Debian 12.
+          Detected: {{ ansible_os_family }} {{ ansible_distribution_version }}.
+
+  roles:
+    - { role: common,       tags: [common] }
+    - { role: node,         tags: [node] }
+    - { role: python,       tags: [python] }
+    - { role: postgres,     tags: [postgres, db] }
+    - { role: repo,         tags: [repo] }
+    - { role: claude_code,  tags: [claude_code, claude] }
+    - { role: mcp_servers,  tags: [mcp_servers, mcp] }
+    - { role: fastapi,      tags: [fastapi, api] }
+    - { role: app,          tags: [app, frontend] }
+    - { role: nginx,        tags: [nginx, web] }
+
+  post_tasks:
+    - name: Summarise endpoints
+      ansible.builtin.debug:
+        msg:
+          - "Site:  https://{{ onehealth_fqdn }}/"
+          - "API:   https://{{ onehealth_fqdn }}/api/v1/healthz"
+          - "Docs:  https://{{ onehealth_fqdn }}/api/v1/docs"
+          - "SSH:   ssh {{ onehealth_user }}@{{ ansible_host }}"

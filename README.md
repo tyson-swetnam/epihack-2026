@@ -300,6 +300,25 @@ SELECT * FROM chain;
 - [ ] Track the lifecycle (Figure 4) as project state for each pilot
       community deployment.
 
+## Self-hosting on a VM
+
+Spinning up your own instance? [`deploy/README.md`](./deploy/README.md)
+walks through VM sizing, DNS, and the operations runbook;
+[`ansible/`](./ansible/) is a one-command Ansible playbook that takes
+a fresh Ubuntu 24.04 VM from `apt update` to a running deployment of
+Claude Code, every MCP server in [`mcp/`](./mcp/), the FastAPI backend,
+the Next.js reporting app, Postgres for the DuckLake catalog, and
+nginx with optional Let's Encrypt TLS.
+
+```bash
+cd ansible
+cp inventory.example.yml inventory.yml          # edit ansible_host
+cp group_vars/all.vault.example.yml group_vars/all.vault.yml
+ansible-vault encrypt group_vars/all.vault.yml  # fill in secrets first
+ansible-galaxy install -r requirements.yml
+ansible-playbook -i inventory.yml playbook.yml --ask-vault-pass
+```
+
 ## Contributing + governance
 
 The repository is now stewarded by a standing review board (ADHS,

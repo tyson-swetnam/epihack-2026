@@ -1,0 +1,57 @@
+---
+# nginx serves the Next.js static export at / and reverse-proxies
+# /api/ to the FastAPI uvicorn on 127.0.0.1.
+
+- name: Install nginx
+  ansible.builtin.apt:
+    name: nginx
+    state: present
+
+- name: Install certbot when TLS is enabled
+  when: tls_enabled
+  ansible.builtin.apt:
+    name:
+      - certbot
+      - python3-certbot-nginx
+    state: present
+
+- name: Remove the default nginx site
+  ansible.builtin.file:
+    path: /etc/nginx/sites-enabled/default
+    state: absent
+  notify: Reload nginx
+
+- name: Write the onehealth nginx site
+  ansible.builtin.template:
+    src: onehealth.conf.j2
+    dest: /etc/nginx/sites-available/onehealth.conf
+    mode: "0644"
+  notify: Reload nginx
+
+- name: Enable the onehealth nginx site
+  ansible.builtin.file:
+    src: /etc/nginx/sites-available/onehealth.conf
+    dest: /etc/nginx/sites-enabled/onehealth.conf
+    state: link
+  notify: Reload nginx
+
+- name: Test nginx config
+  ansible.builtin.command: nginx -t
+  changed_when: false
+
+- name: Ensure nginx is running
+  ansible.builtin.service:
+    name: nginx
+    state: started
+    enabled: true
+
+- name: Issue / renew Let's Encrypt cert
+  when: tls_enabled and vault_tls_email | length > 0
+  ansible.builtin.command:
+    cmd: >-
+      certbot --nginx
+      --non-interactive --agree-tos
+      --email {{ vault_tls_email }}
+      --domains {{ onehealth_fqdn }}
+      --redirect
+    creates: "/etc/letsencrypt/live/{{ onehealth_fqdn }}/fullchain.pem"
