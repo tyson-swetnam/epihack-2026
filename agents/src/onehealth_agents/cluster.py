@@ -1,4 +1,4 @@
-"""ClusterDetectionAgent -- two-tier space-time scan calibrated to AZ history.
+"""ClusterDetectionAgent -- multi-tier space-time scan calibrated to AZ history.
 
 Replaces the original SaTScan-flavoured stub with a real, calibrated
 detector. See ``plan/CLUSTER-CALIBRATION.md`` and
@@ -57,12 +57,45 @@ with the threshold pinned per vertical:
 * VBD:  ``0.95``
 * Heat: ``0.90``  (heat is more time-sensitive, lower bar for action)
 
+**Tier A -- single-case high-CFR alert.**
+Each pathogen flagged ``single_case_alertable`` in
+``schema/deep/cluster_followups.sql`` triggers a ``ClusterAlert`` with
+``cluster_kind='single_case'`` and ``rule_tripped='single_case_high_cfr'``
+on **any** confirmed observation in the trailing 30-day window. Bypasses
+the count and posterior thresholds. Closes ``coconino_plague_2025`` and
+provides defence-in-depth for hantavirus / RMSF / rabies / tularaemia.
+
+**Tier B -- county x week Poisson scan.**
+The same Tier-1 / Tier-2 logic as the ZCTA-week scan, re-bucketed at
+county granularity with looser thresholds (``theta_county=2.0``,
+``k_county=3``). Catches small-denominator multi-county clusters that
+disperse below the ZCTA-week ``k=5`` floor: hantavirus 2023/2024
+(spread across northern AZ counties), WNV 2003 emergence.
+
+**Tier C -- chronic-baseline drift detector.**
+For pathogens with documented chronic endemic baselines (currently only
+``pathogen.rickettsia_rickettsii`` / RMSF), compare the trailing
+12-month rate against the historical 10-year rate. Emit
+``cluster_kind='endemic_drift'`` when trailing exceeds
+``CHRONIC_DRIFT_MULTIPLIER`` (1.25x) of the historical baseline. The
+tribal-data suppression rules in Plan 02 cap detector sensitivity on
+reservations even where a true drift exists -- the alert is best-effort,
+not exhaustive.
+
+**Travel-import cluster.**
+When >= 5 confirmed observations in the trailing 30-day window list
+``exposure.history_of_travel=True`` and share a candidate pathogen (the
+operational stand-in for "shared destination country" given the current
+``ExposureClass`` shape), emit ``cluster_kind='travel_import_cluster'``.
+Catches the 2014 chikungunya scatter.
+
 **Audit fields** -- each emitted ``ClusterAlert`` carries the Tier-1
 score, the Tier-2 posterior, the baseline-window start/end, the rule
 label that tripped (e.g. ``vbd/zcta-week/theta3.0/k5/posterior0.95``),
 the pathogen hint, and a back-reference to the closest historical AZ
 outbreak (by pathogen + geography, within 5 years and 200 km, otherwise
-``None``).
+``None``). The ``cluster_kind`` enum on ``ClusterAlert`` discriminates
+which tier fired.
 
 Vertical scoping
 ----------------

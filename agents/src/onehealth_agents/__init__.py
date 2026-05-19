@@ -38,7 +38,9 @@ from .contracts import (  # noqa: F401  (re-exported for convenience)
     MinimumDataset,
     Notification,
     Observation,
+    SMS_MAX_CHARS as CONTRACTS_SMS_MAX_CHARS,
     SeverityClass,
+    SmsIntakePayload,
     TriageClass,
     TriageDecision,
     VBD_TRIAGE_CLASSES,
@@ -46,6 +48,7 @@ from .contracts import (  # noqa: F401  (re-exported for convenience)
     ValidationStatus,
     Vertical,
     WildlifeClass,
+    to_sms_segment,
 )
 from .enrichment import EnrichmentAgent
 from .geo import GeoEnrichmentAgent
@@ -83,10 +86,12 @@ __all__ = [
     "ClusterDetectionAgent",
     "KnowledgeUpdateAgent",
     "HEAT_SCORE_TABLE",
-    # SMS adapter
+    # SMS adapter + shared SMS helpers
     "SmsAdapter",
     "SmsReply",
     "SMS_MAX_CHARS",
+    "SmsIntakePayload",
+    "to_sms_segment",
     # MCP
     "MCPClient",
     "FakeMCPClient",

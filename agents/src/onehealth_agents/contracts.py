@@ -444,6 +444,50 @@ class Notification(BaseModel):
     body: str
     cta_links: list[dict[str, str]] = Field(default_factory=list)
 
+    # SMS-shaped notifications (channel='sms') should be ≤160 chars body
+    # to fit a single segment. The Notification Agent sets this flag to
+    # True after verifying; the gateway double-checks before sending.
+    sms_segment_safe: Optional[bool] = None
+
+
+SMS_MAX_CHARS = 160
+
+
+def to_sms_segment(text: str, max_chars: int = SMS_MAX_CHARS) -> str:
+    """Truncate text to fit a single SMS segment.
+
+    Trims to ``max_chars - 1`` and appends a Unicode ellipsis when the
+    input exceeds the cap. Matches the truncation logic in
+    ``agents.sms_adapter`` so any notification can reuse it instead of
+    re-implementing.
+    """
+    text = (text or "").strip()
+    if len(text) <= max_chars:
+        return text
+    return text[: max_chars - 1].rstrip() + "…"
+
+
+class SmsIntakePayload(BaseModel):
+    """Validated payload shape emitted by ``sms-entry-mcp.sms_inbound``.
+
+    The SMS gateway hands one of these to
+    :class:`agents.sms_adapter.SmsAdapter.handle_inbound_dataset`. Having
+    a typed model here (vs the previous ad-hoc ``dict[str, Any]``) lets
+    contracts catch shape drift between the MCP and the agent at the
+    boundary.
+    """
+
+    model_config = ConfigDict(extra="allow")
+
+    channel: Literal["sms"] = "sms"
+    vertical: Vertical
+    consent_profile: ConsentProfile = ConsentProfile.ANONYMOUS_HEAT
+    general: dict[str, Any] = Field(default_factory=dict)
+    exposure: Optional[dict[str, Any]] = None
+    human: Optional[dict[str, Any]] = None
+    auxiliary: Optional[dict[str, Any]] = None
+    environmental: Optional[dict[str, Any]] = None
+
 
 # ---------------------------------------------------------------------------
 # Cluster detection output  (Cluster Detection Agent)
@@ -464,6 +508,18 @@ class ClusterAlert(BaseModel):
     deferred_to: str = Field(
         default="ADHS",
         description="Per plan/03 backstop, final declaration is always human.",
+    )
+    cluster_kind: Literal[
+        "spatial", "travel_import_cluster", "endemic_drift", "single_case"
+    ] = Field(
+        default="spatial",
+        description=(
+            "What sort of cluster fired. 'spatial' is the default ZCTA-week / "
+            "2h Poisson scan (Tier 1/2). 'single_case' is the high-CFR "
+            "single-case alert (Tier A). 'travel_import_cluster' is the "
+            "travel-imported scatter detector. 'endemic_drift' is the "
+            "chronic-baseline drift detector (Tier C)."
+        ),
     )
 
     # ---- Calibrated-detector audit fields (Phase-3 cluster calibration). ----

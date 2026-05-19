@@ -169,6 +169,16 @@ export async function enqueueReport(report) {
     mock_key:    report.mock_key || null,
     api_base:    resolveApiBase(),         // null => mock-mode page
     payload:     report.payload,
+    // Optional binary attachment (e.g. a tick photo File). The IDB
+    // structured-clone algorithm stores Blob / File values as-is, so
+    // an offline-queued report doesn't lose its attachment. On replay
+    // the Blob is attached to the multipart form as the field named
+    // by `attachment_field`.
+    attachment:        report.blob || null,
+    attachment_field:  report.blob_field || (report.blob ? 'attachment' : null),
+    attachment_name:   report.blob && report.blob.name
+                         ? report.blob.name
+                         : (report.blob_filename || null),
     retries:     0,
     last_error:  null
   };
@@ -253,6 +263,14 @@ async function postOne(rec) {
   form.append('vertical', rec.vertical);
   form.append('payload',  new Blob([JSON.stringify(rec.payload)],
                                    { type: 'application/json' }));
+  // Re-attach the binary captured at enqueue time (e.g. tick photo).
+  if (rec.attachment) {
+    form.append(
+      rec.attachment_field || 'attachment',
+      rec.attachment,
+      rec.attachment_name || 'attachment'
+    );
+  }
   const res = await fetch(`${rec.api_base}/api/intake`, {
     method: 'POST',
     body:   form,

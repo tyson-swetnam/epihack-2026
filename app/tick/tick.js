@@ -365,7 +365,13 @@ async function doSubmit() {
       await enqueueReport({
         flow: 'tick_mailin',
         vertical: 'vbd',
-        payload
+        payload,
+        // Carry the actual photo File into the IDB queue so it
+        // re-attaches on the multipart replay -- before this fix
+        // offline tick submissions shipped without the picture.
+        blob: state.photo || null,
+        blob_field: state.photo ? 'auxiliary.photo' : null,
+        blob_filename: state.photo ? state.photo.name : null,
       });
       pend.hidden = true;
       renderQueuedResult();
@@ -381,7 +387,13 @@ async function doSubmit() {
       await enqueueReport({
         flow: 'tick_mailin',
         vertical: 'vbd',
-        payload
+        payload,
+        // Carry the actual photo File into the IDB queue so it
+        // re-attaches on the multipart replay -- before this fix
+        // offline tick submissions shipped without the picture.
+        blob: state.photo || null,
+        blob_field: state.photo ? 'auxiliary.photo' : null,
+        blob_filename: state.photo ? state.photo.name : null,
       });
       pend.hidden = true;
       renderQueuedResult();
