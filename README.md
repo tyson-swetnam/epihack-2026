@@ -20,6 +20,11 @@ map/            MapLibre GL map of AZ pinning counties, tribes, NEON
 graph/          Cytoscape.js pathogen knowledge graph (16 pathogens with
                 their vectors, reservoirs, focus areas, and surveilling
                 agencies).
+mcp/
+  └── vectorsurv/   Model Context Protocol server wrapping the VectorSurv
+                    vector-borne disease surveillance API (sites,
+                    collections, pools, abundance, infection rate,
+                    vector index).
 figures/        Structured transcriptions of the EpiHack reference figures
   ├── 01-purpose-one-health-participatory-system.md
   ├── 02-minimum-key-data-parameters.md
@@ -62,7 +67,8 @@ schema/
       ├── pathogens.sql         --   pathogens with vectors / reservoirs / ICD-10
       ├── outbreaks.sql         --   historical AZ outbreaks + timeline dates
       ├── datasets_apis.sql     --   NEON DPs, WHISPers, NWS, GBIF, iNat, etc.
-      └── standards.sql         --   FHIR, OMOP, ICD-10, Darwin Core, GeoSPARQL
+      ├── standards.sql         --   FHIR, OMOP, ICD-10, Darwin Core, GeoSPARQL
+      └── mcp_servers.sql       --   MCP servers (vectorsurv-mcp + tools)
 ```
 
 The Markdown files use YAML frontmatter and explicit `subject | predicate |
