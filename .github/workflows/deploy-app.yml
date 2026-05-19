@@ -1,0 +1,66 @@
+# Build the Next.js reporting app and publish the static export
+# alongside the rest of the Jekyll site on GitHub Pages.
+#
+# This workflow leaves the existing Jekyll-driven site at the repo
+# root untouched; it only builds /app/ into a static bundle and
+# commits the result back to the gh-pages branch under /app/.
+
+name: Build + deploy app
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'app/**'
+      - 'api/openapi.yaml'
+      - '.github/workflows/deploy-app.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-app
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - name: Install dependencies
+        working-directory: app
+        run: npm ci
+
+      - name: Generate API types from OpenAPI
+        working-directory: app
+        run: npm run gen:api
+
+      - name: Typecheck
+        working-directory: app
+        run: npm run typecheck
+
+      - name: Build static export
+        working-directory: app
+        env:
+          NEXT_PUBLIC_API_BASE: mock
+          NEXT_PUBLIC_BUILD: ${{ github.sha }}
+        run: npm run build
+
+      - name: Publish to gh-pages/app/
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: app/out
+          destination_dir: app
+          keep_files: true
+          commit_message: 'app: deploy ${{ github.sha }}'

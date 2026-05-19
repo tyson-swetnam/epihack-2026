@@ -1,0 +1,25 @@
+{
+  "coarse_location": { "zip": "85001", "resolution_m": 5000 },
+  "signals": [
+    {
+      "class": "vbd",
+      "headline": "WNV-positive mosquito pools detected in Maricopa County this week.",
+      "severity_tier": "advisory",
+      "source": {
+        "name": "VectorSurv (UCD DART)",
+        "url": "https://vectorsurv.org/",
+        "mcp": "vectorsurv-mcp"
+      }
+    },
+    {
+      "class": "heat",
+      "headline": "NWS HeatRisk forecast: Magenta tier through Friday in central Arizona.",
+      "severity_tier": "warning",
+      "source": {
+        "name": "NWS HeatRisk",
+        "url": "https://www.weather.gov/wrn/heatrisk",
+        "mcp": "nws-heatrisk-mcp"
+      }
+    }
+  ]
+}

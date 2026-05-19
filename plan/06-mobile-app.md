@@ -269,17 +269,34 @@ the system of record, with three new operational guarantees:
    - Restore script lives at `scripts/restore-ducklake.sh`
      (Phase&nbsp;1 deliverable).
 
+## Stack
+
+Locked-in decisions:
+
+| Layer | Choice | Why |
+|---|---|---|
+| Frontend | **Next.js 14 + React 18 + TypeScript**, App Router, `output: 'export'` | One React codebase for the web pilot; Capacitor wraps the same static export for native; TS gives us strict types generated from the OpenAPI spec. SSR is unused (GitHub Pages has no server) but the file-routing + RSC story are still net wins. |
+| API contract | **OpenAPI 3.1** at [`api/openapi.yaml`](../api/openapi.yaml) | Source of truth for endpoint shapes. TS types generated via `openapi-typescript`; pydantic v2 models generated via `datamodel-code-generator` for the Python orchestrator at `agents/`. |
+| Backend | FastAPI/uvicorn handlers in `agents/src/onehealth_agents/api/` (Phase 06.2) | Conforms to the OpenAPI spec; the agent chain from plan/03 runs behind `POST /v1/reports`. |
+| Hosting (pilot) | GitHub Pages, static export via `.github/workflows/deploy-app.yml` | No server needed; same workflow that already publishes the Jekyll docs. |
+| Hosting (native) | Capacitor → TestFlight + Play Internal Track | Reuses 100% of the Next.js build; native plugins gate HealthKit / Health Connect / push. |
+
 ## Delivery sequence
 
 | Phase | Surface | Status |
 |---|---|---|
-| **Pilot** | Mobile-friendly web PWA on GitHub Pages (extends [`app/`](../app/index.html)) | new — this plan |
-| **Prototype** | Capacitor wrapper around the PWA → published to TestFlight + Play Internal Track | new |
+| **Pilot** | Next.js static export on GitHub Pages ([`app/`](../app/)) | scaffolded — this commit |
+| **Prototype** | Capacitor wrapper around the Next.js export → TestFlight + Play Internal Track | new |
 | **v1** | Native iOS (Swift / SwiftUI) + Android (Kotlin / Jetpack Compose) builds sharing a thin shared-logic core, OR Capacitor production build if no native-only feature is required | new — gated on the prototype's UX findings |
 
-The Capacitor middle step lets us reuse 100% of the pilot's HTML
-/ JS / CSS while gating the native-only features (HealthKit /
+The Capacitor middle step lets us reuse 100% of the pilot's Next.js
+output while gating the native-only features (HealthKit /
 Health Connect from [plan/05 Phase 4](./05-roadmap.html#phase-4--statewide--evaluation-month-912), camera APIs, push notifications) behind native plugins.
+
+The Phase-0/1 vanilla flows (tick mail-in, three heat flows) are
+preserved unchanged under [`app/legacy/`](../app/legacy/) until each
+is ported into the React app. Migration table lives in
+[`app/README.md`](../app/README.html).
 
 ## Mapping to Figure 2 Minimum Dataset
 

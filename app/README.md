@@ -1,275 +1,118 @@
 ---
-title: AZ One Health Sentinel — prototype app
+title: AZ One Health Sentinel — reporting app (Next.js)
 ---
 
-# `app/` — AZ One Health Sentinel prototype
+# `app/` — AZ One Health Sentinel reporting app
 
-This is the **Phase 0 hackathon-MVP UI** for the
-[AZ One Health Sentinel](../plan/README.html). One vertical
-(Vector-Borne Disease), one happy path (mail-in tick), wired end-to-end
-through a mock backend so the demo runs on GitHub Pages with no server.
+The mobile-first reporting app from
+[`plan/06-mobile-app.md`](../plan/06-mobile-app.html). Next.js +
+TypeScript + React. Static-exported for the GitHub Pages pilot;
+the same build wraps with Capacitor for iOS / Android (plan/06
+Delivery sequence).
 
-See [`plan/05-roadmap.md` Phase 0](../plan/05-roadmap.html#phase-0--hackathon-mvp-week-02)
-and [`plan/04-data-flows.md` Scenario A](../plan/04-data-flows.html#scenario-a--hiker-mails-in-a-tick)
-for what this UI implements.
+> **The Phase-0 vanilla prototype** (tick mail-in, heat check-in,
+> heat self-report, cooling-center lookup) is preserved unchanged
+> under [`legacy/`](./legacy/) until each flow is ported into
+> the React app. Existing URLs continue to work via the static
+> archive.
 
-## Stack choice
-
-The rest of the site is **static HTML + Jekyll on GitHub Pages**. To stay
-consistent with [`map/`](../map/), [`graph/`](../graph/), and the root
-[`index.html`](../index.html), this app is a **static, no-build
-prototype**: plain HTML, modern vanilla JS (ES modules), one shared CSS
-file. No bundler, no framework, no CSS toolkit.
-
-That keeps it `git clone` → `python -m http.server` → done, and it lets
-GitHub Pages serve it byte-for-byte.
-
-## Layout
+## What's here
 
 ```
 app/
-  index.html               landing page with the four flow cards + install button + sync pill
-  manifest.webmanifest     Web App Manifest (PWA name, icons, shortcuts)
-  sw.js                    Service worker (scope /app/, three caching strategies)
-  icons/
-    icon.svg               icon source (gradient + white "S" + heat-vertical accent)
-    icon-192.png           manifest icon
-    icon-512.png           manifest icon (also serves as maskable)
-  tick/
-    index.html             Scenario-A tick mail-in flow
-    tick.js                ES module — wires geo, photo, IDB enqueue on offline
-    tick.css               flow-specific styles
-  heat/
-    index.html             Heat-vertical landing
-    heat.css               heat-themed components
-    heat-shared.js         vulnerability score + center-list helpers
-    mock-responses.json    canned heat-vertical agent-chain responses
-    check-in/index.html    CHW heat check-in flow (Scenario C)
-    check-in/check-in.js
-    self-report/index.html anonymous heat self-report
-    self-report/self-report.js
-    cool-off/index.html    "where can I cool off?" lookup
-    cool-off/cool-off.js
-  shared/
-    style.css              base styles (palette, header, cards, buttons, offline pill)
-    intake-client.js       POSTs to /api/intake, handles SW 202 queued response
-    sync.js                IndexedDB queue: enqueueReport / replayAll / subscribe
-    install-prompt.js      beforeinstallprompt → Install button helper
-    sw-register.js         registers /app/sw.js + mounts the sync-status pill
-    geo.js                 navigator.geolocation Promise wrapper + ZIP fallback
-    i18n.js                EN / ES bundle + <html lang> + switcher
-  mock-responses.json      canned IntakeAgent → … → NotificationAgent results (VBD)
-  README.md                (this file)
+  package.json              Next.js 14 + React 18 + TypeScript + openapi-typescript
+  next.config.mjs           output: 'export'; basePath = /epihack-2026/app
+  tsconfig.json             strict + noUncheckedIndexedAccess
+  src/
+    app/
+      layout.tsx            Root layout (palette, viewport, theme-color)
+      page.tsx              Landing — three-button picker (Person / Animal / Environment)
+      report/
+        [type]/page.tsx     The multi-step report flow (one route per report type)
+      profile/
+        page.tsx            Optional post-submit profile interstitial
+      globals.css           Base styles
+    lib/
+      api-client.ts         Typed fetch wrapper around /v1/reports etc.
+      api-types.ts          GENERATED — run `npm run gen:api` to refresh
+      exif-stripper.ts      Client-side EXIF GPS strip (port of legacy/shared/exif-stripper.js)
+      coarse-geo.ts         GPS → 1 km grid / ZIP coarsening (port of legacy/shared/coarse-geo.js)
+    mocks/
+      reports.create.json   Canned response for POST /v1/reports
+      context.zip.json      Canned response for GET /v1/context?zip=…
+  legacy/                  Vanilla-HTML Phase-0/1 prototype (read-only archive)
 ```
 
-## Run locally
+## Quick start
 
-From the repo root:
-
-```sh
-python -m http.server 8000
-# then open: http://localhost:8000/app/
+```bash
+cd app
+npm install
+npm run gen:api          # generate TS types from ../api/openapi.yaml
+npm run dev              # localhost:3000
 ```
 
-That's it. No `npm install`, no build step.
+The dev server defaults to `NEXT_PUBLIC_API_BASE=mock`, which makes
+the API client short-circuit to `src/mocks/*.json` so the app runs
+without a backend. Point at a real Intake Agent with:
 
-## Wire a real backend
-
-The fetch wrapper in
-[`shared/intake-client.js`](./shared/intake-client.js) reads
-`data-api-base` off `<body>`:
-
-| `data-api-base`                           | Behavior |
-|---|---|
-| absent, or `"mock"`                       | Returns the canned `mock-responses.json` entry; default for GitHub Pages. |
-| an origin, e.g. `https://sentinel.example.org` | `POST {origin}/api/intake` as multipart (`payload` JSON + optional `photo`). |
-
-To point the deployed prototype at a real backend, change one attribute:
-
-```html
-<body data-api-base="https://sentinel.example.org">
+```bash
+NEXT_PUBLIC_API_BASE=https://sentinel.example.org/api npm run dev
 ```
 
-The expected response shape lives in
-[`mock-responses.json`](./mock-responses.json) — it mirrors what
-the `Intake → Geo-Enrichment → Validation → Triage → Enrichment →
-Notification` chain in
-[`plan/03-agentic-architecture.md`](../plan/03-agentic-architecture.html)
-should produce. Implementing the real backend means matching that shape
-(no UI changes needed).
+## Production build
 
-## The tick mail-in flow (in `tick/`)
+```bash
+npm run build            # writes out/ as static HTML/JS/CSS
+```
 
-Six steps on one page, with a progress indicator, sticky Next/Back bar,
-44 × 44 px tap targets, and visible focus rings:
+The `out/` directory is what GitHub Pages serves at
+`https://tyson-swetnam.github.io/epihack-2026/app/`. The build is
+wired into `.github/workflows/deploy-app.yml` (Phase 06.1 deliverable).
 
-1. **Welcome** — what we're about to do, link to the Great Arizona Tick
-   Check page. Renders usefully without JS for screen-reader users.
-2. **Where + when** — GPS (with ZIP fallback), date attached, hours
-   attached, location on body. Covers the General + Exposure slots of
-   the [Minimum Dataset](../plan/01-parameter-mapping.html).
-3. **Photo** — `<input type="file" accept="image/*" capture="environment">`
-   so phones open the back camera directly. Preview + remove.
-4. **Optional symptoms** — four checkboxes (fever, headache, rash,
-   muscle aches). Skipping is one tap.
-5. **Consent** — the `consent.tick_mailin` profile, showing which
-   Figure-2 fields are kept vs. suppressed. Explicit accept required.
-6. **Submit** — spinner with a per-agent log while the (mock) chain
-   runs, then a result card with the species estimate (+ confidence
-   caveat), mailing-label download link, 14-day symptom watchlist, and
-   "If symptoms appear" link. Cross-links to
-   [`graph/`](../graph/) and [`map/`](../map/) so the user can see how
-   their report fits the larger picture.
+## Stack rationale
 
-### Stubbed for the real backend to pick up
+- **Next.js + React + TypeScript.** React for component reuse with
+  the future native shell (Capacitor → React Native if needed);
+  Next.js for routing, file conventions, and static export; TS
+  for the strict types we get from the OpenAPI spec.
+- **`output: 'export'`.** GitHub Pages has no server runtime; static
+  export sidesteps that. We lose Next.js features that need a server
+  (API routes, ISR, middleware) but we don't need any of them — the
+  backend lives in [`/agents/`](../agents/) and is reached via the
+  OpenAPI spec at [`/api/openapi.yaml`](../api/openapi.yaml).
+- **`openapi-typescript` + `openapi-fetch`.** The spec is the source
+  of truth. `npm run gen:api` regenerates `src/lib/api-types.ts`
+  from the YAML; the fetcher is typed against those types, so every
+  endpoint call is checked at compile time.
 
-The hackathon MVP fakes a few things the real pipeline will own. They
-are intentionally narrow so they map 1:1 to existing plan items:
+## Privacy contract (load-bearing)
 
-- **No backend.** `app/shared/intake-client.js` short-circuits to
-  `mock-responses.json`. Replace with the real `IntakeAgent` HTTP entry
-  point per the data-api-base contract above.
-- **Client-side species ID is faked.** The mock response hard-codes
-  *Rhipicephalus sanguineus* at 0.62 confidence. The real flow runs a
-  TFLite (or server-side) image model and the Walker Lab supersedes it
-  on receipt.
-- **Mailing-label URL is a placeholder.** Real flow:
-  `great-az-tick-check-mcp.create_submission` returns a signed S3 URL.
-- **`vectorsurv-mcp` context is canned.** Real flow:
-  `vectorsurv-mcp.get_pools(arthropod="tick", county=…, last 90 days)`
-  on submit.
-- **No persistent observation.** Real flow writes to DuckLake via
-  `knowledge-graph-mcp` and the response carries the new `kg_node_id`.
-- **No agent-run audit row.** Real flow appends an `agent_run` row per
-  agent in the chain (see Phase 0 in the roadmap), with timestamps the
-  Figure 3 milestone joins use.
+These are the rules from
+[`plan/06-mobile-app.md`](../plan/06-mobile-app.html) that the
+client must enforce. See `src/lib/exif-stripper.ts` and
+`src/lib/coarse-geo.ts` for the implementations:
 
-## Accessibility
+1. Photo EXIF GPS is stripped **before** any photo leaves the device.
+2. Precise lat/lon is coarsened to a 1 km grid cell (or ZIP) before
+   the body is built.
+3. Every consent toggle on the profile page defaults to **off**.
+4. The Triage Agent's `next_action` enum is the only authority on
+   what action UI the app renders. Server-side LLM copy is read-
+   only context; the app must not render a diagnosis even if one
+   slips through the server's output guard.
 
-- Semantic HTML (`<header>`, `<main>`, `<section>`, `<label>`, headings
-  in order).
-- `aria-label` on icon-only and ambiguous buttons.
-- Visible focus rings via `outline: 3px solid var(--c-focus)`.
-- 44 × 44 px minimum tap target on every interactive element.
-- `prefers-reduced-motion` respected (transitions / spinner reduced).
-- Step 1 (Welcome) renders without JavaScript and links straight to the
-  external Tick Check page so a no-JS user is not stranded.
+## Migration plan (Phase 0/1 → React)
 
-## Palette (matches the rest of the site)
+Each legacy flow gets ported in its own commit:
 
-| Token        | Value     | Use |
+| Legacy URL | New React route | Status |
 |---|---|---|
-| `--c-navy`   | `#1F3A93` | Primary brand (VBD vertical, links, focus). |
-| `--c-red`    | `#C0392B` | Alert / triage urgency. |
-| `--c-orange` | `#E84A2B` | Heat vertical. |
-| `--c-green`  | `#4CAF50` | Success affirmations. |
+| `app/legacy/tick/` | `app/src/app/tick/page.tsx` | TODO |
+| `app/legacy/heat/check-in/` | `app/src/app/heat/check-in/page.tsx` | TODO |
+| `app/legacy/heat/self-report/` | `app/src/app/heat/self-report/page.tsx` | TODO |
+| `app/legacy/heat/cool-off/` | `app/src/app/heat/cool-off/page.tsx` | TODO |
 
-## Offline + sync-on-reconnect (Phase 2)
-
-The app is an installable PWA. The four primary flows
-(tick mail-in, heat CHW check-in, heat self-report, cooling-center
-lookup) keep working with no network.
-
-### Files involved
-
-```
-app/
-  manifest.webmanifest      Web App Manifest (name, icons, shortcuts)
-  sw.js                     Service worker, scoped to /app/ only
-  icons/
-    icon.svg                Source icon (gradient + white "S" + heat dot)
-    icon-192.png            Manifest icon (192x192)
-    icon-512.png            Manifest icon (512x512, also used as maskable)
-  shared/
-    sync.js                 IndexedDB queue: enqueueReport, pendingReports,
-                            replayAll, subscribe
-    install-prompt.js       beforeinstallprompt handler + Install button
-    sw-register.js          Registers the SW, mounts the sync-status pill
-                            ("synced" / "N pending" / "offline") and the
-                            "report synced" toast
-```
-
-### Caching strategies (service worker)
-
-1. **App shell (HTML / CSS / JS / icons under `/app/`):** cache-first
-   with a stale-while-revalidate background refresh. Pre-cached on
-   `install`. The shell opens instantly offline; the next online
-   navigation refreshes it transparently for the visit after.
-2. **Mock-response fixtures + canned cooling-center data**
-   (`*/mock-responses.json`): stale-while-revalidate. Pre-populated on
-   `install` so the cooling-center lookup works on first launch even
-   without a network handshake.
-3. **`POST /api/intake`:** network-first. If the request errors or the
-   browser is offline, the SW returns a synthetic `202 Accepted` with
-   `{ "queued": true }`. The page picks that up and routes the report
-   through `shared/sync.js` (IndexedDB), then shows the "Saved offline"
-   card. The same path is taken when the page detects
-   `navigator.onLine === false` before the fetch even runs.
-
-The scope is `/app/` (not site-wide) so the SW cannot touch the rest of
-the static Jekyll site (`map/`, `graph/`, `plan/`, `wildlife/`, the root
-`index.html`). That matches the "static-site content shouldn't be
-cached aggressively" guardrail in `plan/05-roadmap.md`.
-
-### IndexedDB schema
-
-Database `az-onehealth-sentinel`, object store `pending_reports`:
-
-| field         | type      | notes                                        |
-|---|---|---|
-| `id`          | UUIDv4    | primary key, generated by `crypto.randomUUID` |
-| `enqueued_at` | ISO-8601  | FIFO replay order; indexed                   |
-| `flow`        | string    | `tick_mailin`, `heat_chw_checkin`, `heat_self_report` |
-| `vertical`    | string    | `vbd` or `heat`                              |
-| `mock_key`    | string?   | optional mock-response selector              |
-| `api_base`    | string?   | captured at enqueue time; `null` => mock mode |
-| `payload`     | object    | Minimum-Dataset shaped JSON                  |
-| `retries`     | integer   | bumped on each failed replay, capped at 5    |
-| `last_error`  | string?   | last failure reason, for debugging           |
-
-### Background Sync — and the iOS fallback
-
-On Chromium-based browsers (Chrome, Edge, Brave, Samsung Internet),
-the page calls `ServiceWorkerRegistration.sync.register('az-sentinel-intake-replay')`
-when it enqueues a report. The browser fires that sync the next time
-connectivity returns — even with no tab open — and the service worker
-replays everything from IndexedDB by itself (see `swDirectReplay()`
-in `app/sw.js`).
-
-**iOS Safari does not implement the Background Sync API** (still true
-as of 2026). On Safari and Firefox the offline path degrades like this:
-
-* The IDB enqueue still happens — no data loss.
-* The sync-status pill shows `N pending` and becomes clickable.
-* Replay runs when:
-  1. The page is open and the `online` event fires
-     (`window.addEventListener('online', replayAll)`), or
-  2. The user taps the pending pill to retry manually, or
-  3. The user reopens the app — the `load` handler kicks off
-     `replayAll()` if `navigator.onLine` is true.
-
-In other words: on iOS, the user has to open the app at least once
-after coming back online for queued reports to upload, but they will
-still upload reliably. The "report synced" toast and the
-`sentinel:synced` event fire in either path.
-
-A future improvement (tracked informally) is a Periodic Background
-Sync fallback where supported, and/or a Web Push trigger that wakes
-the SW. Both require backend cooperation and so are out of scope for
-the prototype.
-
-### Verification
-
-```sh
-python -m http.server 8000
-# open http://localhost:8000/app/ in Chrome
-# DevTools → Application → Service Workers (confirm registered)
-# DevTools → Network → Offline
-# navigate to /app/tick/, fill the form, submit
-#   → "Saved offline" card appears
-#   → header pill flips to "1 pending"
-# DevTools → Network → Online
-#   → pill flips to "syncing…" then "synced"
-#   → "tick mailin synced" toast appears
-```
-
+Until each port lands, the legacy HTML stays addressable at
+`/epihack-2026/app/legacy/<flow>/` and the new landing page in
+`src/app/page.tsx` links to it.

@@ -1,0 +1,665 @@
+openapi: 3.1.0
+
+# ============================================================================
+# AZ One Health Sentinel — Intake API
+#
+# The HTTP contract between the One Health reporting app (Next.js, see
+# /app/) and the agent orchestrator (Python FastMCP, see /agents/).
+#
+# This spec is the source of truth. TypeScript client types are
+# generated from it via `openapi-typescript` (see api/README.md).
+# Backend handlers should be generated or validated against the same
+# file; PRs that change endpoints must edit this file first.
+#
+# Privacy boundary (plan/06-mobile-app.md § Hard rules):
+#   * No login. No PII unless the user has opted in.
+#   * Photo EXIF GPS is stripped client-side before upload; the server
+#     rejects any photo that still carries GPS tags.
+#   * Precise coordinates are coarsened to ZIP / ~1 km grid at write
+#     time; precise values only travel under an explicit consent token.
+#   * IP addresses are hashed with a rotating daily salt and discarded
+#     in the same request lifecycle. The raw address is never persisted.
+#   * Triage output is a routing decision, never a diagnosis. The
+#     `next_action` enum is the only authority on what the app shows.
+# ============================================================================
+
+info:
+  title: AZ One Health Sentinel Intake API
+  version: 0.1.0
+  summary: Anonymous-first Human / Animal / Environmental reporting
+  description: |
+    The HTTP API the AZ One Health Sentinel app calls to file an
+    anonymous report, attach an optional profile, and pull
+    public-health context for a coarse location.
+
+    See `plan/06-mobile-app.md` in the repo for the full architectural
+    contract. This file is normative for endpoint shapes; the plan doc
+    is normative for the privacy and never-diagnose rules.
+  license:
+    name: MIT
+    identifier: MIT
+  contact:
+    name: EpiHack Arizona 2026
+    url: https://tyson-swetnam.github.io/epihack-2026/
+
+servers:
+  - url: https://sentinel.example.org/api
+    description: Production (placeholder — replace at deploy time)
+  - url: http://localhost:8000/api
+    description: Local dev (FastAPI / uvicorn)
+  - url: mock
+    description: |
+      Client-side mock. The Next.js app short-circuits requests to
+      bundled fixtures when the configured base is "mock"; useful for
+      GitHub Pages where there's no backend.
+
+tags:
+  - name: reports
+    description: |
+      Anonymous report submission. The three report types — `human`,
+      `animal`, `environmental` — share a payload shape; the
+      `report_type` discriminates downstream routing.
+  - name: profile
+    description: |
+      Optional profile attached *after* submit. Every field is
+      opt-in; the absence of a profile is the default.
+  - name: context
+    description: |
+      Public-health context for a coarse location. The API surfaces
+      *signals* (active WNV pools, HeatRisk tier, WHISPers events,
+      …) but never asserts a diagnosis.
+  - name: meta
+    description: Service health, version, and spec discovery.
+
+paths:
+
+  # -------------------------------------------------------------------------
+  # /v1/reports — POST a new anonymous report.
+  # -------------------------------------------------------------------------
+  /v1/reports:
+    post:
+      tags: [reports]
+      operationId: createReport
+      summary: File a new anonymous report
+      description: |
+        Submit a Human / Animal / Environmental report. The request is
+        multipart so a photo can travel alongside the JSON payload.
+
+        Server-side actions:
+        1. Validate the payload against the Figure-2 minimum-dataset
+           shape encoded in `ReportPayload`.
+        2. **EXIF-GPS check.** Reject any photo whose EXIF block still
+           contains GPS tags (defence in depth — the client strips them
+           too, but a buggy or hostile client is in scope).
+        3. **Coarsen location.** If the payload includes precise
+           lat/lon, snap to a 1 km grid cell. Discard the precise
+           values unless the request carries `Authorization: Claim …`
+           plus a profile that has opted into precise sharing.
+        4. **IP handling.** Hash the request IP with the current daily
+           salt, attach the resulting opaque `coarse_geo_token` to the
+           record, and discard the IP itself.
+        5. Run the Intake → Geo → Validation → Triage → Enrichment →
+           Notification agent chain (see plan/03).
+        6. Return an `observation_id` plus a one-time `claim_token`
+           the client can use to attach a profile or check status.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [payload]
+              properties:
+                payload:
+                  $ref: "#/components/schemas/ReportPayload"
+                photo:
+                  type: string
+                  format: binary
+                  description: |
+                    JPEG / PNG / HEIC. **Must** have EXIF GPS stripped
+                    client-side. Server rejects photos carrying GPS
+                    tags with 422.
+      responses:
+        "201":
+          description: Report accepted; agent chain queued.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReportAck"
+        "202":
+          description: |
+            Queued for asynchronous processing (e.g. the agent chain
+            backlog is high). Clients should poll the `status_url`
+            from the body, or wait for a push when notifications are
+            opted in.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReportAck"
+        "422":
+          description: |
+            Validation failed. The most common cause is a photo whose
+            EXIF still carries GPS tags — see `error.code` =
+            `photo_exif_gps_present`.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+
+  # -------------------------------------------------------------------------
+  # /v1/reports/{observation_id} — GET status / detail with claim token.
+  # -------------------------------------------------------------------------
+  /v1/reports/{observation_id}:
+    parameters:
+      - $ref: "#/components/parameters/ObservationId"
+      - $ref: "#/components/parameters/ClaimAuth"
+    get:
+      tags: [reports]
+      operationId: getReport
+      summary: Check the agent-chain status for an anonymous report
+      description: |
+        The `claim_token` returned at submit is the only way to read
+        back a report; we explicitly do *not* expose any user-facing
+        observation index, so the API cannot be enumerated.
+      responses:
+        "200":
+          description: Status snapshot.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReportStatus"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  # -------------------------------------------------------------------------
+  # /v1/reports/{observation_id}/profile — PATCH to attach the optional
+  # profile post-submit.
+  # -------------------------------------------------------------------------
+  /v1/reports/{observation_id}/profile:
+    parameters:
+      - $ref: "#/components/parameters/ObservationId"
+      - $ref: "#/components/parameters/ClaimAuth"
+    patch:
+      tags: [profile]
+      operationId: attachProfile
+      summary: Attach an optional profile to a previously-submitted report
+      description: |
+        After submit, the app offers a non-blocking interstitial that
+        lets the reporter add demographics, contact information, and
+        per-field consent toggles. This endpoint accepts that profile
+        and updates the existing observation in place.
+
+        Every consent flag defaults to `false`. Setting a flag to
+        `true` is the *only* way a precise location, contact channel,
+        or photo GPS tag is ever retained.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProfilePatch"
+      responses:
+        "200":
+          description: Profile attached.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReportStatus"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          description: Profile failed validation.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  # -------------------------------------------------------------------------
+  # /v1/context — public-health signals for a coarse location.
+  # -------------------------------------------------------------------------
+  /v1/context:
+    get:
+      tags: [context]
+      operationId: getContext
+      summary: Public-health signals for a coarse location
+      description: |
+        Surfaces signals from upstream MCP servers (vectorsurv-mcp,
+        nws-heatrisk-mcp, whispers-mcp, adhs-mcp, …) for a ZIP code or
+        a 1 km grid cell.
+
+        **This endpoint never makes a diagnosis.** Each signal names
+        its source and links to the public dataset that backs it.
+      parameters:
+        - in: query
+          name: zip
+          schema: { type: string, pattern: "^[0-9]{5}$" }
+          description: 5-digit US ZIP code. One of `zip` or `grid_id` is required.
+        - in: query
+          name: grid_id
+          schema: { type: string, pattern: "^g1km:-?\\d+\\.\\d{1,2},-?\\d+\\.\\d{1,2}$" }
+          description: 1 km grid cell id, e.g. `g1km:33.45,-112.07`.
+        - in: query
+          name: types
+          schema:
+            type: array
+            items:
+              type: string
+              enum: [vbd, heat, wildlife, environment]
+          explode: true
+          description: Filter signal classes; default is all four.
+      responses:
+        "200":
+          description: Signal envelope.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContextEnvelope"
+
+  # -------------------------------------------------------------------------
+  # /v1/healthz, /v1/openapi.json — meta.
+  # -------------------------------------------------------------------------
+  /v1/healthz:
+    get:
+      tags: [meta]
+      operationId: getHealth
+      summary: Service liveness probe
+      responses:
+        "200":
+          description: Service is up.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status, build]
+                properties:
+                  status: { type: string, const: ok }
+                  build:  { type: string, example: "2026.05.19+sha.0bb0f5b" }
+
+  /v1/openapi.json:
+    get:
+      tags: [meta]
+      operationId: getOpenApi
+      summary: Return this OpenAPI spec
+      responses:
+        "200":
+          description: The spec.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+
+# ============================================================================
+# Components
+# ============================================================================
+components:
+
+  parameters:
+    ObservationId:
+      in: path
+      name: observation_id
+      required: true
+      schema:
+        type: string
+        format: uuid
+    ClaimAuth:
+      in: header
+      name: Authorization
+      required: true
+      schema:
+        type: string
+        pattern: "^Claim [A-Za-z0-9_-]{16,}$"
+      description: |
+        Anonymous claim token returned by `POST /v1/reports`. The token
+        is the only proof-of-submission; treat it like a password.
+
+  responses:
+    NotFound:
+      description: Resource not found, or claim token doesn't match.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    RateLimited:
+      description: Rate-limited. Back off and retry.
+      headers:
+        Retry-After:
+          schema: { type: integer, minimum: 1 }
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+
+  schemas:
+
+    # -----------------------------------------------------------------------
+    # Common
+    # -----------------------------------------------------------------------
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          enum:
+            - validation_failed
+            - photo_exif_gps_present
+            - photo_too_large
+            - photo_unreadable
+            - rate_limited
+            - claim_token_invalid
+            - not_found
+            - server_error
+        message: { type: string }
+        details:
+          type: object
+          additionalProperties: true
+
+    ReportType:
+      type: string
+      enum: [human, animal, environmental]
+      description: |
+        Discriminates downstream routing. `animal` and `environmental`
+        are fully anonymous; `human` is anonymous by default and offers
+        a clinician-contact opt-in via the profile patch endpoint.
+
+    CoarseLocation:
+      type: object
+      description: |
+        One of `zip` or `grid_id` must be present. Both may be present
+        if the client has resolved a precise lat/lon to both forms.
+        Precise lat/lon NEVER travels at this layer — it's coarsened
+        client-side and re-coarsened server-side.
+      properties:
+        zip:
+          type: string
+          pattern: "^[0-9]{5}$"
+        grid_id:
+          type: string
+          pattern: "^g1km:-?\\d+\\.\\d{1,2},-?\\d+\\.\\d{1,2}$"
+        resolution_m:
+          type: integer
+          minimum: 1000
+          description: |
+            Effective resolution in metres. ZIP-derived locations
+            report the ZIP's bounding-circle radius; grid_id locations
+            report 1000.
+
+    EventClass:
+      type: string
+      description: |
+        Icon-class enum (low/no text UI). Server maps to Figure-2
+        symptom / exposure / animal-event categories.
+      enum:
+        # Human
+        - human.fever_chills
+        - human.heat_distress
+        - human.respiratory
+        - human.gastrointestinal
+        - human.rash_or_bite
+        - human.exposure_water
+        - human.exposure_animal
+        # Animal
+        - animal.dead_wildlife
+        - animal.dead_livestock
+        - animal.sick_unusual_behaviour
+        - animal.mass_die_off
+        - animal.unusual_species_sighting
+        # Environmental
+        - env.sewage
+        - env.smoke_or_burn
+        - env.standing_water
+        - env.water_quality
+        - env.air_quality
+        - env.illegal_dumping
+
+    SeverityIcon:
+      type: string
+      enum: [grin, neutral, frown, alarm]
+      description: User-rated severity on an icon scale.
+
+    ReportPayload:
+      type: object
+      required: [report_type, event_class, coarse_location]
+      additionalProperties: false
+      properties:
+        report_type:    { $ref: "#/components/schemas/ReportType" }
+        event_class:    { $ref: "#/components/schemas/EventClass" }
+        coarse_location:{ $ref: "#/components/schemas/CoarseLocation" }
+        event_date:
+          type: string
+          format: date
+          description: ISO-8601 date. Defaults to today if absent.
+        severity:       { $ref: "#/components/schemas/SeverityIcon" }
+        count:
+          type: integer
+          minimum: 1
+          maximum: 10000
+          description: |
+            Animal reports only — approximate count of affected
+            individuals.
+        species:
+          type: string
+          maxLength: 80
+          description: |
+            Animal reports only — free-text species name. Optional;
+            the iNaturalist MCP will be invited to refine it.
+        symptoms:
+          type: array
+          maxItems: 12
+          items:
+            type: string
+            enum:
+              - fever
+              - chills
+              - headache
+              - muscle_aches
+              - cough
+              - shortness_of_breath
+              - nausea_vomiting
+              - diarrhea
+              - rash
+              - dizziness
+              - confusion
+              - heat_cramps
+          description: |
+            Human reports only. Symptom *categories* (Figure-2 Human
+            class) — never disease names. The Triage Agent uses these
+            for routing, never for diagnosis.
+        notes:
+          type: string
+          maxLength: 500
+          description: |
+            Optional free text. The Validation Agent filters this for
+            PII before persistence; clients should discourage names,
+            phone numbers, and addresses with placeholder copy.
+
+    ReportAck:
+      type: object
+      required: [observation_id, claim_token, status_url]
+      properties:
+        observation_id:
+          type: string
+          format: uuid
+        claim_token:
+          type: string
+          pattern: "^[A-Za-z0-9_-]{16,}$"
+          description: |
+            One-time anonymous identifier. The client stores it in
+            localStorage so the reporter can attach a profile or check
+            status without ever creating an account.
+        status_url:
+          type: string
+          format: uri
+        triage:
+          $ref: "#/components/schemas/TriageOutcome"
+        context:
+          $ref: "#/components/schemas/ContextEnvelope"
+        queued:
+          type: boolean
+          default: false
+
+    TriageOutcome:
+      type: object
+      description: |
+        Triage Agent output. **Never a diagnosis.** The `next_action`
+        enum is authoritative — the app must render the corresponding
+        UI affordance, not the LLM's free text.
+      required: [next_action, sources]
+      properties:
+        next_action:
+          type: string
+          enum:
+            - self_care
+            - see_clinician_routine
+            - see_clinician_urgent
+            - call_211
+            - report_to_agency
+            - mail_in_specimen
+        urgency:
+          type: string
+          enum: [none, routine, urgent, emergent]
+        copy:
+          type: string
+          description: |
+            Public-source-attributed copy. Must not contain assertions
+            of disease state ("you have …", "you may have …", "this
+            is …"). A regex output-guard on the server enforces this
+            invariant before the response is returned.
+          maxLength: 600
+        sources:
+          type: array
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/CitedSource"
+
+    CitedSource:
+      type: object
+      required: [name, url]
+      properties:
+        name: { type: string, example: "VectorSurv (UCD DART)" }
+        url:  { type: string, format: uri }
+        mcp:
+          type: string
+          example: "vectorsurv-mcp"
+          description: Source MCP server, if applicable.
+
+    ReportStatus:
+      type: object
+      required: [observation_id, state]
+      properties:
+        observation_id:
+          type: string
+          format: uuid
+        state:
+          type: string
+          enum: [received, triaged, notified, archived, withdrawn]
+        triage:
+          $ref: "#/components/schemas/TriageOutcome"
+        context:
+          $ref: "#/components/schemas/ContextEnvelope"
+        profile_attached:
+          type: boolean
+          default: false
+
+    # -----------------------------------------------------------------------
+    # Profile — every field is opt-in.
+    # -----------------------------------------------------------------------
+    ProfilePatch:
+      type: object
+      additionalProperties: false
+      description: |
+        All fields optional. Setting a value implies consent for that
+        value to be persisted. There is no way to set a flag and a
+        value separately — supplying the value IS the opt-in.
+      properties:
+        home_zip:
+          type: string
+          pattern: "^[0-9]{5}$"
+        precise_location_consent:
+          type: boolean
+          description: |
+            Allow verified agencies to read the precise GPS captured
+            with the original report (if any). Default false.
+        contact_about_my_reports:
+          $ref: "#/components/schemas/ContactChannel"
+        contact_about_nearby_events:
+          $ref: "#/components/schemas/ContactChannel"
+        share_photo_gps_animal_env:
+          type: boolean
+          default: false
+        share_photo_gps_human:
+          type: boolean
+          default: false
+        age_band:
+          type: string
+          enum: ["<18", "18-29", "30-44", "45-64", "65+"]
+        sex_at_birth:
+          type: string
+          enum: [female, male, intersex, prefer_not_to_say]
+        gender_identity:
+          type: string
+          maxLength: 60
+        race_ethnicity:
+          type: array
+          items: { type: string, maxLength: 60 }
+        primary_language:
+          type: string
+          maxLength: 32
+        accessibility_needs:
+          type: array
+          items: { type: string, maxLength: 60 }
+
+    ContactChannel:
+      type: object
+      additionalProperties: false
+      description: |
+        Setting any field implies opt-in to that channel; absence is
+        opt-out. Defaults are all opt-out.
+      properties:
+        email:
+          type: string
+          format: email
+        sms_phone:
+          type: string
+          pattern: "^\\+?[0-9]{10,15}$"
+
+    # -----------------------------------------------------------------------
+    # Context — public-health signals.
+    # -----------------------------------------------------------------------
+    ContextEnvelope:
+      type: object
+      required: [coarse_location, signals]
+      properties:
+        coarse_location:
+          $ref: "#/components/schemas/CoarseLocation"
+        signals:
+          type: array
+          items:
+            $ref: "#/components/schemas/ContextSignal"
+
+    ContextSignal:
+      type: object
+      required: [class, headline, source]
+      properties:
+        class:
+          type: string
+          enum: [vbd, heat, wildlife, environment]
+        headline:
+          type: string
+          maxLength: 200
+          description: |
+            One-sentence signal, e.g. "WNV-positive mosquito pools
+            detected in Maricopa County this week." MUST attribute a
+            public source in `source`. MUST NOT assert a diagnosis or
+            tie the signal to the user's individual symptoms.
+        severity_tier:
+          type: string
+          enum: [info, advisory, watch, warning]
+        valid_through:
+          type: string
+          format: date-time
+        source:
+          $ref: "#/components/schemas/CitedSource"
