@@ -125,22 +125,22 @@ Every emitted `ClusterAlert` carries:
 
 ## The 14 historical AZ outbreaks the detector was calibrated against
 
-| Year(s) | Slug | Vertical | Total cases | Detector verdict |
-|---------|------|----------|-------------|------------------|
-| 1993    | `four_corners_hantavirus_1993`              | VBD  | 24 (concentrated May-Jul)  | **fires** at ~35 days |
-| 2003    | `az_wnv_2003`                                | VBD  | 13 across 4 months         | known miss (emergence; small denominator) |
-| 2014    | `az_dengue_yuma_sonora_2014`                 | VBD  | 70 AZ + 52 Sonora          | **fires** at ~27 days |
-| 2014    | `az_chikungunya_2014`                        | VBD  | 20 imports / 4 counties    | known miss (no spatial cluster) |
-| 2021    | `maricopa_wnv_2021`                          | VBD  | 1487 cases                 | **fires** at ~3 days |
-| 2022+   | `az_hpai_h5n1_wildbird_2022`                 | VBD  | 2 human cases              | known miss (n=2 humans) |
-| 2023    | `az_hantavirus_2023`                         | VBD  | 6 / year                   | known miss (small denominator) |
-| 2023    | `maricopa_heat_2023`                         | Heat | 645 deaths (Jul 10-25 streak)| **fires** at ~2 days |
-| 2023    | `maricopa_cooling_center_barriers_2023`      | Heat | 944 visitors surveyed      | **fires** at ~8 days |
-| 2024    | `az_hantavirus_2024`                         | VBD  | 11 / year                  | known miss (small denominator) |
-| 2024    | `az_heat_2024`                               | Heat | 602 deaths / 70 days       | **fires** at ~5 days |
-| 2025    | `coconino_plague_2025`                       | VBD  | 1 case                     | known miss (single index case) |
-| 2003-pr | `az_rmsf_tribal_2003_present`                | VBD  | ~500 / 22 yrs              | known miss (chronic baseline; tribal suppression) |
-| 2012-13 | `az_rmsf_rodeo_pilot_2012`                   | VBD  | intervention pilot         | known miss (study, not cluster) |
+| Year(s) | Slug | Vertical | Total cases | Detector verdict | Caught by |
+|---------|------|----------|-------------|------------------|-----------|
+| 1993    | `four_corners_hantavirus_1993`              | VBD  | 24 (concentrated May-Jul)    | **fires** at ~5 days  | Tier A + Tier 2 |
+| 2003    | `az_wnv_2003`                                | VBD  | 13 across 4 months           | **fires** at ~54 days | Tier B county scan |
+| 2014    | `az_dengue_yuma_sonora_2014`                 | VBD  | 70 AZ + 52 Sonora            | **fires** at ~22 days | Tier 2 |
+| 2014    | `az_chikungunya_2014`                        | VBD  | 20 imports / 4 counties      | **fires** at ~79 days | Travel-import |
+| 2021    | `maricopa_wnv_2021`                          | VBD  | 1487 cases                   | **fires** at ~2 days  | Tier 2 |
+| 2022+   | `az_hpai_h5n1_wildbird_2022`                 | VBD  | 2 human cases                | known miss (handled by One-Health Update Agent) | -- |
+| 2023    | `az_hantavirus_2023`                         | VBD  | 6 / year                     | **fires** at ~18 days | Tier A |
+| 2023    | `maricopa_heat_2023`                         | Heat | 645 deaths (Jul 10-25 streak)| **fires** at ~2 days  | Tier 2 (2h bucket) |
+| 2023    | `maricopa_cooling_center_barriers_2023`      | Heat | 944 visitors surveyed        | **fires** at ~8 days  | Tier 2 |
+| 2024    | `az_hantavirus_2024`                         | VBD  | 11 / year                    | **fires** at ~6 days  | Tier A |
+| 2024    | `az_heat_2024`                               | Heat | 602 deaths / 70 days         | **fires** at ~5 days  | Tier 2 (2h bucket) |
+| 2025    | `coconino_plague_2025`                       | VBD  | 1 case                       | **fires** at ~2 days  | Tier A (single-case high-CFR) |
+| 2003-pr | `az_rmsf_tribal_2003_present`                | VBD  | ~500 / 22 yrs                | **fires** at ~7 days  | Tier A; Tier C drift backstop |
+| 2012-13 | `az_rmsf_rodeo_pilot_2012`                   | VBD  | intervention pilot           | **fires** at ~11 days | Tier A |
 
 ## Calibration metrics
 
