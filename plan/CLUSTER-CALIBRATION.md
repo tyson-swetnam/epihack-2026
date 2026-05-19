@@ -219,29 +219,39 @@ Tier C is the secondary signal an analyst sees when looking at the
 
 ## Known misses (and why)
 
-These outbreaks the detector cannot catch *by construction*, given the
-contract from Plan 03 (ZCTA-scoped, count-based, week/2-hour
-buckets). They are not regressions; they are the inherent limits of a
-ZCTA-bucketed count scan:
+After Phase-3 closed the eight gaps with Tiers A / B / C and the
+travel-import detector, the single remaining miss is delegated:
 
 | Slug | Reason |
 |------|--------|
-| `coconino_plague_2025`              | Single index case; below `k=5` by construction. Needed: a single-case-alert tier for high-CFR pathogens. |
-| `az_hantavirus_2023`                | 6 cases across the full year (~0.12/wk per case ZCTA); invisible to a ZCTA-week scan. |
-| `az_hantavirus_2024`                | 11 cases across 5 counties / full year; same small-denominator issue. The 2024-07-08 ADHS HAN advisory was the right way to detect this -- aggregating at the *state* level, not the ZCTA-week. |
-| `az_wnv_2003`                       | 13 cases / 4 months. Novel-pathogen emergence; ADHS detected it through bird then mosquito surveillance, not through ZCTA-week clustering. |
-| `az_chikungunya_2014`               | 20 cases all imported, spread across 4 counties. There is no spatial cluster because each case is a separate import. |
-| `az_hpai_h5n1_wildbird_2022`        | 2 human cases. Detector targets human-incidence clusters; wildlife H5N1 is the One-Health Update Agent's job. |
-| `az_rmsf_tribal_2003_present`       | Chronic endemic baseline (~25 cases/yr across 4 counties); not a *change* from baseline, plus tribal-data suppression rules limit ZCTA-level signal even where available. |
-| `az_rmsf_rodeo_pilot_2012`          | Intervention pilot study, not an outbreak in the count-based sense. |
+| `az_hpai_h5n1_wildbird_2022`        | 2 human cases. Detector targets human-incidence clusters; wildlife H5N1 is the One-Health Update Agent's job (and `pathogen.hpai_h5n1` is deliberately **not** in the `single_case_alertable` seed -- adding it would generate false positives on every flock serosurvey). |
+
+### Gaps closed by Phase-3 follow-ups (formerly known misses)
+
+| Slug | Was missed because | Now caught by |
+|------|--------------------|---------------|
+| `coconino_plague_2025`              | Single index case (n=1 < k=5)                          | Tier A (single-case high-CFR, Y. pestis) |
+| `az_hantavirus_2023`                | 6 cases / year, scattered across 3 northern counties   | Tier A (SNV `single_case_alertable`), Tier B (county-week) as backstop |
+| `az_hantavirus_2024`                | 11 cases / 5 counties / full year                      | Tier A (SNV), Tier B (county-week) as backstop |
+| `az_wnv_2003`                       | 13 cases / 4 months emergence; below ZCTA-week k floor | Tier B (county-week Poisson scan, theta=2.0, k=3) |
+| `az_chikungunya_2014`               | 20 imports / 4 counties; no spatial cluster            | Travel-import detector (>=5 obs / 30d / shared pathogen) |
+| `az_rmsf_tribal_2003_present`       | Chronic endemic baseline; tribal-data suppression      | Tier A (RMSF is `single_case_alertable`); Tier C drift detector flags the rolled-up statewide rate when trailing-12mo > 1.25x historical |
+| `az_rmsf_rodeo_pilot_2012`          | Intervention study, not a count-based outbreak         | Tier A (any confirmed RMSF case in the pilot community) |
 
 ## Open questions and known limitations
 
-* **Small denominators.** Sparse pathogens (hantavirus, plague, RMSF in
-  non-endemic ZCTAs) are not addressable with a ZCTA-week count scan.
-  Phase-4 work should add a complementary single-case high-CFR alert
-  layer (Y. pestis, hemorrhagic fevers, anthrax) and a county-level or
-  region-level scan tier for chronic-low-incidence pathogens.
+* **Small denominators.** Closed by Tier A (single-case high-CFR alert)
+  for the five pathogens flagged in
+  [`schema/deep/cluster_followups.sql`](../schema/deep/cluster_followups.sql)
+  and by Tier B (county-week scan with `theta=2.0`, `k=3`). Anthrax
+  (`pathogen.bacillus_anthracis`) is the obvious next addition once the
+  pathogen node exists in `schema/deep/pathogens.sql`.
+* **Travel destination data.** The travel-import detector approximates
+  the brief's "shared destination" criterion with "shared candidate
+  pathogen" because `ExposureClass` has no destination-country field yet.
+  Phase-4 should add `destination_country` (ISO 3166-1) to
+  `agents/src/onehealth_agents/contracts.py::ExposureClass` and update
+  the seed and detector to use it directly.
 * **ZCTA boundary effects.** Cases that straddle a ZCTA boundary
   (common for unsheltered populations and tribal lands where ZCTA
   geography barely tracks community geography) will under-count both
