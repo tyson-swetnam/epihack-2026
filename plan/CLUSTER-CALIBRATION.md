@@ -9,9 +9,25 @@ This note records the calibration of the
 against the 14 historical Arizona outbreaks seeded in
 [`schema/deep/outbreaks.sql`](../schema/deep/outbreaks.sql). It is the
 Phase-3 deliverable from [`plan/05-roadmap.md`](05-roadmap.md): a real,
-two-tier detector with thresholds pinned by replay against the
+multi-tier detector with thresholds pinned by replay against the
 already-encoded labelled positives, plus an explicit accounting of the
 outbreaks the detector cannot reasonably catch and why.
+
+The detector ships **five** tiers, layered on top of one another:
+
+1. **Tier 1** -- ZCTA x bucket fast deterministic Poisson scan.
+2. **Tier 2** -- Gamma-Poisson refined Bayesian scan (only when Tier 1 fires).
+3. **Tier A** -- Single-case high-CFR alert (no count threshold) for
+   pathogens flagged ``single_case_alertable`` in
+   [`schema/deep/cluster_followups.sql`](../schema/deep/cluster_followups.sql).
+4. **Tier B** -- County x week Poisson scan with looser thresholds, for
+   multi-county clusters that disperse below the ZCTA-week floor.
+5. **Tier C** -- Chronic-baseline drift detector for documented endemic
+   pathogens (currently RMSF).
+
+Plus a travel-import detector for clusters of >= 5 confirmed observations
+in a 30-day window that share a candidate pathogen and report
+``history_of_travel``.
 
 The harness lives in
 [`agents/tests/test_cluster_calibration.py`](../agents/tests/test_cluster_calibration.py)
