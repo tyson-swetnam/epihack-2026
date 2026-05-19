@@ -79,7 +79,11 @@ class Orchestrator:
         audit_sink: AuditSink | None = None,
     ) -> None:
         self.mcp: MCPClient = mcp or FakeMCPClient.with_default_handlers()
-        self.audit_sink: AuditSink = audit_sink or InMemoryAuditSink()
+        # NB: don't use ``or`` here -- an empty InMemoryAuditSink is falsy
+        # because ``__len__`` returns 0 on a fresh instance.
+        self.audit_sink: AuditSink = (
+            audit_sink if audit_sink is not None else InMemoryAuditSink()
+        )
         self.intake = IntakeAgent()
         self.geo = GeoEnrichmentAgent(self.mcp)
         self.validation = ValidationAgent()
@@ -91,71 +95,91 @@ class Orchestrator:
 
     # ------------------------------------------------------------------
     async def process(self, raw_input: dict | str) -> Observation:
-        # 1. Intake
-        observation = await self._run(
-            "intake", lambda: self._maybe_async(self.intake.run, raw_input)
+        # 1. Intake -- digest the raw payload so the audit row anchors a
+        #    reproducible input.
+        intake_input_digest = hash_for_audit(raw_input)
+        observation, intake_run = await self._timed(
+            "intake",
+            lambda: self._maybe_async(self.intake.run, raw_input),
+            input_digest=intake_input_digest,
         )
         if observation is None:
             # Synthesise an empty observation so the pipeline keeps a record.
             observation = Observation()
-            observation.agent_runs.append(
-                AgentRun(
-                    agent="intake",
-                    started_at=_now(),
-                    finished_at=_now(),
-                    duration_ms=0.0,
-                    status="failed",
-                    error="intake returned None",
-                )
+            intake_run = intake_run.model_copy(
+                update={
+                    "status": "failed",
+                    "error": intake_run.error or "intake returned None",
+                    "observation_id": observation.observation_id,
+                }
             )
+        # Stamp the observation_id + output digest now that we have the obs.
+        intake_run = self._finalize_run(intake_run, observation, observation)
+        self._publish(observation, intake_run)
 
         # 2. Geo enrichment
-        geo = await self._run_on(
-            observation, "geo_enrichment", lambda: self.geo.run(observation)
+        geo, geo_run = await self._timed(
+            "geo_enrichment",
+            lambda: self.geo.run(observation),
+            input_digest=hash_for_audit(observation),
         )
         if geo is not None:
             observation.geo = geo
+        geo_run = self._finalize_run(geo_run, observation, geo)
+        self._publish(observation, geo_run)
 
         # 3. Validation
-        validation = await self._run_on(
-            observation, "validation", lambda: self._sync(self.validation.run, observation)
+        validation, validation_run = await self._timed(
+            "validation",
+            lambda: self._sync(self.validation.run, observation),
+            input_digest=hash_for_audit(observation),
         )
         if validation is not None:
             observation.validation = validation
             observation.validation_status = validation.status
+        validation_run = self._finalize_run(validation_run, observation, validation)
+        self._publish(observation, validation_run)
 
         # If validation rejected, stop early.
         if observation.validation_status == ValidationStatus.REJECT:
             return observation
 
         # 4. Triage
-        triage = await self._run_on(
-            observation, "triage", lambda: self._sync(self.triage.run, observation)
+        triage, triage_run = await self._timed(
+            "triage",
+            lambda: self._sync(self.triage.run, observation),
+            input_digest=hash_for_audit(observation),
         )
         if triage is not None:
             observation.triage = triage
             if observation.vertical == Vertical.NEITHER:
                 observation.vertical = triage.vertical
+        triage_run = self._finalize_run(triage_run, observation, triage)
+        self._publish(observation, triage_run)
 
         # 5. Enrichment
-        bundle = await self._run_on(
-            observation,
+        bundle, enrichment_run = await self._timed(
             "enrichment",
             lambda: self.enrichment.run(observation),
+            input_digest=hash_for_audit(observation),
         )
         if bundle is not None:
             observation.enrichments = bundle
         elif not isinstance(observation.enrichments, EnrichmentBundle):
             observation.enrichments = EnrichmentBundle()
+        enrichment_run = self._finalize_run(enrichment_run, observation, bundle)
+        self._publish(observation, enrichment_run)
 
         # 6. Notification
-        notes = await self._run_on(
-            observation,
+        notes, notification_run = await self._timed(
             "notification",
             lambda: self._sync(self.notification.run, observation),
+            input_digest=hash_for_audit(observation),
         )
         if notes is not None:
             observation.notifications = notes
+        notification_run = self._finalize_run(notification_run, observation, notes)
+        self._publish(observation, notification_run)
 
         return observation
 
@@ -193,15 +217,20 @@ class Orchestrator:
         self, observation: Observation, name: str, fn: Callable[[], Awaitable[T] | T]
     ) -> T | None:
         """Run ``fn``, record the resulting :class:`AgentRun` on the observation."""
-        out, run = await self._timed(name, fn)
-        observation.agent_runs.append(run)
+        out, run = await self._timed(name, fn, input_digest=hash_for_audit(observation))
+        run = self._finalize_run(run, observation, out)
+        self._publish(observation, run)
         return out
 
     @staticmethod
     async def _timed(
-        name: str, fn: Callable[[], Awaitable[T] | T]
+        name: str,
+        fn: Callable[[], Awaitable[T] | T],
+        *,
+        input_digest: str | None = None,
     ) -> tuple[T | None, AgentRun]:
         started = datetime.now(timezone.utc)
+        model_id = _DEFAULT_MODEL_FOR_AGENT.get(name)
         try:
             value = fn()
             if asyncio.iscoroutine(value):
@@ -213,6 +242,8 @@ class Orchestrator:
                 finished_at=ended.isoformat(),
                 duration_ms=(ended - started).total_seconds() * 1000.0,
                 status="ok",
+                model=model_id,
+                input_digest=input_digest,
             )
         except Exception as exc:  # noqa: BLE001 -- isolation per plan/03
             ended = datetime.now(timezone.utc)
@@ -223,7 +254,41 @@ class Orchestrator:
                 duration_ms=(ended - started).total_seconds() * 1000.0,
                 status="failed",
                 error=f"{type(exc).__name__}: {exc}",
+                model=model_id,
+                input_digest=input_digest,
             )
+
+    @staticmethod
+    def _finalize_run(
+        run: AgentRun,
+        observation: Observation,
+        output: Any,
+    ) -> AgentRun:
+        """Stamp ``observation_id`` + ``output_digest`` + ``cost_usd`` on a run."""
+        update: dict[str, Any] = {"observation_id": observation.observation_id}
+        if output is not None:
+            update["output_digest"] = hash_for_audit(output)
+        # Cost is currently driven by env-var token counts (zero unless the
+        # agent reported them); the call is still cheap because the pricing
+        # table short-circuits on missing model_id / token counts.
+        update["cost_usd"] = cost_for_run(
+            run.model,
+            run.prompt_tokens,
+            run.completion_tokens,
+            run.cache_read_tokens,
+            run.cache_creation_tokens,
+        )
+        return run.model_copy(update=update)
+
+    def _publish(self, observation: Observation, run: AgentRun) -> None:
+        """Attach ``run`` to the observation and forward to the audit sink."""
+        observation.agent_runs.append(run)
+        try:
+            self.audit_sink.record(run)
+        except Exception:  # noqa: BLE001 -- audit must never break the pipeline
+            # The sink is best-effort: in the worst case we still have the
+            # in-memory ``observation.agent_runs`` trace.
+            pass
 
 
 def _now() -> str:

@@ -6,6 +6,14 @@ See ``plan/03-agentic-architecture.md`` for the design and
 
 from __future__ import annotations
 
+from .audit import (
+    AuditSink,
+    DuckLakeAuditSink,
+    InMemoryAuditSink,
+    SqliteAuditSink,
+    cost_for_run,
+    hash_for_audit,
+)
 from .cluster import ClusterDetectionAgent
 from .contracts import (  # noqa: F401  (re-exported for convenience)
     AgentRun,
@@ -45,6 +53,7 @@ from .intake import IntakeAgent
 from .mcp_client import FakeMCPClient, MCPClient, StdioMCPClient
 from .notification import NotificationAgent
 from .orchestrator import Orchestrator
+from .sms_adapter import SMS_MAX_CHARS, SmsAdapter, SmsReply
 from .triage import HEAT_SCORE_TABLE, HeatTriage, TriageAgent, VBDTriage
 from .update import KnowledgeUpdateAgent
 from .validation import ValidationAgent
@@ -55,6 +64,13 @@ __all__ = [
     "__version__",
     # Orchestrator
     "Orchestrator",
+    # Audit
+    "AuditSink",
+    "InMemoryAuditSink",
+    "DuckLakeAuditSink",
+    "SqliteAuditSink",
+    "hash_for_audit",
+    "cost_for_run",
     # Agents
     "IntakeAgent",
     "GeoEnrichmentAgent",
@@ -67,6 +83,10 @@ __all__ = [
     "ClusterDetectionAgent",
     "KnowledgeUpdateAgent",
     "HEAT_SCORE_TABLE",
+    # SMS adapter
+    "SmsAdapter",
+    "SmsReply",
+    "SMS_MAX_CHARS",
     # MCP
     "MCPClient",
     "FakeMCPClient",

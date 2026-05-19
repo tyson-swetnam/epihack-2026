@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>AZ One Health Sentinel — agency dashboard</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="theme-color" content="#1F3A93" />
+<meta name="description" content="Read-only analyst workspace for ADHS, MCDPH, AZGFD, and Coconino HHS. Phase 3 of the AZ One Health Sentinel roadmap." />
+<link rel="stylesheet" href="shared/style.css" />
+</head>
+<body data-mock-base="./mock">
+
+<header class="dash-header">
+  <div>
+    <div class="crumbs"><a href="../index.html">&laquo; EpiHack AZ 2026</a></div>
+    <h1>AZ One Health Sentinel — agency dashboard</h1>
+  </div>
+  <div id="auth-stub"></div>
+</header>
+
+<main class="container">
+
+  <p class="muted small" style="margin-top:.5rem">
+    Read-only analyst workspace for the four agencies engaged in the
+    <a href="../plan/05-roadmap.html#phase-3--maricopa--coconino-pilot-month-69">Phase 3 pilot</a>.
+    This dashboard is the workspace from
+    <a href="../plan/04-data-flows.html#scenario-d--agency-side-cluster-review">Scenario D</a>:
+    an ADHS epi reviews a hantavirus cluster the
+    <a href="../plan/03-agentic-architecture.html">Cluster Detection Agent</a>
+    flagged overnight, and works the case through to a
+    <em>Verify</em> dispatch.
+  </p>
+
+  <h2>Pick an agency view</h2>
+  <p class="muted small">
+    Every audience gets the same five components &mdash; status card,
+    cluster feed, AZ map embed, case-counts table, and a SQL preview
+    button &mdash; tuned to the analyst's working set. Click below or
+    use the picker in the header.
+  </p>
+
+  <div class="audience-grid">
+    <a class="audience-card" href="adhs/index.html" style="--c:#1F3A93">
+      <h3>ADHS — Vector-Borne &amp; Zoonotic Diseases</h3>
+      <p>State-wide arbovirus + heat-mortality dashboard.
+         WNV + SLEV vector indices, weekly human cases, statewide
+         heat-deaths surveillance, and the Scenario D hantavirus
+         cluster.</p>
+      <span class="audience-meta">3 screens &middot; statewide scope</span>
+    </a>
+
+    <a class="audience-card" href="mcdph/index.html" style="--c:#E84A2B">
+      <h3>Maricopa County DPH — Heat Surveillance</h3>
+      <p>CHW heat-check-in pins, WNV vector-index map, and
+         spatial-temporal heat-exhaustion clusters in Phoenix-metro
+         ZCTAs (Scenario C + Phase 1 success criterion).</p>
+      <span class="audience-meta">2 screens &middot; county scope</span>
+    </a>
+
+    <a class="audience-card" href="azgfd/index.html" style="--c:#2C5F2D">
+      <h3>AZ Game &amp; Fish — Wildlife Health Program</h3>
+      <p>WHISPers events + AZGFD mortality reports + iNaturalist
+         citizen-science overlays. HPAI, plague, EHDV, WNV in
+         wildlife, statewide.</p>
+      <span class="audience-meta">1 screen &middot; wildlife scope</span>
+    </a>
+
+    <a class="audience-card" href="coconino/index.html" style="--c:#6A1B9A">
+      <h3>Coconino County HHS</h3>
+      <p>Plague + hantavirus + Grand-Canyon NPS coordination.
+         The Scenario D hantavirus cluster lands here too,
+         co-flagged with ADHS.</p>
+      <span class="audience-meta">1 screen &middot; Coconino + NPS</span>
+    </a>
+  </div>
+
+  <h2>About this workspace</h2>
+  <p class="small">
+    The dashboard is <strong>read-only</strong>. The "Verify outbreak"
+    write action from Scenario D step 6 is described in each agency
+    view as a future-work box; in the Phase 3 pilot it ships as a
+    separate, audited write workflow that goes through the
+    <a href="../plan/03-agentic-architecture.html">Knowledge Update Agent</a>.
+  </p>
+  <p class="small">
+    Every pin and every row carries a <code>kg_node_id</code> that
+    round-trips to the <a href="../map/index.html">geospatial map</a>,
+    the <a href="../graph/index.html">pathogen graph</a>, and the
+    underlying SQL nodes seeded by <a href="../schema/">schema/</a>.
+  </p>
+
+  <div class="future-box">
+    <strong>Future work (not in this prototype):</strong>
+    agency SSO (ADHS Entra ID, MCDPH AD, AZGFD employee portal,
+    Coconino HHS); per-agency DUAs; the "Verify outbreak" write
+    workflow that writes a <code>Verify</code> milestone event back
+    to the knowledge graph via <code>knowledge-graph-mcp</code> (a
+    write-tooling MCP that ships separately from the read-only
+    server bundled here); cluster-detection threshold calibration
+    against historical AZ data (1993 Four Corners, 2021 Maricopa
+    WNV, 2023/2024 heat seasons, 2025 Coconino plague).
+  </div>
+
+  <p class="crosslinks">
+    Cross-references:
+    <a href="../map/index.html">Arizona map</a>
+    <a href="../graph/index.html">pathogen graph</a>
+    <a href="../plan/index.html">plan</a>
+    <a href="../app/index.html">field app</a>
+    <a href="../wildlife/index.html">wildlife focus group</a>
+    <a href="../heat/index.html">heat focus group</a>
+  </p>
+</main>
+
+<footer class="dash-footer">
+  Source: Ending Pandemics Academy &middot; University of Arizona Mel &amp;
+  Enid Zuckerman College of Public Health &middot; Global Health Institute.
+</footer>
+
+<script type="module">
+  import { mountAuthStub } from './shared/auth-stub.js';
+  mountAuthStub(document.getElementById('auth-stub'), null);
+</script>
+
+</body>
+</html>

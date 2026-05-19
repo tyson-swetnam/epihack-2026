@@ -28,19 +28,38 @@ GitHub Pages serve it byte-for-byte.
 
 ```
 app/
-  index.html            landing page with two cards (Submit a tick, Heat check-in stub)
+  index.html               landing page with the four flow cards + install button + sync pill
+  manifest.webmanifest     Web App Manifest (PWA name, icons, shortcuts)
+  sw.js                    Service worker (scope /app/, three caching strategies)
+  icons/
+    icon.svg               icon source (gradient + white "S" + heat-vertical accent)
+    icon-192.png           manifest icon
+    icon-512.png           manifest icon (also serves as maskable)
   tick/
-    index.html          Scenario-A tick mail-in flow (multi-step single page)
-    tick.js             ES module that drives the flow
-    tick.css            flow-specific styles
+    index.html             Scenario-A tick mail-in flow
+    tick.js                ES module — wires geo, photo, IDB enqueue on offline
+    tick.css               flow-specific styles
   heat/
-    index.html          Phase 1 placeholder card
+    index.html             Heat-vertical landing
+    heat.css               heat-themed components
+    heat-shared.js         vulnerability score + center-list helpers
+    mock-responses.json    canned heat-vertical agent-chain responses
+    check-in/index.html    CHW heat check-in flow (Scenario C)
+    check-in/check-in.js
+    self-report/index.html anonymous heat self-report
+    self-report/self-report.js
+    cool-off/index.html    "where can I cool off?" lookup
+    cool-off/cool-off.js
   shared/
-    style.css           base styles (palette, header, cards, buttons)
-    intake-client.js    POSTs to /api/intake or returns a canned mock response
-    geo.js              navigator.geolocation Promise wrapper + ZIP fallback
-  mock-responses.json   canned IntakeAgent → … → NotificationAgent results
-  README.md             (this file)
+    style.css              base styles (palette, header, cards, buttons, offline pill)
+    intake-client.js       POSTs to /api/intake, handles SW 202 queued response
+    sync.js                IndexedDB queue: enqueueReport / replayAll / subscribe
+    install-prompt.js      beforeinstallprompt → Install button helper
+    sw-register.js         registers /app/sw.js + mounts the sync-status pill
+    geo.js                 navigator.geolocation Promise wrapper + ZIP fallback
+    i18n.js                EN / ES bundle + <html lang> + switcher
+  mock-responses.json      canned IntakeAgent → … → NotificationAgent results (VBD)
+  README.md                (this file)
 ```
 
 ## Run locally
@@ -144,3 +163,113 @@ are intentionally narrow so they map 1:1 to existing plan items:
 | `--c-red`    | `#C0392B` | Alert / triage urgency. |
 | `--c-orange` | `#E84A2B` | Heat vertical. |
 | `--c-green`  | `#4CAF50` | Success affirmations. |
+
+## Offline + sync-on-reconnect (Phase 2)
+
+The app is an installable PWA. The four primary flows
+(tick mail-in, heat CHW check-in, heat self-report, cooling-center
+lookup) keep working with no network.
+
+### Files involved
+
+```
+app/
+  manifest.webmanifest      Web App Manifest (name, icons, shortcuts)
+  sw.js                     Service worker, scoped to /app/ only
+  icons/
+    icon.svg                Source icon (gradient + white "S" + heat dot)
+    icon-192.png            Manifest icon (192x192)
+    icon-512.png            Manifest icon (512x512, also used as maskable)
+  shared/
+    sync.js                 IndexedDB queue: enqueueReport, pendingReports,
+                            replayAll, subscribe
+    install-prompt.js       beforeinstallprompt handler + Install button
+    sw-register.js          Registers the SW, mounts the sync-status pill
+                            ("synced" / "N pending" / "offline") and the
+                            "report synced" toast
+```
+
+### Caching strategies (service worker)
+
+1. **App shell (HTML / CSS / JS / icons under `/app/`):** cache-first
+   with a stale-while-revalidate background refresh. Pre-cached on
+   `install`. The shell opens instantly offline; the next online
+   navigation refreshes it transparently for the visit after.
+2. **Mock-response fixtures + canned cooling-center data**
+   (`*/mock-responses.json`): stale-while-revalidate. Pre-populated on
+   `install` so the cooling-center lookup works on first launch even
+   without a network handshake.
+3. **`POST /api/intake`:** network-first. If the request errors or the
+   browser is offline, the SW returns a synthetic `202 Accepted` with
+   `{ "queued": true }`. The page picks that up and routes the report
+   through `shared/sync.js` (IndexedDB), then shows the "Saved offline"
+   card. The same path is taken when the page detects
+   `navigator.onLine === false` before the fetch even runs.
+
+The scope is `/app/` (not site-wide) so the SW cannot touch the rest of
+the static Jekyll site (`map/`, `graph/`, `plan/`, `wildlife/`, the root
+`index.html`). That matches the "static-site content shouldn't be
+cached aggressively" guardrail in `plan/05-roadmap.md`.
+
+### IndexedDB schema
+
+Database `az-onehealth-sentinel`, object store `pending_reports`:
+
+| field         | type      | notes                                        |
+|---|---|---|
+| `id`          | UUIDv4    | primary key, generated by `crypto.randomUUID` |
+| `enqueued_at` | ISO-8601  | FIFO replay order; indexed                   |
+| `flow`        | string    | `tick_mailin`, `heat_chw_checkin`, `heat_self_report` |
+| `vertical`    | string    | `vbd` or `heat`                              |
+| `mock_key`    | string?   | optional mock-response selector              |
+| `api_base`    | string?   | captured at enqueue time; `null` => mock mode |
+| `payload`     | object    | Minimum-Dataset shaped JSON                  |
+| `retries`     | integer   | bumped on each failed replay, capped at 5    |
+| `last_error`  | string?   | last failure reason, for debugging           |
+
+### Background Sync — and the iOS fallback
+
+On Chromium-based browsers (Chrome, Edge, Brave, Samsung Internet),
+the page calls `ServiceWorkerRegistration.sync.register('az-sentinel-intake-replay')`
+when it enqueues a report. The browser fires that sync the next time
+connectivity returns — even with no tab open — and the service worker
+replays everything from IndexedDB by itself (see `swDirectReplay()`
+in `app/sw.js`).
+
+**iOS Safari does not implement the Background Sync API** (still true
+as of 2026). On Safari and Firefox the offline path degrades like this:
+
+* The IDB enqueue still happens — no data loss.
+* The sync-status pill shows `N pending` and becomes clickable.
+* Replay runs when:
+  1. The page is open and the `online` event fires
+     (`window.addEventListener('online', replayAll)`), or
+  2. The user taps the pending pill to retry manually, or
+  3. The user reopens the app — the `load` handler kicks off
+     `replayAll()` if `navigator.onLine` is true.
+
+In other words: on iOS, the user has to open the app at least once
+after coming back online for queued reports to upload, but they will
+still upload reliably. The "report synced" toast and the
+`sentinel:synced` event fire in either path.
+
+A future improvement (tracked informally) is a Periodic Background
+Sync fallback where supported, and/or a Web Push trigger that wakes
+the SW. Both require backend cooperation and so are out of scope for
+the prototype.
+
+### Verification
+
+```sh
+python -m http.server 8000
+# open http://localhost:8000/app/ in Chrome
+# DevTools → Application → Service Workers (confirm registered)
+# DevTools → Network → Offline
+# navigate to /app/tick/, fill the form, submit
+#   → "Saved offline" card appears
+#   → header pill flips to "1 pending"
+# DevTools → Network → Online
+#   → pill flips to "syncing…" then "synced"
+#   → "tick mailin synced" toast appears
+```
+

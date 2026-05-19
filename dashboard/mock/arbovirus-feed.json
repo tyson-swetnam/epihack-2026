@@ -1,0 +1,188 @@
+{
+  "_about": "Canned WNV / SLEV arbovirus positivity and human-case time series, shaped after the vectorsurv_calculate_infection_rate + vectorsurv_get_case_counts MCP tools. Weeks are ISO weeks of 2026; mir_per_1000 is bias-corrected MLE. Used by adhs/arbovirus.html and adhs/index.html.",
+  "_generated_at": "2026-05-19T07:00:00Z",
+  "target_pathogens": ["WNV", "SLEV"],
+  "counties": [
+    {
+      "county": "Maricopa",
+      "fips": "04013",
+      "kg_node_id": "county.maricopa",
+      "pop_approx": 4496588,
+      "wnv": {
+        "weekly_mir": [
+          { "iso_week": "2026-W12", "mir_per_1000": 0.4 },
+          { "iso_week": "2026-W13", "mir_per_1000": 0.9 },
+          { "iso_week": "2026-W14", "mir_per_1000": 1.5 },
+          { "iso_week": "2026-W15", "mir_per_1000": 2.6 },
+          { "iso_week": "2026-W16", "mir_per_1000": 4.1 },
+          { "iso_week": "2026-W17", "mir_per_1000": 5.8 },
+          { "iso_week": "2026-W18", "mir_per_1000": 7.2 },
+          { "iso_week": "2026-W19", "mir_per_1000": 8.2 }
+        ],
+        "human_cases_ytd": 7,
+        "human_cases_weekly": [
+          { "iso_week": "2026-W12", "cases": 0 },
+          { "iso_week": "2026-W13", "cases": 0 },
+          { "iso_week": "2026-W14", "cases": 1 },
+          { "iso_week": "2026-W15", "cases": 1 },
+          { "iso_week": "2026-W16", "cases": 1 },
+          { "iso_week": "2026-W17", "cases": 1 },
+          { "iso_week": "2026-W18", "cases": 1 },
+          { "iso_week": "2026-W19", "cases": 2 }
+        ]
+      },
+      "slev": {
+        "weekly_mir": [
+          { "iso_week": "2026-W12", "mir_per_1000": 0.0 },
+          { "iso_week": "2026-W13", "mir_per_1000": 0.2 },
+          { "iso_week": "2026-W14", "mir_per_1000": 0.4 },
+          { "iso_week": "2026-W15", "mir_per_1000": 0.4 },
+          { "iso_week": "2026-W16", "mir_per_1000": 0.7 },
+          { "iso_week": "2026-W17", "mir_per_1000": 1.1 },
+          { "iso_week": "2026-W18", "mir_per_1000": 1.5 },
+          { "iso_week": "2026-W19", "mir_per_1000": 1.8 }
+        ],
+        "human_cases_ytd": 0,
+        "human_cases_weekly": [
+          { "iso_week": "2026-W12", "cases": 0 },
+          { "iso_week": "2026-W13", "cases": 0 },
+          { "iso_week": "2026-W14", "cases": 0 },
+          { "iso_week": "2026-W15", "cases": 0 },
+          { "iso_week": "2026-W16", "cases": 0 },
+          { "iso_week": "2026-W17", "cases": 0 },
+          { "iso_week": "2026-W18", "cases": 0 },
+          { "iso_week": "2026-W19", "cases": 0 }
+        ]
+      }
+    },
+    {
+      "county": "Pima",
+      "fips": "04019",
+      "kg_node_id": "county.pima",
+      "pop_approx": 1063162,
+      "wnv": {
+        "weekly_mir": [
+          { "iso_week": "2026-W12", "mir_per_1000": 0.2 },
+          { "iso_week": "2026-W13", "mir_per_1000": 0.4 },
+          { "iso_week": "2026-W14", "mir_per_1000": 0.7 },
+          { "iso_week": "2026-W15", "mir_per_1000": 1.3 },
+          { "iso_week": "2026-W16", "mir_per_1000": 2.0 },
+          { "iso_week": "2026-W17", "mir_per_1000": 2.7 },
+          { "iso_week": "2026-W18", "mir_per_1000": 3.1 },
+          { "iso_week": "2026-W19", "mir_per_1000": 3.6 }
+        ],
+        "human_cases_ytd": 2,
+        "human_cases_weekly": [
+          { "iso_week": "2026-W12", "cases": 0 },
+          { "iso_week": "2026-W13", "cases": 0 },
+          { "iso_week": "2026-W14", "cases": 0 },
+          { "iso_week": "2026-W15", "cases": 1 },
+          { "iso_week": "2026-W16", "cases": 0 },
+          { "iso_week": "2026-W17", "cases": 0 },
+          { "iso_week": "2026-W18", "cases": 1 },
+          { "iso_week": "2026-W19", "cases": 0 }
+        ]
+      },
+      "slev": {
+        "weekly_mir": [
+          { "iso_week": "2026-W12", "mir_per_1000": 0.0 },
+          { "iso_week": "2026-W13", "mir_per_1000": 0.1 },
+          { "iso_week": "2026-W14", "mir_per_1000": 0.2 },
+          { "iso_week": "2026-W15", "mir_per_1000": 0.3 },
+          { "iso_week": "2026-W16", "mir_per_1000": 0.4 },
+          { "iso_week": "2026-W17", "mir_per_1000": 0.5 },
+          { "iso_week": "2026-W18", "mir_per_1000": 0.6 },
+          { "iso_week": "2026-W19", "mir_per_1000": 0.7 }
+        ],
+        "human_cases_ytd": 0,
+        "human_cases_weekly": [
+          { "iso_week": "2026-W14", "cases": 0 },
+          { "iso_week": "2026-W15", "cases": 0 },
+          { "iso_week": "2026-W16", "cases": 0 },
+          { "iso_week": "2026-W17", "cases": 0 },
+          { "iso_week": "2026-W18", "cases": 0 },
+          { "iso_week": "2026-W19", "cases": 0 }
+        ]
+      }
+    },
+    {
+      "county": "Yuma",
+      "fips": "04027",
+      "kg_node_id": "county.yuma",
+      "pop_approx": 203881,
+      "wnv": {
+        "weekly_mir": [
+          { "iso_week": "2026-W14", "mir_per_1000": 0.3 },
+          { "iso_week": "2026-W15", "mir_per_1000": 0.6 },
+          { "iso_week": "2026-W16", "mir_per_1000": 1.0 },
+          { "iso_week": "2026-W17", "mir_per_1000": 1.4 },
+          { "iso_week": "2026-W18", "mir_per_1000": 1.8 },
+          { "iso_week": "2026-W19", "mir_per_1000": 2.2 }
+        ],
+        "human_cases_ytd": 1,
+        "human_cases_weekly": [
+          { "iso_week": "2026-W14", "cases": 0 },
+          { "iso_week": "2026-W15", "cases": 0 },
+          { "iso_week": "2026-W16", "cases": 0 },
+          { "iso_week": "2026-W17", "cases": 1 },
+          { "iso_week": "2026-W18", "cases": 0 },
+          { "iso_week": "2026-W19", "cases": 0 }
+        ]
+      },
+      "slev": {
+        "weekly_mir": [
+          { "iso_week": "2026-W14", "mir_per_1000": 0.0 },
+          { "iso_week": "2026-W15", "mir_per_1000": 0.1 },
+          { "iso_week": "2026-W16", "mir_per_1000": 0.1 },
+          { "iso_week": "2026-W17", "mir_per_1000": 0.2 },
+          { "iso_week": "2026-W18", "mir_per_1000": 0.3 },
+          { "iso_week": "2026-W19", "mir_per_1000": 0.3 }
+        ],
+        "human_cases_ytd": 0,
+        "human_cases_weekly": [
+          { "iso_week": "2026-W14", "cases": 0 },
+          { "iso_week": "2026-W15", "cases": 0 },
+          { "iso_week": "2026-W16", "cases": 0 },
+          { "iso_week": "2026-W17", "cases": 0 },
+          { "iso_week": "2026-W18", "cases": 0 },
+          { "iso_week": "2026-W19", "cases": 0 }
+        ]
+      }
+    },
+    {
+      "county": "Coconino",
+      "fips": "04005",
+      "kg_node_id": "county.coconino",
+      "pop_approx": 145871,
+      "wnv": {
+        "weekly_mir": [
+          { "iso_week": "2026-W14", "mir_per_1000": 0.0 },
+          { "iso_week": "2026-W15", "mir_per_1000": 0.1 },
+          { "iso_week": "2026-W16", "mir_per_1000": 0.1 },
+          { "iso_week": "2026-W17", "mir_per_1000": 0.2 },
+          { "iso_week": "2026-W18", "mir_per_1000": 0.3 },
+          { "iso_week": "2026-W19", "mir_per_1000": 0.4 }
+        ],
+        "human_cases_ytd": 0,
+        "human_cases_weekly": [
+          { "iso_week": "2026-W17", "cases": 0 },
+          { "iso_week": "2026-W18", "cases": 0 },
+          { "iso_week": "2026-W19", "cases": 0 }
+        ]
+      },
+      "slev": {
+        "weekly_mir": [
+          { "iso_week": "2026-W17", "mir_per_1000": 0.0 },
+          { "iso_week": "2026-W18", "mir_per_1000": 0.0 },
+          { "iso_week": "2026-W19", "mir_per_1000": 0.0 }
+        ],
+        "human_cases_ytd": 0,
+        "human_cases_weekly": [
+          { "iso_week": "2026-W17", "cases": 0 },
+          { "iso_week": "2026-W18", "cases": 0 },
+          { "iso_week": "2026-W19", "cases": 0 }
+        ]
+      }
+    }
+  ]
+}

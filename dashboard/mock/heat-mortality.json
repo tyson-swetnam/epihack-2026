@@ -1,0 +1,69 @@
+{
+  "_about": "Canned heat-mortality series for the ADHS and MCDPH dashboards. Numbers are illustrative for the demo; historical context drawn from heat/04-vulnerable-populations.md (>4,320 deaths 2013-2024, 990 in 2023, 36% unsheltered share in 2016, 81% male) and the schema/heat.sql resource catalog. The weekly demo series is wired to ISO weeks of 2026 so the cluster feed lines up.",
+  "_generated_at": "2026-05-19T07:00:00Z",
+  "headline": {
+    "statewide_deaths_2013_2024": 4320,
+    "statewide_deaths_2023": 990,
+    "annual_er_visits_avg": 4298,
+    "maricopa_unsheltered_share_pct_2016": 36,
+    "maricopa_male_share_pct": 81
+  },
+  "weekly_statewide": [
+    { "iso_week": "2026-W12", "deaths_provisional": 1,  "er_visits": 28 },
+    { "iso_week": "2026-W13", "deaths_provisional": 2,  "er_visits": 36 },
+    { "iso_week": "2026-W14", "deaths_provisional": 3,  "er_visits": 51 },
+    { "iso_week": "2026-W15", "deaths_provisional": 5,  "er_visits": 72 },
+    { "iso_week": "2026-W16", "deaths_provisional": 6,  "er_visits": 88 },
+    { "iso_week": "2026-W17", "deaths_provisional": 8,  "er_visits": 109 },
+    { "iso_week": "2026-W18", "deaths_provisional": 11, "er_visits": 132 },
+    { "iso_week": "2026-W19", "deaths_provisional": 14, "er_visits": 161 }
+  ],
+  "weekly_maricopa": [
+    { "iso_week": "2026-W12", "deaths_provisional": 1, "er_visits": 19 },
+    { "iso_week": "2026-W13", "deaths_provisional": 2, "er_visits": 26 },
+    { "iso_week": "2026-W14", "deaths_provisional": 2, "er_visits": 38 },
+    { "iso_week": "2026-W15", "deaths_provisional": 4, "er_visits": 55 },
+    { "iso_week": "2026-W16", "deaths_provisional": 5, "er_visits": 66 },
+    { "iso_week": "2026-W17", "deaths_provisional": 6, "er_visits": 81 },
+    { "iso_week": "2026-W18", "deaths_provisional": 8, "er_visits": 102 },
+    { "iso_week": "2026-W19", "deaths_provisional": 11, "er_visits": 124 }
+  ],
+  "vulnerable_populations": [
+    {
+      "group": "People experiencing unsheltered homelessness",
+      "rate_per_100k_2024": 245.0,
+      "weekly": [3, 5, 7, 10, 13, 18, 22, 28],
+      "notes": "Largest single factor in the post-2010 rise in Maricopa heat deaths; 36% unsheltered share in 2016, remained elevated since."
+    },
+    {
+      "group": "Older adults (65+)",
+      "rate_per_100k_2024": 41.2,
+      "weekly": [1, 2, 2, 3, 4, 5, 6, 7],
+      "notes": "Disproportionate share of indoor heat deaths, often linked to AC failure or unaffordability."
+    },
+    {
+      "group": "American Indian / Alaska Native (Maricopa)",
+      "rate_per_100k_2024": 96.3,
+      "weekly": [0, 1, 1, 1, 2, 2, 3, 3],
+      "notes": "Highest heat-associated death rates per 100k in MCDPH data."
+    },
+    {
+      "group": "African American (Maricopa)",
+      "rate_per_100k_2024": 71.8,
+      "weekly": [0, 1, 1, 2, 2, 3, 3, 4],
+      "notes": "Among the highest heat-associated death rates per 100k in MCDPH data."
+    },
+    {
+      "group": "Outdoor workers",
+      "rate_per_100k_2024": 32.6,
+      "weekly": [1, 1, 2, 3, 3, 5, 5, 7],
+      "notes": "Landscape, construction, agriculture, roofing, delivery, warehouse; OSHA-recognized occupational exposure."
+    },
+    {
+      "group": "Tribal community members (rural)",
+      "rate_per_100k_2024": 28.4,
+      "weekly": [0, 0, 1, 1, 1, 2, 2, 3],
+      "notes": "Compounded by housing-quality gaps and limited cooling-center proximity."
+    }
+  ]
+}

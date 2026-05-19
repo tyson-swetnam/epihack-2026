@@ -6,6 +6,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="theme-color" content="#1F3A93" />
 <meta name="description" content="Mobile-first participatory-surveillance prototype for Arizona: submit a tick, heat check-in, anonymous heat self-report, and a cooling-center lookup." />
+<link rel="manifest" href="manifest.webmanifest" />
+<link rel="icon" type="image/svg+xml" href="icons/icon.svg" />
+<link rel="apple-touch-icon" href="icons/icon-192.png" />
 <link rel="stylesheet" href="shared/style.css" />
 <style>
   .hero {
@@ -29,6 +32,13 @@
 <header class="app-header">
   <div class="crumbs"><a href="../index.html">&laquo; EpiHack AZ 2026</a></div>
   <h1>AZ One Health Sentinel</h1>
+  <!-- Install button is hidden until the browser fires beforeinstallprompt.
+       app/shared/install-prompt.js handles the rest. -->
+  <button type="button" class="btn secondary" id="install-btn" hidden
+          style="margin-top:.6rem"
+          aria-label="Install this app on your device">
+    Install app
+  </button>
 </header>
 
 <main class="container" id="main">
@@ -49,6 +59,7 @@
       <span class="badge">Phase 0</span>
       <span class="badge">VBD</span>
       <span class="badge">end-to-end</span>
+      <span class="badge offline">Works offline</span>
     </div>
   </a>
 
@@ -62,6 +73,7 @@
       <span class="badge magenta">Phase 1</span>
       <span class="badge">Heat</span>
       <span class="badge">Scenario C</span>
+      <span class="badge offline">Works offline</span>
     </div>
   </a>
 
@@ -75,6 +87,7 @@
       <span class="badge heat">Phase 1</span>
       <span class="badge">Heat</span>
       <span class="badge">anonymous</span>
+      <span class="badge offline">Works offline</span>
     </div>
   </a>
 
@@ -86,6 +99,7 @@
     <div>
       <span class="badge cool">lookup</span>
       <span class="badge">mag-hrn-mcp</span>
+      <span class="badge offline">Cached offline</span>
     </div>
   </a>
 
@@ -113,6 +127,19 @@
   Source: Ending Pandemics Academy &middot; University of Arizona Mel &amp;
   Enid Zuckerman College of Public Health &middot; Global Health Institute.
 </footer>
+
+<script type="module">
+  // Landing-page bootstrap: register the SW, wire the install button, and
+  // mount the sync-status pill next to the page title. See:
+  //   * app/sw.js                  — caching strategies + offline-replay
+  //   * app/shared/sync.js         — IDB queue, replayAll(), subscribe()
+  //   * app/shared/install-prompt.js — beforeinstallprompt handling
+  //   * app/shared/sw-register.js  — registers /app/sw.js + mounts the pill
+  import { bootstrapOfflineUi } from './shared/sw-register.js';
+  import { mountInstallButton } from './shared/install-prompt.js';
+  bootstrapOfflineUi();
+  mountInstallButton('#install-btn');
+</script>
 
 </body>
 </html>

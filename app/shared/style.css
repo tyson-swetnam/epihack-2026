@@ -115,6 +115,16 @@ select:focus-visible, textarea:focus-visible, label:focus-visible {
   margin: .35rem .25rem 0 0;
 }
 .badge.warn { background: #fff1d6; color: #8a5a00; }
+/* "Works offline" / "Cached offline" affordance on flow cards (Phase 2). */
+.badge.offline {
+  background: #e6f6ec;
+  color: #1f6f37;
+  border: 1px solid #b4dec1;
+}
+.badge.offline::before {
+  content: "○ ";
+  color: #1f6f37;
+}
 
 /* ----- Buttons ---------------------------------------------------------- */
 .btn {

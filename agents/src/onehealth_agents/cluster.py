@@ -534,55 +534,52 @@ class ClusterDetectionAgent:
         observations: list[Observation],
         now: datetime,
     ) -> list[ClusterAlert]:
-        baseline_start = now - timedelta(weeks=self.baseline_weeks)
+        # Baseline window = the four weeks **immediately preceding** the
+        # current bucket window (NOT overlapping it). This is what keeps a
+        # rapidly-unfolding outbreak from polluting its own denominator:
+        # if all of the outbreak's reports land in the current bucket,
+        # they are excluded from the baseline.
+        bucket_dur = _bucket_duration(profile.bucket)
+        baseline_end = now - bucket_dur
+        baseline_start = baseline_end - timedelta(weeks=self.baseline_weeks)
 
         # -- Bucket the observations: (zcta, bucket_key) -> [obs] --
         cell_obs: dict[tuple[str, str], list[Observation]] = defaultdict(list)
-        # State-level baseline counts: bucket_key -> [obs]. We sum every
-        # observation in the trailing window, statewide.
-        baseline_counts: list[Observation] = []
+        # Statewide baseline tallied per ZCTA (so we can compute a
+        # leave-one-out rate that drops the candidate's own contribution).
+        baseline_by_zcta: dict[str, int] = defaultdict(int)
 
         for obs in observations:
             ts = _parse_obs_ts(obs.received_at)
             if ts is None:
                 continue
-            if ts < baseline_start:
-                continue
             zcta = _obs_zcta(obs)
             if not zcta:
                 continue
-            if ts >= now - _bucket_duration(profile.bucket):
+            if ts >= now - bucket_dur and ts <= now:
                 key = _bucket_key(ts, profile.bucket)
                 cell_obs[(zcta, key)].append(obs)
-            if ts < now:
-                baseline_counts.append(obs)
+            elif baseline_start <= ts < baseline_end:
+                baseline_by_zcta[zcta] += 1
 
         if not cell_obs:
             return []
 
-        # -- Compute state-level baseline rate: events per ZCTA per bucket. --
-        # Treat the universe as "all ZCTAs that have seen activity in the
-        # trailing window" (proxy for the agency-managed denominator).
-        active_zctas = {
-            _obs_zcta(o)
-            for o in baseline_counts
-            if _obs_zcta(o)
-        }
+        # -- State-level baseline rate (events per ZCTA per bucket) --
+        # "Active" universe = every ZCTA we have seen in either the
+        # baseline OR the current window. This gives us a stable
+        # denominator across cycles.
+        active_zctas = set(baseline_by_zcta) | {z for z, _ in cell_obs}
         n_zctas = max(1, len(active_zctas))
-        baseline_total = len(baseline_counts)
         baseline_window_days = self.baseline_weeks * 7
         if baseline_window_days <= 0:
             return []
-        rate_per_zcta_per_day = baseline_total / (n_zctas * baseline_window_days)
+        baseline_total = sum(baseline_by_zcta.values())
 
         if profile.bucket == "week":
             bucket_days = 7.0
         else:
             bucket_days = 2.0 / 24.0
-        expected_per_bucket = max(
-            rate_per_zcta_per_day * bucket_days,
-            _floor_expectation(profile.bucket),
-        )
 
         alerts: list[ClusterAlert] = []
         seen_dupes: set[tuple[str, str]] = set()
@@ -590,6 +587,16 @@ class ClusterDetectionAgent:
             observed = len(obs_in_cell)
             if observed < profile.k:
                 continue
+            # Leave-one-out: subtract the candidate ZCTA's baseline
+            # contribution so a chronic hot-spot doesn't anchor its own
+            # expectation. ``n_other`` is the remaining ZCTA universe.
+            other_total = baseline_total - baseline_by_zcta.get(zcta, 0)
+            n_other = max(1, n_zctas - 1)
+            rate_per_zcta_per_day = other_total / (n_other * baseline_window_days)
+            expected_per_bucket = max(
+                rate_per_zcta_per_day * bucket_days,
+                _floor_expectation(profile.bucket),
+            )
             tier1 = observed / expected_per_bucket
             if tier1 < profile.theta:
                 continue
