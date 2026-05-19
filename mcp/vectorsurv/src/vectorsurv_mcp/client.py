@@ -18,6 +18,19 @@ DEFAULT_BASE_URL = os.environ.get(
     "VECTORSURV_BASE_URL", "https://api.vectorsurv.org"
 )
 
+# Endpoint paths are inferred from the public vectorsurvR R package and
+# search-result snippets citing docs.api.vectorsurv.org; they are *not*
+# verified against the live Swagger at https://api.vectorsurv.org/
+# because this build environment can't reach that host. Override any
+# path via the corresponding env var if the Swagger spec disagrees.
+PATHS = {
+    "login":       os.environ.get("VECTORSURV_PATH_LOGIN",       "/login"),
+    "agencies":    os.environ.get("VECTORSURV_PATH_AGENCIES",    "/agency"),
+    "sites":       os.environ.get("VECTORSURV_PATH_SITES",       "/v1/site/"),
+    "collections": os.environ.get("VECTORSURV_PATH_COLLECTIONS", "/v1/arthropod/collection"),
+    "pools":       os.environ.get("VECTORSURV_PATH_POOLS",       "/v1/arthropod/pool"),
+}
+
 
 class VectorSurvAuthError(RuntimeError):
     """Raised when the VectorSurv API rejects credentials or a token."""
@@ -54,7 +67,7 @@ class VectorSurvClient:
                 "(or passed to VectorSurvClient)."
             )
         resp = await self._http.post(
-            f"{self.base_url}/login",
+            f"{self.base_url}{PATHS['login']}",
             params={"username": self.username, "password": self.password},
         )
         if resp.status_code != 200:
@@ -86,7 +99,7 @@ class VectorSurvClient:
     # ------------------------------------------------------------------ tools
     async def list_agencies(self) -> Any:
         """Agencies the authenticated user has access to."""
-        return await self._get("/agency")
+        return await self._get(PATHS["agencies"])
 
     async def list_sites(
         self,
@@ -94,11 +107,11 @@ class VectorSurvClient:
         page: int = 1,
         page_size: int = 100,
     ) -> Any:
-        """Trap-location bookmarks. /v1/site/ per the public docs."""
+        """Trap-location bookmarks."""
         params: dict[str, Any] = {"page": page, "pageSize": page_size}
         if agency_ids:
             params["agency_ids"] = ",".join(str(i) for i in agency_ids)
-        return await self._get("/v1/site/", params=params)
+        return await self._get(PATHS["sites"], params=params)
 
     async def get_collections(
         self,
@@ -109,7 +122,7 @@ class VectorSurvClient:
         page: int = 1,
         page_size: int = 1000,
     ) -> Any:
-        """Arthropod collection records. /v1/arthropod/collection."""
+        """Arthropod collection records."""
         params: dict[str, Any] = {
             "arthropod": arthropod,
             "start_date": start_date,
@@ -119,7 +132,7 @@ class VectorSurvClient:
         }
         if agency_ids:
             params["agency_ids"] = ",".join(str(i) for i in agency_ids)
-        return await self._get("/v1/arthropod/collection", params=params)
+        return await self._get(PATHS["collections"], params=params)
 
     async def get_pools(
         self,
@@ -143,4 +156,4 @@ class VectorSurvClient:
             params["agency_ids"] = ",".join(str(i) for i in agency_ids)
         if target_acronym:
             params["target_acronym"] = target_acronym
-        return await self._get("/v1/arthropod/pool", params=params)
+        return await self._get(PATHS["pools"], params=params)

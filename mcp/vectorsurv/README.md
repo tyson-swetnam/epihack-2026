@@ -94,18 +94,23 @@ credentials.
 
 ## Endpoints used
 
-| MCP tool | VectorSurv endpoint |
-|---|---|
-| `vectorsurv_list_agencies` | `GET /agency` |
-| `vectorsurv_list_sites` | `GET /v1/site/` |
-| `vectorsurv_get_collections` | `GET /v1/arthropod/collection` |
-| `vectorsurv_get_pools` | `GET /v1/arthropod/pool` |
+| MCP tool | VectorSurv endpoint (default) | Override env var |
+|---|---|---|
+| (login) | `POST /login?username=…&password=…` | `VECTORSURV_PATH_LOGIN` |
+| `vectorsurv_list_agencies` | `GET /agency` | `VECTORSURV_PATH_AGENCIES` |
+| `vectorsurv_list_sites` | `GET /v1/site/` | `VECTORSURV_PATH_SITES` |
+| `vectorsurv_get_collections` | `GET /v1/arthropod/collection` | `VECTORSURV_PATH_COLLECTIONS` |
+| `vectorsurv_get_pools` | `GET /v1/arthropod/pool` | `VECTORSURV_PATH_POOLS` |
 
-Paths are inferred from the public
-[`vectorsurvR`](https://github.com/UCD-DART/vectorsurvR) R package and
-the [VectorSurv API docs](https://docs.api.vectorsurv.org/). The base
-URL is configurable via `VECTORSURV_BASE_URL` so it can be pointed at
-the Sandbox or a local proxy if the production paths drift.
+> **Paths are inferred, not verified against the live Swagger.** The
+> root URL <https://api.vectorsurv.org/> hosts the Swagger UI for the
+> live spec; if any of the defaults above disagree with what Swagger
+> shows, override the corresponding env var (no code change required).
+> Sources for the defaults are the public
+> [`vectorsurvR`](https://github.com/UCD-DART/vectorsurvR) R package
+> and the [VectorSurv API docs](https://docs.api.vectorsurv.org/). The
+> `/login` path is the most confident; `/agency` and `/v1/arthropod/pool`
+> are the most likely to drift.
 
 ## Calculations
 
