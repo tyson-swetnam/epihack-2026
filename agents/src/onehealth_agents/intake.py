@@ -231,7 +231,7 @@ class IntakeAgent:
             # Suppress Human-class symptom set unless the bite branch wants them.
             # For mail-in with no symptoms we zero out the bag.
             if not any(
-                getattr(dataset.human, f) for f in dataset.human.model_fields
+                getattr(dataset.human, f) for f in HumanClass.model_fields
             ):
                 dataset.human = HumanClass()
         elif consent == ConsentProfile.WEARABLE_ONLY:

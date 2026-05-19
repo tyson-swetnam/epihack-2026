@@ -126,7 +126,7 @@ class HeatRisk(str, Enum):
 class GeneralClass(BaseModel):
     """``category.general`` -- demographics, contact, geo (Figure 2)."""
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="forbid", populate_by_name=True)
 
     age: Optional[float] = None
     sex: Optional[Literal["F", "M", "X", "unknown"]] = None
