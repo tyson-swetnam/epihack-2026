@@ -226,10 +226,22 @@ def synthesise_observations(
             ts = outbreak_start + timedelta(hours=offset_h)
             observations.append(_make_obs(zcta=z, ts=ts, vertical=case.vertical))
 
-    # Outbreak-period observations in the case's ZCTA.
+    # Outbreak-period observations in the case's ZCTA. Heat events cluster
+    # in the late-afternoon / early-evening 2-hour windows; VBD events are
+    # spread uniformly across the period.
+    is_heat = case.vertical is Vertical.HEAT
     for _ in range(case.n_reports_during):
-        offset_h = rng.uniform(0, case.period_days * 24)
-        ts = outbreak_start + timedelta(hours=offset_h)
+        day_offset = rng.uniform(0, case.period_days)
+        if is_heat:
+            # Sample diurnally: 70% of events fall into a 6-hour peak
+            # window (15:00-21:00 local-ish, treated as UTC for the test).
+            if rng.random() < 0.7:
+                hour = rng.uniform(15, 21)
+            else:
+                hour = rng.uniform(0, 24)
+        else:
+            hour = rng.uniform(0, 24)
+        ts = outbreak_start + timedelta(days=day_offset, hours=hour)
         observations.append(_make_obs(zcta=case.zcta, ts=ts, vertical=case.vertical))
 
     return observations, outbreak_start

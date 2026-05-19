@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>AZ One Health Today — what's happening near you</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#1F3A93" />
+<meta name="description" content="Today's heat, vector-borne disease, and wildlife signals for Arizona. Auto-detects your county; no login, no personal data." />
+<meta name="color-scheme" content="light" />
+<link rel="stylesheet" href="shared/style.css" />
+</head>
+<!--
+  data-feeds-base="mock" loads the canned fixtures under today/mock/.
+  Set data-feeds-base="https://example.org" in a real deploy to swap
+  every feed to a live aggregation endpoint. data-i18n-default="auto"
+  opts the page into navigator.language-based EN/ES detection (same
+  convention as app/heat/*).
+-->
+<body data-feeds-base="mock" data-i18n-default="auto">
+
+<header class="today-bar">
+  <div class="crumbs"><a href="../index.html">&laquo; EpiHack AZ 2026</a></div>
+  <h1>AZ One Health Today</h1>
+</header>
+
+<main class="today-main" id="main">
+
+  <!-- =====================================================================
+       1. Hero
+       Today's date, the user's county (auto-detected; manual override
+       via the geo strip below), and the headline number.
+       The noscript version stays on "Arizona" until JS upgrades it.
+       ===================================================================== -->
+  <section class="hero" id="hero" data-tier="navy" aria-labelledby="hero-h">
+    <p class="today-date" id="hero-date" aria-live="polite">
+      <noscript>Today &middot; Arizona</noscript>
+    </p>
+    <h2 id="hero-h">
+      <span id="hero-headline">
+        <noscript>What's happening in Arizona today</noscript>
+      </span>
+    </h2>
+    <p class="hero-sub" id="hero-sub">
+      <noscript>Heat, mosquito surveillance, wildlife. No login. No personal data.</noscript>
+    </p>
+    <div class="hero-strip" id="hero-week" aria-label="Seven-day HeatRisk outlook"></div>
+  </section>
+
+  <!-- =====================================================================
+       Geo strip — auto-detect county + manual override.
+       Static <select> + status is here for the noscript baseline so the
+       core message ("Showing statewide") is visible without JS.
+       ===================================================================== -->
+  <div class="geo-strip" role="region" aria-label="Choose your county">
+    <label for="county">Your area</label>
+    <select id="county" autocomplete="off">
+      <option value="">Arizona (statewide)</option>
+    </select>
+    <span class="status" id="geo-status" role="status" aria-live="polite">
+      Showing statewide.
+    </span>
+  </div>
+
+  <!-- =====================================================================
+       2. Heat panel
+       Current NWS HeatRisk + 7-day outlook + nearest cooling-center count
+       + deep-link to app/heat/cool-off/.
+       ===================================================================== -->
+  <section class="panel heat" aria-labelledby="heat-h">
+    <h3 id="heat-h">Heat today</h3>
+    <p class="lead">From <code>nws-heatrisk-mcp</code> and <code>mag-hrn-mcp</code>.</p>
+    <div class="numbox" id="heat-numbox">
+      <span class="hr-pill" id="heat-pill" data-tier="" aria-label="Today's HeatRisk tier">
+        <span class="skeleton"></span>
+      </span>
+      <span class="num" id="heat-temp"><span class="skeleton"></span></span>
+      <span class="unit" id="heat-temp-unit"></span>
+    </div>
+    <p id="heat-advice" class="lead"><span class="skeleton lg"></span></p>
+    <p id="heat-centers" class="kv" aria-live="polite">
+      <span class="skeleton"></span>
+    </p>
+    <div class="actions">
+      <a class="btn heat" href="../app/heat/cool-off/index.html"
+         aria-label="Find a cooling center near you">
+        Find a cooling center
+      </a>
+      <a class="btn secondary" href="../app/heat/self-report/index.html">
+        Heat self-report
+      </a>
+    </div>
+  </section>
+
+  <!-- =====================================================================
+       3. Vector-borne disease panel
+       WNV pool positivity trailing 4 weeks (sparkline) + outbreak list +
+       deep-link to app/tick/.
+       ===================================================================== -->
+  <section class="panel vbd" aria-labelledby="vbd-h">
+    <h3 id="vbd-h">Vector-borne disease</h3>
+    <p class="lead">From <code>vectorsurv-mcp</code> + <code>whispers-mcp</code> + <code>knowledge-graph-mcp</code>.</p>
+    <div class="numbox" id="vbd-numbox">
+      <span class="num" id="vbd-positives"><span class="skeleton"></span></span>
+      <span class="unit">WNV-positive pools (4-week)</span>
+      <span class="trend" id="vbd-trend"></span>
+      <span id="vbd-spark" aria-hidden="true"></span>
+    </div>
+    <p id="vbd-context" class="lead"><span class="skeleton lg"></span></p>
+    <ul id="vbd-outbreaks" class="kv" style="margin:.5rem 0 0;padding:0;list-style:none"></ul>
+    <div class="actions">
+      <a class="btn" href="../app/tick/index.html">Report what you've seen</a>
+      <a class="btn secondary" href="../graph/index.html">See the pathogen graph</a>
+    </div>
+  </section>
+
+  <!-- =====================================================================
+       4. Wildlife signals
+       Last 10 days of WHISPers + iNaturalist; lazy-loaded MapLibre map +
+       a list. The list is the source of truth; the map is enhancement.
+       ===================================================================== -->
+  <section class="panel wild" aria-labelledby="wild-h">
+    <h3 id="wild-h">Recent wildlife signals</h3>
+    <p class="lead">Last 10 days &middot; <code>whispers-mcp</code> + <code>inaturalist-mcp</code>.</p>
+    <ul id="wild-list" class="wildlife-list" aria-label="Recent wildlife observations">
+      <li><span class="skeleton lg"></span></li>
+      <li><span class="skeleton lg"></span></li>
+      <li><span class="skeleton lg"></span></li>
+    </ul>
+    <div id="wild-map" class="today-map" aria-label="Map of recent wildlife observations across Arizona"></div>
+    <div class="actions">
+      <a class="btn secondary" href="../map/index.html">Open the full AZ map</a>
+    </div>
+  </section>
+
+  <!-- =====================================================================
+       5. Statewide rollup
+       Five-number snapshot. Updated on a 1-hour cadence by an aggregation
+       MCP (currently canned).
+       ===================================================================== -->
+  <section class="panel rollup" aria-labelledby="rollup-h">
+    <h3 id="rollup-h">Statewide snapshot</h3>
+    <p class="lead">Updated hourly. Sources: <code>adhs-mcp</code>, <code>vectorsurv-mcp</code>, <code>211-az-mcp</code>, <code>whispers-mcp</code>.</p>
+    <div id="rollup-grid" class="rollup-grid" aria-label="Five-number statewide snapshot">
+      <div class="cell"><span class="skeleton lg"></span></div>
+      <div class="cell"><span class="skeleton lg"></span></div>
+      <div class="cell"><span class="skeleton lg"></span></div>
+      <div class="cell"><span class="skeleton lg"></span></div>
+      <div class="cell"><span class="skeleton lg"></span></div>
+    </div>
+    <p class="kv" id="rollup-asof"></p>
+  </section>
+
+  <!-- =====================================================================
+       6. "What can I do right now?" action menu
+       Three buttons. Visible in the noscript fallback too.
+       ===================================================================== -->
+  <section class="panel action" aria-labelledby="action-h">
+    <h3 id="action-h">What can I do right now?</h3>
+    <p class="lead">Three actions, no login.</p>
+    <div class="action-grid">
+      <a class="btn" href="../app/tick/index.html"
+         aria-label="Submit a tick mail-in to the Great Arizona Tick Check lab">
+        Submit a tick
+      </a>
+      <a class="btn heat" href="../app/heat/check-in/index.html"
+         aria-label="Heat check-in for a friend or neighbour">
+        Heat check-in for a friend
+      </a>
+      <a class="btn secondary" href="../app/heat/cool-off/index.html"
+         aria-label="See cooling centers near me">
+        See cooling centers near me
+      </a>
+    </div>
+  </section>
+
+  <!-- =====================================================================
+       7. How this works
+       Short paragraph + privacy stamp + cross-links to plan, figures,
+       MCP servers.
+       ===================================================================== -->
+  <section class="today-foot" aria-labelledby="how-h">
+    <h4 id="how-h">How this works</h4>
+    <p>
+      Every number above comes from an MCP server in the
+      <a href="../mcp/" >mcp/</a> tree. The page aggregates and
+      anonymises — <strong>no personal data ever appears on this page</strong>
+      <span class="privacy-stamp">no PII</span>.
+      The agency-facing dashboard (Phase&nbsp;3) sees the line-data; this
+      page sees only counts and rates.
+    </p>
+    <p>
+      Read the architecture in
+      <a href="../plan/index.html">the plan</a>, the framework figures in
+      <a href="../figures/index.html">figures/</a>, or the per-source
+      docs in
+      <a href="../mcp/nws-heatrisk-mcp/README.html">nws-heatrisk-mcp</a>,
+      <a href="../mcp/mag-hrn-mcp/README.html">mag-hrn-mcp</a>,
+      <a href="../mcp/vectorsurv/README.html">vectorsurv-mcp</a>,
+      <a href="../mcp/whispers-mcp/README.html">whispers-mcp</a>,
+      <a href="../mcp/inaturalist-mcp/README.html">inaturalist-mcp</a>,
+      <a href="../mcp/adhs-mcp/README.html">adhs-mcp</a>,
+      <a href="../mcp/211-az-mcp/README.html">211-az-mcp</a>,
+      <a href="../mcp/knowledge-graph-mcp/README.html">knowledge-graph-mcp</a>.
+    </p>
+    <p>
+      Cross-links:
+      <a href="../app/index.html">app</a> &middot;
+      <a href="../map/index.html">AZ map</a> &middot;
+      <a href="../graph/index.html">pathogen graph</a> &middot;
+      <a href="../plan/index.html">plan</a> &middot;
+      <a href="../figures/index.html">figures</a>.
+    </p>
+  </section>
+</main>
+
+<!-- ====================================================================== -->
+<!-- noscript: ensure the first screen is genuinely useful with JS off.   -->
+<!-- The hero + the action menu + the cooling-center static list below   -->
+<!-- give a user real, actionable info even when the script never runs.   -->
+<!-- ====================================================================== -->
+<noscript>
+  <div class="today-main" style="padding-top:0">
+    <section class="panel heat">
+      <h3>Heat today (static fallback)</h3>
+      <p class="lead">
+        Today is <strong>2026-05-19</strong>. The NWS HeatRisk feed for
+        central Arizona is at the <strong>Magenta</strong> tier — the
+        worst tier — through 2026-05-22. Drink water, stay indoors with
+        AC noon–7pm, and check on anyone over 65, anyone unsheltered,
+        and outdoor workers.
+      </p>
+      <ul>
+        <li><strong>Burton Barr Central Library cooling center</strong>
+            — 1221 N Central Ave, Phoenix &middot;
+            <a href="tel:+16022624636">602-262-4636</a></li>
+        <li><strong>Human Services Campus respite center</strong>
+            — 204 S 12th Ave, Phoenix &middot; pet-friendly &middot;
+            <a href="tel:+16022820853">602-282-0853</a></li>
+        <li><strong>211 Arizona</strong> for ride to nearest center &middot;
+            <a href="tel:18772118661">2-1-1</a></li>
+      </ul>
+    </section>
+    <section class="panel action">
+      <h3>What can I do right now?</h3>
+      <ul>
+        <li><a href="../app/tick/index.html">Submit a tick</a></li>
+        <li><a href="../app/heat/check-in/index.html">Heat check-in for a friend</a></li>
+        <li><a href="../app/heat/cool-off/index.html">See cooling centers near me</a></li>
+      </ul>
+    </section>
+  </div>
+</noscript>
+
+<script type="module" src="today.js"></script>
+</body>
+</html>

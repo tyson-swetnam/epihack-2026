@@ -535,15 +535,19 @@ class ClusterDetectionAgent:
         now: datetime,
     ) -> list[ClusterAlert]:
         # Baseline window = the four weeks **immediately preceding** the
-        # current bucket window (NOT overlapping it). This is what keeps a
+        # scan horizon (NOT overlapping it). This is what keeps a
         # rapidly-unfolding outbreak from polluting its own denominator:
-        # if all of the outbreak's reports land in the current bucket,
-        # they are excluded from the baseline.
-        bucket_dur = _bucket_duration(profile.bucket)
-        baseline_end = now - bucket_dur
+        # the outbreak's reports land in the scan horizon, not in the
+        # baseline window.
+        scan_horizon = _scan_horizon(profile.bucket)
+        scan_start = now - scan_horizon
+        baseline_end = scan_start
         baseline_start = baseline_end - timedelta(weeks=self.baseline_weeks)
 
         # -- Bucket the observations: (zcta, bucket_key) -> [obs] --
+        # Every (zcta, bucket) cell whose timestamp falls within the scan
+        # horizon is a candidate hot cell. Older observations contribute
+        # to the baseline.
         cell_obs: dict[tuple[str, str], list[Observation]] = defaultdict(list)
         # Statewide baseline tallied per ZCTA (so we can compute a
         # leave-one-out rate that drops the candidate's own contribution).
@@ -556,7 +560,7 @@ class ClusterDetectionAgent:
             zcta = _obs_zcta(obs)
             if not zcta:
                 continue
-            if ts >= now - bucket_dur and ts <= now:
+            if scan_start <= ts <= now:
                 key = _bucket_key(ts, profile.bucket)
                 cell_obs[(zcta, key)].append(obs)
             elif baseline_start <= ts < baseline_end:
@@ -679,14 +683,27 @@ def _bucket_key(ts: datetime, bucket: str) -> str:
 
 
 def _bucket_duration(bucket: str) -> timedelta:
-    """How far back from ``now`` we consider 'the current bucket' for scoring.
+    """Width of *one* bucket (week or 2-hour). Used by the audit fields."""
+    if bucket == "week":
+        return timedelta(days=7)
+    return timedelta(hours=2)
 
-    We give the latest bucket a small grace window so observations whose
-    arrival was a few seconds late still get counted.
+
+def _scan_horizon(bucket: str) -> timedelta:
+    """How far back from ``now`` we look for candidate hot cells.
+
+    Wider than one bucket -- the detector evaluates every (zcta, bucket)
+    pair in the scan horizon so a hot 2-hour window five hours ago is
+    still emitted when ``run()`` is called now. The horizons are pinned
+    short enough that buckets older than the trailing baseline are still
+    safely excluded.
     """
     if bucket == "week":
-        return timedelta(days=7, seconds=60)
-    return timedelta(hours=2, seconds=60)
+        # Trailing 2 ISO weeks (so a Monday-evening run sees Sunday-night
+        # data from the bucket that just closed).
+        return timedelta(days=14, seconds=60)
+    # 24-hour scan horizon -> 12 candidate 2-hour buckets.
+    return timedelta(hours=24, seconds=60)
 
 
 def _floor_expectation(bucket: str) -> float:
