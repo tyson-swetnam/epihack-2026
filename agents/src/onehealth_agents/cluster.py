@@ -144,6 +144,60 @@ class TuningProfile:
 VBD_PROFILE = TuningProfile(theta=3.0, k=5, posterior_threshold=0.95, bucket="week")
 HEAT_PROFILE = TuningProfile(theta=2.0, k=4, posterior_threshold=0.90, bucket="2h")
 
+# Tier B -- county-level scan: looser thresholds because the geographic
+# universe is much smaller (15 AZ counties vs ~400 ZCTAs in scope) and the
+# per-cell counts are correspondingly larger, but small-denominator
+# pathogens spread across multiple counties stay invisible at ZCTA-week.
+VBD_COUNTY_PROFILE = TuningProfile(theta=2.0, k=3, posterior_threshold=0.90, bucket="week")
+
+# Tier A -- single-case high-CFR alert window. Any confirmed observation
+# whose pathogen hint is flagged ``single_case_alertable`` in
+# ``schema/deep/cluster_followups.sql`` and whose timestamp falls inside
+# this trailing window emits a ClusterAlert.
+SINGLE_CASE_WINDOW_DAYS = 30
+
+# Tier C -- chronic-baseline drift. Trailing-12-month rate must exceed
+# CHRONIC_DRIFT_MULTIPLIER x historical 10-year rate to fire. 1.25x is the
+# "noticeably elevated" threshold used in CDC NNDSS endemic-disease alerts.
+CHRONIC_DRIFT_MULTIPLIER = 1.25
+CHRONIC_TRAILING_DAYS = 365
+CHRONIC_HISTORICAL_DAYS = 365 * 10
+
+# Travel-import cluster threshold. The brief specifies >=5 observations
+# in a 30-day trailing window sharing a destination; we use shared
+# candidate-pathogen as the operational stand-in (no destination field on
+# ExposureClass yet).
+TRAVEL_CLUSTER_MIN_OBS = 5
+TRAVEL_CLUSTER_WINDOW_DAYS = 30
+
+
+# Alias map: outbreaks.sql + legacy MCP payloads use shorter slugs than the
+# canonical schema/deep/pathogens.sql nodes. The detector normalises both
+# directions so a Triage candidate slug from either provenance matches the
+# single_case_alertable seed.
+_PATHOGEN_ALIASES: dict[str, str] = {
+    "pathogen.y_pestis":      "pathogen.yersinia_pestis",
+    "pathogen.sin_nombre":    "pathogen.snv",
+    "pathogen.h5n1":          "pathogen.hpai_h5n1",
+}
+
+
+def _normalise_pathogen(pid: Optional[str]) -> Optional[str]:
+    if pid is None:
+        return None
+    return _PATHOGEN_ALIASES.get(pid, pid)
+
+
+# Pathogens with a documented chronic endemic baseline in AZ. Tier C
+# (chronic-baseline drift) only runs for these.  Historical rate is the
+# 10-year empirical mean derived from outbreaks.sql + ADHS surveillance.
+CHRONIC_BASELINE_PATHOGENS: dict[str, float] = {
+    # RMSF tribal AZ: ~500 cases / 22 yrs through 2024 = ~22.7 cases/yr.
+    # Stored as the per-day historical rate so the trailing-vs-historical
+    # comparison is unit-consistent. (~22.7 / 365)
+    "pathogen.rickettsia_rickettsii": 22.7 / 365.0,
+}
+
 
 # ---------------------------------------------------------------------------
 # Historical outbreaks (parsed at import time from schema/deep/outbreaks.sql)
@@ -285,6 +339,44 @@ def _load_historical_outbreaks(sql_path: str | None = None) -> list[HistoricalOu
 
 
 HISTORICAL_OUTBREAKS: list[HistoricalOutbreak] = _load_historical_outbreaks()
+
+
+def _load_single_case_alertable(sql_path: str | None = None) -> frozenset[str]:
+    """Parse ``schema/deep/cluster_followups.sql`` for the seed
+    ``single_case_alertable`` flag. Returns the set of pathogen.* slugs
+    that should fire Tier A on a single confirmed observation.
+
+    Falls back to a hard-coded set (the five pathogens in the committed
+    seed) if the SQL file is unavailable -- the detector should never
+    silently lose Tier A coverage just because the file moved.
+    """
+    fallback = frozenset({
+        "pathogen.yersinia_pestis",
+        "pathogen.snv",
+        "pathogen.rabies_lyssavirus",
+        "pathogen.francisella_tularensis",
+        "pathogen.rickettsia_rickettsii",
+    })
+    if sql_path is None:
+        from pathlib import Path
+        candidate = Path(__file__).resolve().parents[3] / "schema" / "deep" / "cluster_followups.sql"
+        sql_path = str(candidate)
+    try:
+        with open(sql_path, "r", encoding="utf-8") as fh:
+            text = fh.read()
+    except OSError:
+        return fallback
+    found: set[str] = set()
+    # Match lines of the form  ('pathogen.<slug>', 'single_case_alertable', 1)
+    for m in re.finditer(
+        r"\('(pathogen\.[a-z0-9_]+)',\s*'single_case_alertable',\s*1\s*\)",
+        text,
+    ):
+        found.add(m.group(1))
+    return frozenset(found) if found else fallback
+
+
+SINGLE_CASE_ALERTABLE: frozenset[str] = _load_single_case_alertable()
 
 
 # ---------------------------------------------------------------------------
@@ -487,10 +579,15 @@ class ClusterDetectionAgent:
         *,
         vbd: TuningProfile = VBD_PROFILE,
         heat: TuningProfile = HEAT_PROFILE,
+        vbd_county: TuningProfile = VBD_COUNTY_PROFILE,
         baseline_weeks: int = 4,
         prior_alpha: float = PRIOR_ALPHA,
         prior_beta: float = PRIOR_BETA,
         effect_size_rr: float = EFFECT_SIZE_RR,
+        single_case_alertable: frozenset[str] | None = None,
+        chronic_baseline_pathogens: dict[str, float] | None = None,
+        chronic_drift_multiplier: float = CHRONIC_DRIFT_MULTIPLIER,
+        travel_cluster_min_obs: int = TRAVEL_CLUSTER_MIN_OBS,
         # Legacy keyword args kept for back-compat with the old stub
         # construction sites (e.g. Orchestrator). They are no-ops now but
         # accepted silently so callers don't break.
@@ -501,10 +598,20 @@ class ClusterDetectionAgent:
     ) -> None:
         self.vbd = vbd
         self.heat = heat
+        self.vbd_county = vbd_county
         self.baseline_weeks = baseline_weeks
         self.prior_alpha = prior_alpha
         self.prior_beta = prior_beta
         self.effect_size_rr = effect_size_rr
+        self.single_case_alertable = (
+            SINGLE_CASE_ALERTABLE if single_case_alertable is None else single_case_alertable
+        )
+        self.chronic_baseline_pathogens = (
+            dict(CHRONIC_BASELINE_PATHOGENS) if chronic_baseline_pathogens is None
+            else dict(chronic_baseline_pathogens)
+        )
+        self.chronic_drift_multiplier = chronic_drift_multiplier
+        self.travel_cluster_min_obs = travel_cluster_min_obs
 
     # ------------------------------------------------------------------
     def profile_for(self, vertical: Vertical, now: datetime) -> Optional[TuningProfile]:
@@ -556,7 +663,21 @@ class ClusterDetectionAgent:
             profile = self.profile_for(vertical, now)
             if profile is None:
                 continue
+            # Spatial ZCTA scan (Tier 1 + Tier 2).
             alerts.extend(self._scan_vertical(vertical, profile, vert_obs, now))
+            # Tier B -- county x week Poisson scan. Same Tier-1/Tier-2 logic
+            # at coarser geography. Only runs for week-bucket scans; the
+            # 2-hour bucket is already as fine-grained as the cadence allows.
+            if profile.bucket == "week" and vertical is Vertical.VBD:
+                alerts.extend(
+                    self._scan_county(vertical, self.vbd_county, vert_obs, now)
+                )
+            # Tier A -- single-case high-CFR alert.
+            alerts.extend(self._scan_single_case(vertical, vert_obs, now))
+            # Tier C -- chronic-baseline drift detector.
+            alerts.extend(self._scan_chronic_drift(vertical, vert_obs, now))
+            # Travel-import cluster detector.
+            alerts.extend(self._scan_travel_imports(vertical, vert_obs, now))
         return alerts
 
     # ------------------------------------------------------------------
@@ -685,6 +806,335 @@ class ClusterDetectionAgent:
                     rule_tripped=rule,
                     pathogen_hint=pathogen_hint,
                     historical_match=historical,
+                    cluster_kind="spatial",
+                )
+            )
+        return alerts
+
+    # ------------------------------------------------------------------
+    # Tier B -- county x week Poisson scan
+    # ------------------------------------------------------------------
+    def _scan_county(
+        self,
+        vertical: Vertical,
+        profile: TuningProfile,
+        observations: list[Observation],
+        now: datetime,
+    ) -> list[ClusterAlert]:
+        """Coarse-grained county x week scan. Catches multi-county clusters
+        that disperse below the ZCTA-week ``k=5`` floor (hantavirus 23/24,
+        WNV 2003 emergence)."""
+        scan_horizon = _scan_horizon(profile.bucket)
+        scan_start = now - scan_horizon
+        baseline_end = scan_start
+        baseline_start = baseline_end - timedelta(weeks=self.baseline_weeks)
+
+        cell_obs: dict[tuple[str, str], list[Observation]] = defaultdict(list)
+        baseline_by_county: dict[str, int] = defaultdict(int)
+
+        for obs in observations:
+            ts = _parse_obs_ts(obs.received_at)
+            if ts is None:
+                continue
+            zcta = _obs_zcta(obs)
+            county = _obs_county(obs) or (_zcta_to_county(zcta) if zcta else None)
+            if not county:
+                continue
+            if scan_start <= ts <= now:
+                key = _bucket_key(ts, profile.bucket)
+                cell_obs[(county, key)].append(obs)
+            elif baseline_start <= ts < baseline_end:
+                baseline_by_county[county] += 1
+
+        if not cell_obs:
+            return []
+
+        active = set(baseline_by_county) | {c for c, _ in cell_obs}
+        n_counties = max(1, len(active))
+        baseline_window_days = self.baseline_weeks * 7
+        baseline_total = sum(baseline_by_county.values())
+        bucket_days = 7.0 if profile.bucket == "week" else (2.0 / 24.0)
+
+        alerts: list[ClusterAlert] = []
+        seen: set[tuple[str, str]] = set()
+        for (county, key), obs_in_cell in cell_obs.items():
+            observed = len(obs_in_cell)
+            if observed < profile.k:
+                continue
+            other_total = baseline_total - baseline_by_county.get(county, 0)
+            n_other = max(1, n_counties - 1)
+            rate_per_day = other_total / (n_other * baseline_window_days)
+            expected = max(
+                rate_per_day * bucket_days,
+                _floor_expectation(profile.bucket),
+            )
+            tier1 = observed / expected
+            if tier1 < profile.theta:
+                continue
+            posterior = _posterior_p_rr_gt(
+                self.effect_size_rr, observed, expected,
+                alpha=self.prior_alpha, beta=self.prior_beta,
+            )
+            if posterior < profile.posterior_threshold:
+                continue
+            if (county, key) in seen:
+                continue
+            seen.add((county, key))
+            bucket_start, bucket_end = _bucket_start_end(key, profile.bucket)
+            pathogen_hint = _dominant_pathogen_hint(obs_in_cell)
+            historical = _closest_historical(
+                pathogen_hint=pathogen_hint,
+                is_heat=(vertical is Vertical.HEAT),
+                county_id=county,
+                zcta=None,
+                when=bucket_start,
+            )
+            rule = (
+                f"{vertical.value}/county-{profile.bucket}/"
+                f"theta{profile.theta}/k{profile.k}/"
+                f"posterior{profile.posterior_threshold}"
+            )
+            llr = _poisson_log_likelihood_ratio(observed, expected)
+            alerts.append(
+                ClusterAlert(
+                    vertical=vertical,
+                    zcta=None,
+                    county_id=county,
+                    observation_ids=[o.observation_id for o in obs_in_cell],
+                    window_start=bucket_start.isoformat(),
+                    window_end=bucket_end.isoformat(),
+                    expected=expected,
+                    observed=observed,
+                    log_likelihood=llr,
+                    tier1_score=tier1,
+                    tier2_posterior=posterior,
+                    baseline_window_start=baseline_start.isoformat(),
+                    baseline_window_end=now.isoformat(),
+                    rule_tripped=rule,
+                    pathogen_hint=pathogen_hint,
+                    historical_match=historical,
+                    cluster_kind="spatial",
+                )
+            )
+        return alerts
+
+    # ------------------------------------------------------------------
+    # Tier A -- single-case high-CFR alert
+    # ------------------------------------------------------------------
+    def _scan_single_case(
+        self,
+        vertical: Vertical,
+        observations: list[Observation],
+        now: datetime,
+    ) -> list[ClusterAlert]:
+        """Emit one ClusterAlert per (zcta, pathogen) for any confirmed
+        observation in the trailing 30-day window whose pathogen hint is
+        flagged ``single_case_alertable``.
+
+        "Confirmed" is interpreted as: the observation has a triage
+        decision OR an explicit ``auxiliary.diagnostic_lab`` value (raw
+        ``mcp_pull`` payloads from public lab feeds), AND the validation
+        agent did not REJECT it.
+        """
+        if not self.single_case_alertable:
+            return []
+        window_start = now - timedelta(days=SINGLE_CASE_WINDOW_DAYS)
+        alerts: list[ClusterAlert] = []
+        seen: set[tuple[str, str]] = set()
+        for obs in observations:
+            ts = _parse_obs_ts(obs.received_at)
+            if ts is None or not (window_start <= ts <= now):
+                continue
+            if not _is_confirmed(obs):
+                continue
+            for pid in _candidate_pathogen_ids(obs):
+                norm = _normalise_pathogen(pid)
+                if norm not in self.single_case_alertable:
+                    continue
+                zcta = _obs_zcta(obs) or ""
+                key = (zcta, norm)
+                if key in seen:
+                    continue
+                seen.add(key)
+                county_id = _obs_county(obs) or _zcta_to_county(zcta)
+                historical = _closest_historical(
+                    pathogen_hint=norm,
+                    is_heat=False,
+                    county_id=county_id,
+                    zcta=zcta or None,
+                    when=ts,
+                )
+                alerts.append(
+                    ClusterAlert(
+                        vertical=vertical,
+                        zcta=zcta or None,
+                        county_id=county_id,
+                        observation_ids=[obs.observation_id],
+                        window_start=ts.isoformat(),
+                        window_end=ts.isoformat(),
+                        expected=0.0,
+                        observed=1,
+                        log_likelihood=0.0,
+                        tier1_score=None,
+                        tier2_posterior=None,
+                        baseline_window_start=window_start.isoformat(),
+                        baseline_window_end=now.isoformat(),
+                        rule_tripped="single_case_high_cfr",
+                        pathogen_hint=norm,
+                        historical_match=historical,
+                        cluster_kind="single_case",
+                    )
+                )
+        return alerts
+
+    # ------------------------------------------------------------------
+    # Tier C -- chronic-baseline drift
+    # ------------------------------------------------------------------
+    def _scan_chronic_drift(
+        self,
+        vertical: Vertical,
+        observations: list[Observation],
+        now: datetime,
+    ) -> list[ClusterAlert]:
+        """Detect raised endemic-pathogen rates against a 10-year baseline.
+
+        Per Plan 02 tribal-data-suppression rules, observations originating
+        from tribal lands may be aggregated at the county level or
+        suppressed entirely; the detector will under-report on
+        reservations. This is the canonical RMSF-tribal limitation and
+        is *by design* of the data-sovereignty contract.
+        """
+        if not self.chronic_baseline_pathogens or vertical is Vertical.HEAT:
+            return []
+        trailing_start = now - timedelta(days=CHRONIC_TRAILING_DAYS)
+        # Count observations per (pathogen, county) in trailing 12 months.
+        tally: dict[tuple[str, Optional[str]], list[Observation]] = defaultdict(list)
+        for obs in observations:
+            ts = _parse_obs_ts(obs.received_at)
+            if ts is None or not (trailing_start <= ts <= now):
+                continue
+            if not _is_confirmed(obs):
+                continue
+            zcta = _obs_zcta(obs)
+            county = _obs_county(obs) or (_zcta_to_county(zcta) if zcta else None)
+            for pid in _candidate_pathogen_ids(obs):
+                norm = _normalise_pathogen(pid)
+                if norm in self.chronic_baseline_pathogens:
+                    tally[(norm, county)].append(obs)
+
+        alerts: list[ClusterAlert] = []
+        for (pid, county), obs_list in tally.items():
+            trailing_count = len(obs_list)
+            historical_rate_per_day = self.chronic_baseline_pathogens[pid]
+            expected_trailing = historical_rate_per_day * CHRONIC_TRAILING_DAYS
+            if expected_trailing <= 0:
+                continue
+            # Per-county expectation is the statewide expectation divided
+            # by the number of counties in the chronic-disease footprint.
+            # Without that footprint encoded here, fall back to "any single
+            # county should not exceed 1.25x the statewide baseline".
+            if trailing_count < self.chronic_drift_multiplier * expected_trailing:
+                continue
+            ts_when = max(_parse_obs_ts(o.received_at) or now for o in obs_list)
+            alerts.append(
+                ClusterAlert(
+                    vertical=vertical,
+                    zcta=None,
+                    county_id=county,
+                    observation_ids=[o.observation_id for o in obs_list],
+                    window_start=trailing_start.isoformat(),
+                    window_end=now.isoformat(),
+                    expected=expected_trailing,
+                    observed=trailing_count,
+                    log_likelihood=_poisson_log_likelihood_ratio(
+                        trailing_count, expected_trailing,
+                    ),
+                    tier1_score=trailing_count / expected_trailing,
+                    tier2_posterior=None,
+                    baseline_window_start=(now - timedelta(days=CHRONIC_HISTORICAL_DAYS)).isoformat(),
+                    baseline_window_end=trailing_start.isoformat(),
+                    rule_tripped=(
+                        f"chronic_baseline_drift/x{self.chronic_drift_multiplier}"
+                    ),
+                    pathogen_hint=pid,
+                    historical_match=_closest_historical(
+                        pathogen_hint=pid, is_heat=False,
+                        county_id=county, zcta=None, when=ts_when,
+                    ),
+                    cluster_kind="endemic_drift",
+                )
+            )
+        return alerts
+
+    # ------------------------------------------------------------------
+    # Travel-import cluster
+    # ------------------------------------------------------------------
+    def _scan_travel_imports(
+        self,
+        vertical: Vertical,
+        observations: list[Observation],
+        now: datetime,
+    ) -> list[ClusterAlert]:
+        """When >= ``travel_cluster_min_obs`` confirmed observations in a
+        trailing 30-day window list ``exposure.history_of_travel=True`` and
+        share a candidate pathogen (operational stand-in for "shared
+        destination" given ExposureClass has no destination field yet),
+        emit ``cluster_kind='travel_import_cluster'``.
+        """
+        if vertical is Vertical.HEAT:
+            return []
+        window_start = now - timedelta(days=TRAVEL_CLUSTER_WINDOW_DAYS)
+        by_pathogen: dict[str, list[Observation]] = defaultdict(list)
+        for obs in observations:
+            ts = _parse_obs_ts(obs.received_at)
+            if ts is None or not (window_start <= ts <= now):
+                continue
+            if not _has_travel_exposure(obs):
+                continue
+            if not _is_confirmed(obs):
+                continue
+            for pid in _candidate_pathogen_ids(obs):
+                norm = _normalise_pathogen(pid)
+                if norm is None:
+                    continue
+                by_pathogen[norm].append(obs)
+
+        alerts: list[ClusterAlert] = []
+        for pid, obs_list in by_pathogen.items():
+            if len(obs_list) < self.travel_cluster_min_obs:
+                continue
+            counties = sorted({
+                _obs_county(o) or _zcta_to_county(_obs_zcta(o) or "") or "unknown"
+                for o in obs_list
+            })
+            county_id = counties[0] if len(counties) == 1 else None
+            ts_when = max(_parse_obs_ts(o.received_at) or now for o in obs_list)
+            historical = _closest_historical(
+                pathogen_hint=pid, is_heat=False,
+                county_id=county_id, zcta=None, when=ts_when,
+            )
+            alerts.append(
+                ClusterAlert(
+                    vertical=vertical,
+                    zcta=None,
+                    county_id=county_id,
+                    observation_ids=[o.observation_id for o in obs_list],
+                    window_start=window_start.isoformat(),
+                    window_end=now.isoformat(),
+                    expected=0.0,
+                    observed=len(obs_list),
+                    log_likelihood=0.0,
+                    tier1_score=None,
+                    tier2_posterior=None,
+                    baseline_window_start=window_start.isoformat(),
+                    baseline_window_end=now.isoformat(),
+                    rule_tripped=(
+                        f"travel_import_cluster/n>={self.travel_cluster_min_obs}/"
+                        f"win{TRAVEL_CLUSTER_WINDOW_DAYS}d"
+                    ),
+                    pathogen_hint=pid,
+                    historical_match=historical,
+                    cluster_kind="travel_import_cluster",
                 )
             )
         return alerts
