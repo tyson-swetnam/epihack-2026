@@ -1,0 +1,61 @@
+{
+  "_comment": "Canned IntakeAgent -> ... -> NotificationAgent responses returned by app/shared/intake-client.js when the page runs in mock mode (no data-api-base, or data-api-base='mock'). Swap to a real backend by setting data-api-base on <body>. Each flow's shape mirrors plan/04-data-flows.md so the real backend can drop in without changing the UI.",
+
+  "tick_mailin": {
+    "flow": "tick_mailin",
+    "triage_class": "mail-tick-to-walker-lab + self-monitor-for-14-days",
+    "species_estimate": {
+      "common_name": "Brown dog tick",
+      "scientific_name": "Rhipicephalus sanguineus",
+      "confidence": 0.62,
+      "verify_with_lab": true,
+      "note": "Client-side ML estimate. Walker Lab species ID supersedes this on receipt."
+    },
+    "geo": {
+      "resolved_county": "Santa Cruz",
+      "kg_node_id": "county.santa_cruz",
+      "tribal_land": false,
+      "vector_control_agency": "Santa Cruz County Health Services"
+    },
+    "vectorsurv_context": {
+      "tool": "vectorsurv-mcp.get_pools",
+      "summary": "No tick pools reported in Santa Cruz County in the last 90 days. No live signal nearby.",
+      "pool_count": 0,
+      "window_days": 90
+    },
+    "candidate_pathogens": [
+      {
+        "name": "Rickettsia rickettsii",
+        "disease": "Rocky Mountain Spotted Fever",
+        "icd10": "A77.0",
+        "kg_node_id": "pathogen.rickettsia_rickettsii"
+      }
+    ],
+    "mailing_label": {
+      "tool": "great-az-tick-check-mcp.create_submission",
+      "submission_id": "GATC-2026-002184",
+      "label_url": "https://example.org/labels/GATC-2026-002184.pdf",
+      "note": "Download, print, attach to a padded mailer with the tick in a sealed plastic bag. Tracking info goes to the email provided in your submission."
+    },
+    "symptom_watchlist": {
+      "window_days": 14,
+      "watch_for": [
+        "Fever (≥ 101 °F / 38.3 °C)",
+        "Headache that doesn't respond to OTC pain relief",
+        "Spotted rash, especially on wrists / ankles",
+        "Severe muscle aches",
+        "Nausea or vomiting"
+      ],
+      "if_symptoms_url": "https://www.azdhs.gov/preparedness/epidemiology-disease-control/vector-borne-zoonotic-diseases/index.php#tickborne-disease"
+    },
+    "edges_written": [
+      "observation -> reportsAbout -> pathogen.rickettsia_rickettsii",
+      "observation -> occurredIn -> county.santa_cruz",
+      "observation -> referredTo -> resource.ua_extension_tickcheck",
+      "observation -> partOf -> focus.rmsf"
+    ],
+    "milestones": [
+      { "milestone": "Detect", "fired_at": "2026-05-19T18:42:11Z" }
+    ]
+  }
+}

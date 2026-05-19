@@ -1,0 +1,12 @@
+{
+  "_comment": "Paste the 'knowledge-graph' block into your Claude Desktop config under mcpServers. Restart Claude Desktop after editing. Both the KG_* env vars are optional; the default loads the in-repo schema/ files into an in-memory DuckDB.",
+  "mcpServers": {
+    "knowledge-graph": {
+      "command": "uvx",
+      "args": ["--from", "/absolute/path/to/epihack-2026/mcp/knowledge-graph-mcp", "knowledge-graph-mcp"],
+      "env": {
+        "KG_SCHEMA_PATH": "/absolute/path/to/epihack-2026/schema"
+      }
+    }
+  }
+}

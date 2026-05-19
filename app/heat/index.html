@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Heat check-in (Phase 1 stub) — AZ One Health Sentinel</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#E84A2B" />
+<link rel="stylesheet" href="../shared/style.css" />
+<style>
+  .stub-hero {
+    background: linear-gradient(135deg, #E84A2B 0%, #C0392B 100%);
+    color: #fff;
+    padding: 1.5rem 1.1rem;
+    border-radius: 10px;
+    margin: 1rem 0 1.25rem;
+  }
+  .stub-hero h1 { margin: 0 0 .35rem 0; font-size: 1.4rem; color: #fff; }
+  .stub-hero p  { margin: 0; opacity: .95; font-size: .95rem; }
+  .flow-list { padding-left: 1.1rem; }
+  .flow-list li { margin: .35rem 0; }
+</style>
+</head>
+<body data-api-base="mock">
+
+<header class="app-header" style="background:#C0392B">
+  <div class="crumbs"><a href="../index.html">&laquo; AZ One Health Sentinel</a></div>
+  <h1>Heat check-in &mdash; coming in Phase 1</h1>
+</header>
+
+<main class="container">
+
+  <div class="stub-hero">
+    <h1>Not built yet</h1>
+    <p>The Heat vertical lands in Phase&nbsp;1, after the Phase&nbsp;0
+       tick mail-in flow proves the agent chain end-to-end.</p>
+  </div>
+
+  <h2 style="color:var(--c-orange);margin-top:0">What Phase 1 will ship</h2>
+  <ul class="flow-list">
+    <li><strong>CHW heat check-in</strong> &mdash; field-app flow for outreach workers
+        with unsheltered residents (Scenario&nbsp;C in
+        <a href="../../plan/04-data-flows.html#scenario-c--unsheltered-resident-heat-check-in">04-data-flows</a>).</li>
+    <li><strong>Anonymous heat self-report</strong> &mdash; minimum-friction flow
+        for community members.</li>
+    <li><strong>"Where can I cool off?"</strong> &mdash; queries
+        <code>mag-hrn-mcp</code> + <code>211-az-mcp</code> for an open cooling
+        center and on-demand transport.</li>
+  </ul>
+
+  <h2 style="color:var(--c-orange)">Why it's behind tick mail-in</h2>
+  <p>The Heat vertical depends on three MCPs that aren't shipped yet:
+    <code>nws-heatrisk-mcp</code>, <code>mag-hrn-mcp</code>,
+    <code>adhs-mcp</code>. Building those is the gating work for
+    Phase&nbsp;1; see
+    <a href="../../plan/05-roadmap.html#phase-1--heat-vertical-month-12">roadmap</a>.</p>
+
+  <a class="btn block" href="../index.html">Back to app home</a>
+
+  <hr class="rule" />
+  <p class="muted small">
+    Cross-references:
+    <a href="../../map/index.html">map of AZ</a> &middot;
+    <a href="../../graph/index.html">pathogen graph</a> &middot;
+    <a href="../../heat/index.html">heat focus-group materials</a>
+  </p>
+</main>
+
+<footer class="app-footer">
+  Source: Ending Pandemics Academy &middot; University of Arizona Mel &amp;
+  Enid Zuckerman College of Public Health &middot; Global Health Institute.
+</footer>
+
+</body>
+</html>

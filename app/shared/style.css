@@ -1,0 +1,175 @@
+/* =========================================================================
+   AZ One Health Sentinel — prototype app
+   Shared base styles. Mobile-first. Mirrors the palette used across
+   the rest of the site (map/, graph/, index.html, plan/).
+
+   Palette
+     --c-navy    #1F3A93   primary brand (VBD vertical, links, focus)
+     --c-red     #C0392B   alert / triage urgency
+     --c-orange  #E84A2B   Heat vertical
+     --c-green   #4CAF50   success / "submitted" affirmations
+     --c-bg      #ffffff   page background
+     --c-ink     #1a1a1a   body text
+     --c-mute    #555      secondary text
+     --c-rule    #d8dde6   borders
+   ========================================================================= */
+
+:root {
+  --c-navy:   #1F3A93;
+  --c-navy-2: #15296a;
+  --c-red:    #C0392B;
+  --c-orange: #E84A2B;
+  --c-green:  #4CAF50;
+  --c-bg:     #ffffff;
+  --c-soft:   #f4f6fb;
+  --c-ink:    #1a1a1a;
+  --c-mute:   #555;
+  --c-rule:   #d8dde6;
+  --c-focus:  #FFB300;
+
+  --radius:   8px;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-top:    env(safe-area-inset-top, 0px);
+
+  /* 44 x 44 minimum touch target (iOS HIG). */
+  --tap: 44px;
+}
+
+* { box-sizing: border-box; }
+
+html, body { margin: 0; padding: 0; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+               Helvetica, Arial, sans-serif;
+  color: var(--c-ink);
+  background: var(--c-bg);
+  line-height: 1.5;
+  -webkit-text-size-adjust: 100%;
+  -webkit-font-smoothing: antialiased;
+}
+
+a { color: var(--c-navy); }
+a:focus-visible, button:focus-visible, input:focus-visible,
+select:focus-visible, textarea:focus-visible, label:focus-visible {
+  outline: 3px solid var(--c-focus);
+  outline-offset: 2px;
+}
+
+/* ----- Header bar shared across pages ----------------------------------- */
+.app-header {
+  background: var(--c-navy);
+  color: #fff;
+  padding: calc(.75rem + var(--safe-top)) 1rem .75rem;
+}
+.app-header a { color: #fff; text-decoration: none; opacity: .9; }
+.app-header a:hover { opacity: 1; text-decoration: underline; }
+.app-header h1 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+.app-header .crumbs {
+  font-size: .8rem;
+  opacity: .85;
+  margin-bottom: .15rem;
+}
+
+/* ----- Page container --------------------------------------------------- */
+.container {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 1rem 1rem calc(6rem + var(--safe-bottom));
+}
+
+/* ----- Cards used on landing & success pages ---------------------------- */
+.card {
+  display: block;
+  background: #fff;
+  border: 1px solid var(--c-rule);
+  border-left: 6px solid var(--c-navy);
+  border-radius: var(--radius);
+  padding: 1rem 1.1rem;
+  margin: 0 0 1rem;
+  text-decoration: none;
+  color: inherit;
+  min-height: var(--tap);
+}
+.card:hover { background: var(--c-soft); }
+.card h2 { margin: 0 0 .35rem 0; font-size: 1.05rem; color: var(--c-navy); }
+.card p  { margin: 0; color: var(--c-mute); font-size: .9rem; }
+.card.heat   { border-left-color: var(--c-orange); }
+.card.heat h2{ color: var(--c-orange); }
+.card.stub   { opacity: .75; }
+
+.badge {
+  display: inline-block;
+  background: #e3e8ef;
+  color: #333;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: .72rem;
+  margin: .35rem .25rem 0 0;
+}
+.badge.warn { background: #fff1d6; color: #8a5a00; }
+
+/* ----- Buttons ---------------------------------------------------------- */
+.btn {
+  appearance: none;
+  -webkit-appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .4rem;
+  min-height: var(--tap);
+  min-width: var(--tap);
+  padding: .7rem 1.1rem;
+  font: inherit;
+  font-weight: 600;
+  border-radius: var(--radius);
+  border: 1px solid transparent;
+  background: var(--c-navy);
+  color: #fff;
+  cursor: pointer;
+  text-decoration: none;
+  text-align: center;
+}
+.btn:hover { background: var(--c-navy-2); }
+.btn:disabled { opacity: .55; cursor: not-allowed; }
+.btn.secondary {
+  background: #fff;
+  color: var(--c-navy);
+  border-color: var(--c-navy);
+}
+.btn.secondary:hover { background: var(--c-soft); }
+.btn.ghost {
+  background: transparent;
+  color: var(--c-navy);
+  border-color: transparent;
+}
+.btn.danger { background: var(--c-red); }
+.btn.success { background: var(--c-green); }
+.btn.block { width: 100%; }
+
+/* ----- Reduced motion --------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+}
+
+/* ----- Utility ---------------------------------------------------------- */
+.muted { color: var(--c-mute); }
+.small { font-size: .85rem; }
+.kv    { font-size: .85rem; color: var(--c-mute); margin: .15rem 0; }
+.kv strong { color: var(--c-ink); font-weight: 600; }
+
+hr.rule { border: 0; border-top: 1px solid var(--c-rule); margin: 1.25rem 0; }
+
+.app-footer {
+  max-width: 680px;
+  margin: 2rem auto 0;
+  padding: 1rem;
+  border-top: 1px solid var(--c-rule);
+  color: var(--c-mute);
+  font-size: .78rem;
+  text-align: center;
+}
