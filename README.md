@@ -18,7 +18,7 @@ heavy lifting:
 | Layer | Role | What it lets us do |
 |---|---|---|
 | **[Claude Code](https://claude.com/product/claude-code)** | Agentic authoring | Drafts the schema, runs parallel sub-agents to research AZ counties / tribes / pathogens / outbreaks / datasets / standards, keeps the prose docs in sync with the SQL seeds, and opens pull requests against this repo. Every commit message in `git log` describes a Claude-led change. |
-| **GitHub** | Source of truth + review surface | Every change &mdash; new content, schema, MCP code, visualizations &mdash; lands as a pull request; humans review and merge. Versioned snapshots of upstream specs (e.g. `mcp/vectorsurv/openapi/`) make API drift a `git diff` away. The site itself is served via GitHub Pages with Jekyll. |
+| **GitHub** | Source of truth + review surface | Every change &mdash; new content, schema, MCP code, visualizations &mdash; lands as a pull request; humans review and merge. Versioned snapshots of upstream specs (e.g. `mcp/vectorsurv-mcp/openapi/`) make API drift a `git diff` away. The site itself is served via GitHub Pages with Jekyll. |
 | **[DuckLake](https://ducklake.select/) (Postgres + [DuckDB](https://duckdb.org/))** | Queryable knowledge graph | A property-graph (`kg.node`, `kg.edge`, `kg.property`) seeded from version-controlled SQL; Postgres holds the DuckLake catalog (time-travel, branches, ACID), DuckDB is the query engine. Joins Parquet + Postgres + CSV in a single SQL statement; works on a laptop and at hack-day scale. |
 
 What makes it *living* rather than a static snapshot:
@@ -27,11 +27,11 @@ What makes it *living* rather than a static snapshot:
   drafts a `schema/deep/*.sql` seed, and opens a PR. Reviewers (humans
   or other agents) merge. The next `.read` rebuilds the graph.
 - **Upstream API drift is detected, not silently swallowed.** The
-  `mcp/vectorsurv/openapi/` directory holds versioned snapshots; a
+  `mcp/vectorsurv-mcp/openapi/` directory holds versioned snapshots; a
   `git diff` between two snapshots is the changelog the MCP client
   reacts to.
 - **MCP servers stream live agency data into the same graph.**
-  The included [`vectorsurv-mcp`](./mcp/vectorsurv/) exposes the
+  The included [`vectorsurv-mcp`](./mcp/vectorsurv-mcp/) exposes the
   national mosquito- and tick-surveillance API as MCP tools (sites,
   collections, pools, vector-index calculations, human / equine
   arbovirus case counts). An LLM client can query VectorSurv and
@@ -62,7 +62,7 @@ Everything in this repository is also a page on the published site at
 - [AZ One Health Sentinel — plan](./plan/) &mdash; five-document plan for a mobile-first participatory-surveillance app spanning Vector-Borne Disease and Heat. Covers Figure 2 parameter mapping by vertical, the MCP integration topology, the eight-agent architecture, four worked end-to-end data flows, and a phased roadmap tied to the [Figure 3 timeliness milestones](./figures/03-outbreak-timeliness-metrics.md).
 
 ### MCP servers (live data ingestion for LLMs)
-- [`vectorsurv-mcp`](./mcp/vectorsurv/) &mdash; Wraps the [VectorSurv](https://vectorsurv.org/) API (spec v1.0.44). 13 tools.
+- [`vectorsurv-mcp`](./mcp/vectorsurv-mcp/) &mdash; Wraps the [VectorSurv](https://vectorsurv.org/) API (spec v1.0.44). 13 tools.
 - [`knowledge-graph-mcp`](./mcp/knowledge-graph-mcp/) &mdash; Read-only DuckDB query MCP over the kg (572 nodes / 791 edges / 1027 properties). 12 tools + SQL escape-hatch.
 - [`great-az-tick-check-mcp`](./mcp/great-az-tick-check-mcp/) &mdash; Mock submission tracking for the UA Cooperative Extension tick program. 5 tools.
 - [`nws-heatrisk-mcp`](./mcp/nws-heatrisk-mcp/) &mdash; NWS HeatRisk + alerts + heat-index. 7 tools.

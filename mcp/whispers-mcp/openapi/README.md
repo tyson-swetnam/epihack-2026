@@ -32,7 +32,7 @@ follow upstream drift without a code change.
 
 ## Why this directory exists
 
-Mirrors the convention in `mcp/vectorsurv/openapi/`: keeping a spec
+Mirrors the convention in `mcp/vectorsurv-mcp/openapi/`: keeping a spec
 snapshot in-tree means contributors whose build environment can't
 reach the live USGS host (e.g. CI sandboxes) can still trace each
 client path back to an authoritative source.

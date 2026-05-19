@@ -37,7 +37,7 @@ happy path (mail-in tick), three MCPs, one agent pipeline.
   v1.0.44 (Mongoose-style `query[...]` operators, `/v1/` prefix, new
   agency-region-intersect / region / test-target / pools-are-positive
   / case-count tools — 13 tools total). Snapshot the spec under
-  `mcp/vectorsurv/openapi/`.
+  `mcp/vectorsurv-mcp/openapi/`.
 * **PR #7** — Mobile-responsive map and pathogen-graph viewers
   (flexbox + ≤800px breakpoint + collapsible panel, MapLibre touch
   tuning, Cytoscape pinch-zoom).

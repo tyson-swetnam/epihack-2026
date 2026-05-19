@@ -14,7 +14,7 @@ server, not by negotiating bilateral integrations.
 
 | Server | Status | Backed by | Feeds vertical |
 |---|---|---|---|
-| [`vectorsurv-mcp`](../mcp/vectorsurv/) | ✅ shipped | api.vectorsurv.org (OpenAPI v1.0.44) | VBD |
+| [`vectorsurv-mcp`](../mcp/vectorsurv-mcp/) | ✅ shipped | api.vectorsurv.org (OpenAPI v1.0.44) | VBD |
 | `nws-heatrisk-mcp` | ⏳ planned | api.weather.gov HeatRisk + alerts | Heat |
 | `mag-hrn-mcp` | ⏳ planned | hrn.azmag.gov (cooling-center registry) | Heat |
 | `adhs-mcp` | ⏳ planned | ADHS open-data (heat mortality, arbovirus reports) | Both |

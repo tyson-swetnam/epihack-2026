@@ -3,7 +3,7 @@
   "mcpServers": {
     "vectorsurv": {
       "command": "uvx",
-      "args": ["--from", "/absolute/path/to/epihack-2026/mcp/vectorsurv", "vectorsurv-mcp"],
+      "args": ["--from", "/absolute/path/to/epihack-2026/mcp/vectorsurv-mcp", "vectorsurv-mcp"],
       "env": {
         "VECTORSURV_USERNAME": "your_gateway_username",
         "VECTORSURV_PASSWORD": "your_gateway_password",

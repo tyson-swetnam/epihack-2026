@@ -59,7 +59,7 @@ ON CONFLICT DO NOTHING;
 INSERT INTO kg.property (node_id, key, value_text) VALUES
   ('mcp.vectorsurv', 'language',  'python'),
   ('mcp.vectorsurv', 'transport', 'stdio (default); streamable-http available'),
-  ('mcp.vectorsurv', 'path',      'mcp/vectorsurv/'),
+  ('mcp.vectorsurv', 'path',      'mcp/vectorsurv-mcp/'),
   ('mcp.vectorsurv', 'package',   'vectorsurv-mcp'),
   ('mcp.vectorsurv', 'license',   'MIT')
 ON CONFLICT DO NOTHING;

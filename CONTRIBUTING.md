@@ -45,7 +45,7 @@ workspaces with their own `pyproject.toml`. Install only what you
 need:
 
 ```bash
-cd mcp/vectorsurv && uv sync                      # any MCP server
+cd mcp/vectorsurv-mcp && uv sync                      # any MCP server
 cd agents          && uv sync                     # orchestrator
 cd mcp/knowledge-graph-mcp && uv sync             # kg query server
 ```
@@ -116,7 +116,7 @@ pathogen FKs find their parents.
 
 ### Adding a new MCP server
 
-Use [`mcp/vectorsurv/`](./mcp/vectorsurv/) as the template — it is the
+Use [`mcp/vectorsurv-mcp/`](./mcp/vectorsurv-mcp/) as the template — it is the
 most complete reference and follows every convention reviewers expect.
 
 ```

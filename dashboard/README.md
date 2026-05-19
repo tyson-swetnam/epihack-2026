@@ -110,7 +110,7 @@ mock-fallback path is preserved unless explicitly opted out.
 
 In a deployed install the dashboard would also be wired to:
 
-- [`vectorsurv-mcp`](../mcp/vectorsurv/) for live vector-index
+- [`vectorsurv-mcp`](../mcp/vectorsurv-mcp/) for live vector-index
   readings (`vectorsurv_calculate_infection_rate`).
 - [`adhs-mcp`](../mcp/adhs-mcp/) for ADHS arbovirus + heat-mortality
   summaries.

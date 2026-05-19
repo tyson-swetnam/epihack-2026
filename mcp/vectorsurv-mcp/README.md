@@ -107,7 +107,7 @@ read them.
 ### Standalone
 
 ```bash
-cd mcp/vectorsurv
+cd mcp/vectorsurv-mcp
 uv sync
 uv run vectorsurv-mcp                 # stdio (default)
 MCP_TRANSPORT=streamable-http uv run vectorsurv-mcp  # HTTP
@@ -116,7 +116,7 @@ MCP_TRANSPORT=streamable-http uv run vectorsurv-mcp  # HTTP
 ### Tests
 
 ```bash
-cd mcp/vectorsurv
+cd mcp/vectorsurv-mcp
 uv run pytest
 ```
 

@@ -1,5 +1,5 @@
 {
-  "_comment": "Canned vectorsurv_calculate_infection_rate output shape (MIR per 1000 mosquitoes, Biweek interval, target WNV, mosquito) for the trailing four weeks. Mirrors mcp/vectorsurv/src/vectorsurv_mcp/calculations.py:infection_rate(). The `county_summary` block is a small aggregation we'd add to a future MCP tool (see the README's wire-to-real-MCPs section).",
+  "_comment": "Canned vectorsurv_calculate_infection_rate output shape (MIR per 1000 mosquitoes, Biweek interval, target WNV, mosquito) for the trailing four weeks. Mirrors mcp/vectorsurv-mcp/src/vectorsurv_mcp/calculations.py:infection_rate(). The `county_summary` block is a small aggregation we'd add to a future MCP tool (see the README's wire-to-real-MCPs section).",
   "tool": "vectorsurv-mcp.vectorsurv_calculate_infection_rate",
   "fetched_at": "2026-05-19T14:05:00Z",
   "target_disease": "WNV",
