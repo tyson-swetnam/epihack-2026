@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Where can I cool off? — AZ One Health Sentinel</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#1f8fbf" />
+<meta name="description" content="Find the nearest open cooling centers in Arizona. Pet-friendly and transport-eligible flags surface up front." />
+<link rel="stylesheet" href="../../shared/style.css" />
+<link rel="stylesheet" href="../heat.css" />
+</head>
+<body data-api-base="mock" data-i18n-default="auto">
+
+<header class="heat-header" style="background:linear-gradient(135deg,#1f8fbf 0%,var(--c-orange) 100%)">
+  <div class="crumbs"><a href="../../index.html">&laquo; AZ One Health Sentinel</a></div>
+  <h1 data-i18n="heat.cooloff.title">Where can I cool off?</h1>
+</header>
+
+<main class="container" id="main">
+
+  <div class="cool-hero">
+    <h1 data-i18n="cooloff.list.heading">Nearest cooling centers</h1>
+    <p>Open now, ranked by distance. Pet-friendly and transport-eligible centers are flagged.</p>
+  </div>
+
+  <!-- Location entry — same pattern as the other heat flows. -->
+  <section class="step active" style="display:block">
+    <label class="field" for="zip">
+      <span data-i18n="geo.zip_label">Your location</span>
+    </label>
+    <div class="geo-status" id="geo-status" role="status" aria-live="polite">
+      <span class="dot"></span>
+      <span id="geo-status-text">Tap &ldquo;Use my location&rdquo; or enter a ZIP below.</span>
+    </div>
+    <div class="field-row" style="margin-top:.5rem">
+      <button type="button" class="btn secondary" id="geo-btn" data-i18n="geo.use_location">Use my location</button>
+      <input type="text" id="zip" inputmode="numeric" maxlength="10"
+             autocomplete="postal-code" data-i18n-attr="placeholder:geo.zip_placeholder;aria-label:geo.zip_label" />
+    </div>
+    <div class="cta-grid" style="margin-top:.65rem">
+      <button type="button" class="btn heat" id="search-btn">Find centers</button>
+      <a class="btn secondary" href="tel:18772118661" aria-label="Call 211 Arizona">
+        <span data-i18n="cooloff.center.call_211">Call 211</span>
+      </a>
+    </div>
+  </section>
+
+  <!-- Live list (JS-rendered). noscript fallback below preserves the static
+       Phoenix-area list so the page is still useful without JS. -->
+  <section id="results" aria-live="polite" aria-busy="false" style="margin-top:1rem">
+    <ul class="center-list" id="center-list">
+      <!-- placeholder until JS fetches the mock fixture -->
+    </ul>
+  </section>
+
+  <noscript>
+    <section style="margin-top:1rem">
+      <h2 style="color:var(--c-orange-2)">Phoenix-area cooling centers (static list)</h2>
+      <ul class="center-list">
+        <li class="center">
+          <h3>Burton Barr Central Library cooling center</h3>
+          <div class="meta">1221 N Central Ave, Phoenix, AZ 85004 &middot; 10:00 AM – 8:00 PM</div>
+          <div class="badges">
+            <span class="badge heat">Open now</span>
+            <span class="badge magenta">Transport eligible</span>
+          </div>
+          <div class="actions">
+            <a class="btn heat block" href="https://maps.apple.com/?daddr=1221+N+Central+Ave,+Phoenix,+AZ+85004" rel="noopener">Open in Maps</a>
+            <a class="btn secondary block" href="tel:+16022624636">Call 602-262-4636</a>
+          </div>
+        </li>
+        <li class="center">
+          <h3>Human Services Campus respite center</h3>
+          <div class="meta">204 S 12th Ave, Phoenix, AZ 85007 &middot; 7:00 AM – 10:00 PM</div>
+          <div class="badges">
+            <span class="badge heat">Open now</span>
+            <span class="badge cool">Pet-friendly</span>
+            <span class="badge magenta">Transport eligible</span>
+          </div>
+          <div class="actions">
+            <a class="btn heat block" href="https://maps.apple.com/?daddr=204+S+12th+Ave,+Phoenix,+AZ+85007" rel="noopener">Open in Maps</a>
+            <a class="btn secondary block" href="tel:+16022820853">Call 602-282-0853</a>
+          </div>
+        </li>
+      </ul>
+      <p class="muted small">JavaScript is disabled. The list above is a static
+        snapshot. Dial <a href="tel:18772118661">2-1-1</a> for the live phone
+        directory.</p>
+    </noscript>
+  </noscript>
+
+  <hr class="rule" />
+  <p class="muted small">
+    Live data flows through <code>mag-hrn-mcp.search_centers(lat, lon, radius=2km, open_now=true)</code>
+    and the transport-eligible badge is computed by
+    <code>211-az-mcp.transport_to_cooling_center</code>. Cross-references:
+    <a href="../../../map/index.html">map of AZ</a> &middot;
+    <a href="../../../graph/index.html">pathogen graph</a> &middot;
+    <a href="../../../heat/index.html">heat focus-group materials</a>.
+  </p>
+</main>
+
+<footer class="app-footer">
+  Source: Ending Pandemics Academy &middot; University of Arizona Mel &amp;
+  Enid Zuckerman College of Public Health &middot; Global Health Institute.
+</footer>
+
+<script type="module" src="cool-off.js"></script>
+</body>
+</html>

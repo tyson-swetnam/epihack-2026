@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Heat check-in (CHW) — AZ One Health Sentinel</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#962FBF" />
+<meta name="description" content="CHW-mediated heat check-in for unsheltered residents. Computes a heat-vulnerability score, finds the nearest open cooling center, and offers one-tap transport via 211 Arizona. Part of the AZ One Health Sentinel prototype." />
+<link rel="stylesheet" href="../../shared/style.css" />
+<link rel="stylesheet" href="../heat.css" />
+</head>
+<!-- data-api-base="mock" short-circuits to app/heat/mock-responses.json
+     (see app/shared/intake-client.js). data-i18n-default="auto" lets the
+     page render in Spanish first when navigator.language starts with es. -->
+<body data-api-base="mock" data-i18n-default="auto">
+
+<header class="heat-header magenta">
+  <div class="crumbs"><a href="../../index.html">&laquo; AZ One Health Sentinel</a></div>
+  <h1>Heat check-in <span style="opacity:.85;font-weight:400">(CHW)</span></h1>
+</header>
+
+<!-- Progress bar (hidden until JS upgrades the page) -->
+<div class="progress magenta" id="progress" hidden>
+  <div class="label">
+    <span><span class="step-name" id="step-name">Identify</span></span>
+    <span id="step-count">Step 1 of 6</span>
+  </div>
+  <div class="bar"><div class="fill" id="progress-fill"></div></div>
+</div>
+
+<main class="container" id="main">
+
+  <!-- =====================================================================
+       Step 1 — Identify subject (anonymous-friendly)
+       Default-on unsheltered toggle (this is the CHW outreach flow).
+       ===================================================================== -->
+  <section class="step active" id="step-subject" data-step="subject" data-step-name="Identify">
+    <h2 class="magenta" data-i18n="heat.subject.heading">Who are you checking on?</h2>
+    <p class="muted small">
+      Scenario&nbsp;C in
+      <a href="../../../plan/04-data-flows.html#scenario-c--unsheltered-resident-heat-check-in" rel="noopener">04-data-flows</a>.
+      Anonymous by default; nothing here identifies an individual.
+    </p>
+
+    <fieldset style="border:0;padding:0;margin:1rem 0 0">
+      <legend class="field" style="margin:0" data-i18n="heat.subject.age">Approximate age</legend>
+      <div class="radio-pills" role="radiogroup" aria-label="Age range">
+        <label><input type="radio" name="age_range" value="under_18"><span data-i18n="heat.subject.age.under18">Under 18</span></label>
+        <label><input type="radio" name="age_range" value="18_39"><span data-i18n="heat.subject.age.18_39">18-39</span></label>
+        <label><input type="radio" name="age_range" value="40_64" checked><span data-i18n="heat.subject.age.40_64">40-64</span></label>
+        <label><input type="radio" name="age_range" value="65_plus"><span data-i18n="heat.subject.age.65plus">65+</span></label>
+      </div>
+    </fieldset>
+
+    <fieldset style="border:0;padding:0;margin:1rem 0 0">
+      <legend class="field" style="margin:0" data-i18n="heat.subject.sex">Sex</legend>
+      <div class="radio-pills" role="radiogroup" aria-label="Sex">
+        <label><input type="radio" name="sex" value="F"><span data-i18n="heat.subject.sex.f">Female</span></label>
+        <label><input type="radio" name="sex" value="M" checked><span data-i18n="heat.subject.sex.m">Male</span></label>
+        <label><input type="radio" name="sex" value="X"><span data-i18n="heat.subject.sex.other">Other / prefer not to say</span></label>
+      </div>
+    </fieldset>
+
+    <div class="toggle-row" style="margin-top:1rem">
+      <span>
+        <span class="label" data-i18n="heat.subject.unsheltered">Currently unsheltered?</span>
+        <span class="hint" data-i18n="heat.subject.unsheltered.hint">Default-on for outreach flows. Drives the vulnerability score.</span>
+      </span>
+      <label class="toggle-switch">
+        <input type="checkbox" id="unsheltered" checked />
+        <span class="slider" aria-hidden="true"></span>
+      </label>
+    </div>
+
+    <div class="toggle-row">
+      <span>
+        <span class="label" data-i18n="heat.subject.pet">With a pet?</span>
+        <span class="hint" data-i18n="heat.subject.pet.hint">Filters out non-pet-friendly cooling centers.</span>
+      </span>
+      <label class="toggle-switch">
+        <input type="checkbox" id="with-pet" />
+        <span class="slider" aria-hidden="true"></span>
+      </label>
+    </div>
+
+    <noscript>
+      <div class="error-banner" role="status" style="margin-top:1rem">
+        This flow needs JavaScript to compute the vulnerability score.
+        For the demo without JS, see Scenario&nbsp;C in
+        <a href="../../../plan/04-data-flows.html#scenario-c--unsheltered-resident-heat-check-in">plan/04</a>.
+      </div>
+    </noscript>
+  </section>
+
+  <!-- =====================================================================
+       Step 2 — Where + when
+       ===================================================================== -->
+  <section class="step" id="step-where" data-step="where" data-step-name="Where" hidden>
+    <h2 class="magenta" data-i18n="heat.where.heading">Where and when</h2>
+    <p class="muted small">
+      Powers the Geo-Enrichment Agent's ZCTA lookup and the cooling-center search.
+    </p>
+
+    <label class="field" for="zip">
+      <span data-i18n="geo.zip_label">Your location</span>
+    </label>
+    <div class="geo-status" id="geo-status" role="status" aria-live="polite">
+      <span class="dot"></span>
+      <span id="geo-status-text">Tap &ldquo;Use my location&rdquo; or enter a ZIP below.</span>
+    </div>
+    <div class="field-row" style="margin-top:.5rem">
+      <button type="button" class="btn secondary" id="geo-btn" data-i18n="geo.use_location">Use my location</button>
+      <input type="text" id="zip" inputmode="numeric" maxlength="10"
+             autocomplete="postal-code" data-i18n-attr="placeholder:geo.zip_placeholder;aria-label:geo.zip_label" />
+    </div>
+
+    <label class="field" for="time-of-checkin">
+      <span data-i18n="heat.where.time">Time of check-in</span>
+      <input type="time" id="time-of-checkin" required />
+    </label>
+  </section>
+
+  <!-- =====================================================================
+       Step 3 — Symptoms (multi-select)
+       Aligns with heat additions in plan/01-parameter-mapping.md.
+       ===================================================================== -->
+  <section class="step" id="step-symptoms" data-step="symptoms" data-step-name="Symptoms" hidden>
+    <h2 class="magenta" data-i18n="heat.symptoms.heading">What are you seeing?</h2>
+    <p class="lead" data-i18n="heat.symptoms.lead">Tap all that apply. "None of the above" is a perfectly normal answer.</p>
+
+    <div class="check-grid" id="symptoms-grid" role="group" aria-label="Heat symptoms checklist">
+      <label><input type="checkbox" value="confusion">      <span data-i18n="heat.symptoms.confusion">Confusion / altered mental status</span></label>
+      <label><input type="checkbox" value="hot_dry_skin">   <span data-i18n="heat.symptoms.hot_dry_skin">Hot dry skin (not sweating)</span></label>
+      <label><input type="checkbox" value="heavy_sweating"> <span data-i18n="heat.symptoms.heavy_sweating">Heavy sweating</span></label>
+      <label><input type="checkbox" value="headache">       <span data-i18n="heat.symptoms.headache">Headache</span></label>
+      <label><input type="checkbox" value="dizziness">      <span data-i18n="heat.symptoms.dizziness">Dizziness</span></label>
+      <label><input type="checkbox" value="muscle_cramps">  <span data-i18n="heat.symptoms.muscle_cramps">Muscle cramps</span></label>
+      <label class="none-of-above"><input type="checkbox" value="none"> <span data-i18n="heat.symptoms.none">None of the above</span></label>
+    </div>
+
+    <label class="field" for="core-temp" style="margin-top:1.25rem">
+      <span data-i18n="heat.symptoms.coretemp">Core body temperature (°F, if you measured)</span>
+      <span class="hint" data-i18n="heat.symptoms.coretemp.hint">Optional. ≥ 104 °F is the heat-stroke threshold.</span>
+      <input type="number" id="core-temp" inputmode="decimal" step="0.1" min="90" max="115" placeholder="—" />
+    </label>
+  </section>
+
+  <!-- =====================================================================
+       Step 4 — Exposure context
+       ===================================================================== -->
+  <section class="step" id="step-exposure" data-step="exposure" data-step-name="Exposure" hidden>
+    <h2 class="magenta" data-i18n="heat.exposure.heading">Today's exposure</h2>
+
+    <label class="field" for="outdoor-hours">
+      <span data-i18n="heat.exposure.outdoor">Outdoor time today</span>
+      <span class="hint" data-i18n="heat.exposure.outdoor.hint">Best guess in hours. ≥ 4 h adds 2 points to the score.</span>
+    </label>
+    <div class="slider-field">
+      <input type="range" id="outdoor-hours" min="0" max="14" step="1" value="6"
+             aria-describedby="outdoor-hours-value" />
+      <div><span class="value" id="outdoor-hours-value">6 h</span></div>
+    </div>
+
+    <div class="toggle-row" style="margin-top:1rem">
+      <span>
+        <span class="label" data-i18n="heat.exposure.ac">Access to air conditioning today?</span>
+        <span class="hint" data-i18n="heat.exposure.ac.hint">Working AC is the single strongest indoor-mortality protector.</span>
+      </span>
+      <label class="toggle-switch">
+        <input type="checkbox" id="ac-access" />
+        <span class="slider" aria-hidden="true"></span>
+      </label>
+    </div>
+
+    <fieldset style="border:0;padding:0;margin:1rem 0 0">
+      <legend class="field" style="margin:0" data-i18n="heat.exposure.water">When did they last drink water?</legend>
+      <div class="radio-pills" role="radiogroup" aria-label="Last drank water">
+        <label><input type="radio" name="last-water" value="under_1h"><span data-i18n="heat.exposure.water.under1">&lt;1h</span></label>
+        <label><input type="radio" name="last-water" value="1_3h" checked><span data-i18n="heat.exposure.water.1_3">1-3h</span></label>
+        <label><input type="radio" name="last-water" value="over_3h"><span data-i18n="heat.exposure.water.over3">&gt;3h</span></label>
+        <label><input type="radio" name="last-water" value="unknown"><span data-i18n="heat.exposure.water.unknown">?</span></label>
+      </div>
+    </fieldset>
+
+    <div class="toggle-row">
+      <span>
+        <span class="label" data-i18n="heat.exposure.meds">On thermoregulation-affecting medications?</span>
+        <span class="hint" data-i18n="heat.exposure.meds.hint">Antipsychotics, anticholinergics, diuretics, beta-blockers, stimulants.</span>
+      </span>
+      <label class="toggle-switch">
+        <input type="checkbox" id="thermo-meds" />
+        <span class="slider" aria-hidden="true"></span>
+      </label>
+    </div>
+
+    <div class="toggle-row">
+      <span>
+        <span class="label" data-i18n="heat.exposure.transport">Has transport available?</span>
+        <span class="hint" data-i18n="heat.exposure.transport.hint">If no, transport will be dispatched on Go-to-cooling-center.</span>
+      </span>
+      <label class="toggle-switch">
+        <input type="checkbox" id="transport-access" />
+        <span class="slider" aria-hidden="true"></span>
+      </label>
+    </div>
+  </section>
+
+  <!-- =====================================================================
+       Step 5 — Consent (consent.anonymous_heat)
+       ===================================================================== -->
+  <section class="step" id="step-consent" data-step="consent" data-step-name="Consent" hidden>
+    <h2 class="magenta" data-i18n="heat.consent.heading">What we keep and what we drop</h2>
+    <p>
+      <strong data-i18n="heat.consent.profile">Profile: consent.anonymous_heat</strong>.
+      Configured in
+      <a href="../../../schema/deep/application.sql" rel="noopener"><code>schema/deep/application.sql</code></a>
+      so the Intake Agent drops the suppressed fields at the boundary, before
+      anything lands in the kg.
+    </p>
+
+    <table class="consent-table" aria-label="Fields kept vs. fields not collected">
+      <thead>
+        <tr><th>Field</th><th>Kept</th><th>Why / not why</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Age range, sex, ZIP</td><td class="y">Yes</td><td>Cohort identification for vulnerability scoring + ZCTA cluster detection.</td></tr>
+        <tr><td>GPS (coarse)</td><td class="y">Yes</td><td>Cooling-center routing and county-vector-control assignment.</td></tr>
+        <tr><td>Symptoms</td><td class="y">Yes</td><td>Drives the triage class (heat-exhaustion vs. heat-stroke).</td></tr>
+        <tr><td>Exposure context</td><td class="y">Yes</td><td>Vulnerability-score line items (unsheltered, no AC, outdoor exposure, meds).</td></tr>
+        <tr><td>Email</td><td class="n">Not collected</td><td>Suppressed: <code>consent.anonymous_heat → suppressesField → param.email</code></td></tr>
+        <tr><td>Household member ID</td><td class="n">Not collected</td><td>Suppressed: <code>param.household_member_id</code></td></tr>
+        <tr><td>Occupation</td><td class="n">Not collected</td><td>Suppressed: <code>param.occupation</code></td></tr>
+        <tr><td>Absent from work / school</td><td class="n">Not collected</td><td>Suppressed: <code>param.absent_work</code>, <code>param.absent_school</code></td></tr>
+        <tr><td>Phone number</td><td class="n">Not collected</td><td>Suppressed: <code>param.phone_number</code></td></tr>
+      </tbody>
+    </table>
+
+    <label class="field" style="margin-top:1.25rem;display:flex;gap:.65rem;align-items:flex-start;font-weight:400">
+      <input type="checkbox" id="consent-ok" style="width:22px;height:22px;margin-top:.15rem;flex:0 0 auto" />
+      <span data-i18n="heat.consent.accept">I have explained this and the subject (or their proxy) accepts.</span>
+    </label>
+  </section>
+
+  <!-- =====================================================================
+       Step 6 — Submit / Result
+       ===================================================================== -->
+  <section class="step" id="step-submit" data-step="submit" data-step-name="Submit" hidden>
+    <div id="submit-pre">
+      <h2 class="magenta" data-i18n="heat.submit.heading">Ready to send?</h2>
+      <p>Posts through <strong>Intake &rarr; Geo &rarr; Validation &rarr;
+        Triage(Heat) &rarr; Enrichment &rarr; Notification</strong>.</p>
+      <div id="summary" class="section-block">
+        <h3>Summary</h3>
+        <div id="summary-body" class="muted small">Loading&hellip;</div>
+      </div>
+    </div>
+
+    <div id="submit-pending" class="submitting" hidden role="status" aria-live="polite">
+      <div class="big-spinner" aria-hidden="true"></div>
+      <div><strong data-i18n="heat.submit.running">Running the agent pipeline…</strong></div>
+      <div class="agent-log" id="agent-log">
+        <div class="line pending">Intake Agent: applying consent.anonymous_heat suppression</div>
+        <div class="line pending">Geo-Enrichment Agent: resolving ZCTA</div>
+        <div class="line pending">Validation Agent: high-risk-population flag</div>
+        <div class="line pending">Triage Agent (Heat): computing vulnerability score</div>
+        <div class="line pending">Enrichment Agent: mag-hrn-mcp.search_centers + nws-heatrisk-mcp</div>
+        <div class="line pending">Notification Agent: building CHW card</div>
+      </div>
+    </div>
+
+    <div id="submit-result" hidden></div>
+    <div id="submit-error" class="error-banner" hidden role="alert"></div>
+  </section>
+
+</main>
+
+<div class="sticky-bar" id="sticky-bar" hidden>
+  <button type="button" class="btn secondary back" id="back-btn" data-i18n="nav.back">Back</button>
+  <button type="button" class="btn magenta" id="next-btn" data-i18n="nav.next">Next</button>
+</div>
+
+<footer class="app-footer" style="margin-bottom:6rem">
+  Prototype &middot; no real data is sent. See the
+  <a href="../../README.html">app README</a>.
+</footer>
+
+<script type="module" src="check-in.js"></script>
+
+</body>
+</html>

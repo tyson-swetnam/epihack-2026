@@ -1,0 +1,46 @@
+WHISPers service spec snapshot
+==============================
+
+Base URL  : https://whispers.usgs.gov/api      (confirmed via
+            USGS-WiM/whispers src/environments/environment.prod.ts;
+            api_root = "https://whispers.usgs.gov/api/")
+Codebase  : https://github.com/USGS-WiM/whispersservices (archived
+            2023-06-30; active mirror at
+            https://code.usgs.gov/WiM/whispersservices)
+Stack     : Django + Django REST Framework + Celery + Psycopg2
+Spec URLs : /openapi/   (DRF schema view)
+            /docs/      (Swagger UI)
+
+The live OpenAPI JSON has NOT been captured into this directory --
+the build sandbox cannot reach whispers.usgs.gov. To refresh:
+
+    curl -sS https://whispers.usgs.gov/api/openapi/?format=openapi-json \
+      | jq . > snapshot-$(date +%Y%m%d).json
+
+DRF router routes (from whispersapi/urls.py) that this MCP wraps:
+  - events/                EventViewSet
+  - eventsummaries/        EventSummaryViewSet  (preferred read path;
+                                                 includes joined
+                                                 species + diagnosis)
+  - eventdetails/{id}/     EventDetailViewSet
+  - eventtypes/            EventTypeViewSet
+  - eventlocations/        EventLocationViewSet
+  - species/               SpeciesViewSet
+  - diagnoses/             DiagnosisViewSet
+  - administrativelevelones/  states/provinces
+  - administrativeleveltwos/  counties
+
+Auth model (verified in whispersapi/views.py):
+  - HistoryViewSet uses DRYPermissions.
+  - EventViewSet.get_queryset() filters anonymous requests to
+    queryset.filter(public=True). I.e. reads of public events are
+    unauthenticated. Writes, drafts, and non-public records require
+    a Gateway account.
+
+EventSummaryFilter fields (from whispersapi/filters.py):
+  and_params, complete, public, permission_source, event_type,
+  diagnosis, diagnosis_type, species, administrative_level_one (state),
+  administrative_level_two (county), flyway, country, gnis_id,
+  affected_count__gte, affected_count__lte, start_date, end_date, id.
+
+Pagination: HistoryViewSet honors ?no_page to return all rows.

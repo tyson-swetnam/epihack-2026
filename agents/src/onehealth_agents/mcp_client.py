@@ -101,18 +101,20 @@ class FakeMCPClient:
             }
 
         client.register(
-            "knowledge-graph-mcp", "regions_at_point", regions_at_point
+            "knowledge-graph-mcp", "kg_regions_at_point", regions_at_point
         )
 
         # knowledge-graph-mcp.outbreak_check ------------------------------
         async def outbreak_check(
-            pathogen: str | None = None,
-            county: str | None = None,
+            pathogen_id: str | None = None,
+            county_id: str | None = None,
+            # Tolerate legacy callers that still pass the un-suffixed names.
+            **_: Any,
         ) -> dict[str, Any]:
             return {"active_outbreaks": []}
 
         client.register(
-            "knowledge-graph-mcp", "outbreak_check", outbreak_check
+            "knowledge-graph-mcp", "kg_outbreak_check", outbreak_check
         )
 
         # vectorsurv-mcp.agency_region_intersect --------------------------
@@ -127,7 +129,7 @@ class FakeMCPClient:
             }
 
         client.register(
-            "vectorsurv-mcp", "agency_region_intersect", agency_region_intersect
+            "vectorsurv-mcp", "vectorsurv_agency_region_intersect", agency_region_intersect
         )
 
         # vectorsurv-mcp.get_pools ----------------------------------------
@@ -135,7 +137,7 @@ class FakeMCPClient:
             # No nearby WNV / tick pools in the worked scenarios.
             return {"pools": [], "count": 0, "query": kwargs}
 
-        client.register("vectorsurv-mcp", "get_pools", get_pools)
+        client.register("vectorsurv-mcp", "vectorsurv_get_pools", get_pools)
 
         # great-az-tick-check-mcp.create_submission -----------------------
         async def create_submission(**kwargs: Any) -> dict[str, Any]:
@@ -147,7 +149,7 @@ class FakeMCPClient:
             }
 
         client.register(
-            "great-az-tick-check-mcp", "create_submission", create_submission
+            "great-az-tick-check-mcp", "gattc_create_submission", create_submission
         )
 
         # nws-heatrisk-mcp.heatrisk ---------------------------------------
@@ -164,7 +166,7 @@ class FakeMCPClient:
                 "ambient_temp_f": 115.0 if level == "Magenta" else 92.0,
             }
 
-        client.register("nws-heatrisk-mcp", "heatrisk", heatrisk)
+        client.register("nws-heatrisk-mcp", "nws_heatrisk", heatrisk)
 
         # mag-hrn-mcp.search_centers (cooling centers) --------------------
         async def search_centers(**kwargs: Any) -> dict[str, Any]:
@@ -189,7 +191,7 @@ class FakeMCPClient:
                 ]
             }
 
-        client.register("mag-hrn-mcp", "search_centers", search_centers)
+        client.register("mag-hrn-mcp", "mag_search_centers", search_centers)
 
         # 211-az-mcp.transport_to_cooling_center --------------------------
         async def transport_to_cooling_center(**kwargs: Any) -> dict[str, Any]:
@@ -201,7 +203,7 @@ class FakeMCPClient:
 
         client.register(
             "211-az-mcp",
-            "transport_to_cooling_center",
+            "az211_transport_to_cooling_center",
             transport_to_cooling_center,
         )
 

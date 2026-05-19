@@ -49,7 +49,7 @@ class GeoEnrichmentAgent:
             try:
                 resp = await self.mcp.call_tool(
                     "knowledge-graph-mcp",
-                    "regions_at_point",
+                    "kg_regions_at_point",
                     lat=general.lat,
                     lon=general.lon,
                 )
@@ -64,7 +64,8 @@ class GeoEnrichmentAgent:
                 if geo.county_id and observation.vertical.value in {"vbd", "both"}:
                     try:
                         intersect = await self.mcp.call_tool(
-                            "vectorsurv-mcp", "agency_region_intersect"
+                            "vectorsurv-mcp",
+                            "vectorsurv_agency_region_intersect",
                         )
                         for hit in intersect.get("intersections", []):
                             if hit.get("region") == geo.county_id:

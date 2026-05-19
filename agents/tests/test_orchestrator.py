@@ -68,8 +68,8 @@ async def test_scenario_a_tick_mailin():
 
     # Enrichment hydrated the tick-mail-in submission AND queried pools.
     tools_called = {(r.mcp_server, r.tool) for r in obs.enrichments.records}
-    assert ("great-az-tick-check-mcp", "create_submission") in tools_called
-    assert ("vectorsurv-mcp", "get_pools") in tools_called
+    assert ("great-az-tick-check-mcp", "gattc_create_submission") in tools_called
+    assert ("vectorsurv-mcp", "vectorsurv_get_pools") in tools_called
 
     # Notification surfaced a user-facing card with a mailing label.
     user_notes = [n for n in obs.notifications if n.audience == "user"]
@@ -144,9 +144,9 @@ async def test_scenario_c_heat_checkin():
 
     # Enrichment hit HeatRisk + cooling-centers + 211 transport dispatch.
     tools_called = {(r.mcp_server, r.tool) for r in obs.enrichments.records}
-    assert ("nws-heatrisk-mcp", "heatrisk") in tools_called
-    assert ("mag-hrn-mcp", "search_centers") in tools_called
-    assert ("211-az-mcp", "transport_to_cooling_center") in tools_called
+    assert ("nws-heatrisk-mcp", "nws_heatrisk") in tools_called
+    assert ("mag-hrn-mcp", "mag_search_centers") in tools_called
+    assert ("211-az-mcp", "az211_transport_to_cooling_center") in tools_called
 
     # CHW + user notifications present, agency dashboard pin too.
     audiences = {n.audience for n in obs.notifications}

@@ -13,7 +13,7 @@ Real production code extends this dispatch table per MCP server.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from .contracts import (
@@ -51,11 +51,14 @@ class KnowledgeUpdateAgent:
         return out
 
     async def _pull_vectorsurv(self) -> list[Observation]:
+        end_dt = datetime.now(timezone.utc).date()
+        start_dt = end_dt - timedelta(days=7)
         payload = await self.mcp.call_tool(
             "vectorsurv-mcp",
-            "get_pools",
+            "vectorsurv_get_pools",
             arthropod="mosquito",
-            last_days=7,
+            start_date=start_dt.isoformat(),
+            end_date=end_dt.isoformat(),
         )
         obs = []
         for pool in payload.get("pools", []):
@@ -85,7 +88,7 @@ class KnowledgeUpdateAgent:
         # Phoenix anchor for the daily pull.
         payload = await self.mcp.call_tool(
             "nws-heatrisk-mcp",
-            "heatrisk",
+            "nws_heatrisk",
             lat=33.45,
             lon=-112.07,
             date=datetime.now(timezone.utc).strftime("%Y-%m-%d"),
@@ -116,7 +119,7 @@ class KnowledgeUpdateAgent:
 
     async def _pull_outbreaks(self) -> list[Observation]:
         payload: dict[str, Any] = await self.mcp.call_tool(
-            "knowledge-graph-mcp", "outbreak_check"
+            "knowledge-graph-mcp", "kg_outbreak_check"
         )
         obs = []
         for outbreak in payload.get("active_outbreaks", []):
