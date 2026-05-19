@@ -23,6 +23,7 @@ server, not by negotiating bilateral integrations.
 | `inaturalist-mcp` | ⏳ planned | iNaturalist API (vectors + wildlife observations) | VBD |
 | `211-az-mcp` | ⏳ planned | 211 Arizona resource directory | Heat |
 | `knowledge-graph-mcp` | ⏳ planned | This repo's DuckLake graph (read + write) | Both |
+| `outbreaks-near-me-mcp` | 🔭 future | Federation with Boston Children's [Outbreaks Near Me](https://outbreaksnearme.org/us/en-US) symptom-cluster platform (successor to Flu Near You). OBNM is the canonical human-symptom-side participatory-surveillance platform; this MCP would let the AZ agents pull symptom-cluster context for a user's ZIP and contribute Sentinel reports back upstream. Gated on a partnership with the HealthMap team. | Both |
 
 ## Parameter-by-parameter source map
 
