@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>ADHS — heat mortality drill-down</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="theme-color" content="#1F3A93" />
+<link rel="stylesheet" href="../shared/style.css" />
+</head>
+<body data-agency="adhs" data-mock-base="../mock">
+
+<header class="dash-header">
+  <div>
+    <div class="crumbs">
+      <a href="../../index.html">EpiHack AZ 2026</a> &middot;
+      <a href="../index.html">agency dashboard</a> &middot;
+      <a href="./index.html">ADHS</a>
+    </div>
+    <h1>Heat mortality — statewide <span class="agency-tag">drill-down</span></h1>
+  </div>
+  <div id="auth-stub"></div>
+</header>
+
+<div class="printable-banner">
+  <h1>ADHS — heat-mortality (printable)</h1>
+  <p>Generated <span id="print-date"></span></p>
+</div>
+
+<main class="container">
+
+  <p class="muted small">
+    Provisional weekly + cumulative heat-related deaths and ED visits.
+    Historical context per
+    <a href="../../heat/04-vulnerable-populations.html">heat-Q4 vulnerable populations</a>:
+    Arizona recorded more than <strong>4,320</strong> heat deaths
+    between 2013 and 2024, with <strong>990</strong> in 2023 alone.
+    Surveillance row is wired to
+    <a href="../../mcp/adhs-mcp/README.html">adhs-mcp</a>.
+  </p>
+
+  <h2>Headline statistics</h2>
+  <div class="status-row" id="headline-row"></div>
+
+  <h2>Weekly statewide vs Maricopa</h2>
+  <div class="analyst-table-wrap">
+    <table class="analyst-table" id="weekly-table">
+      <caption>Provisional weekly heat deaths and ED visits, 2026 to date</caption>
+      <thead>
+        <tr>
+          <th>ISO week</th>
+          <th class="num">AZ deaths</th>
+          <th class="num">AZ ED visits</th>
+          <th class="num">Maricopa deaths</th>
+          <th class="num">Maricopa ED visits</th>
+          <th>Trend (AZ deaths)</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <h2>Vulnerable-population disparities</h2>
+  <div class="analyst-table-wrap">
+    <table class="analyst-table" id="vuln-table">
+      <caption>Heat-mortality rate per 100,000 by high-burden group (2024 baseline)</caption>
+      <thead>
+        <tr>
+          <th>Group</th>
+          <th class="num">Rate / 100k</th>
+          <th class="num">Latest weekly counts</th>
+          <th>Trend (8 wk)</th>
+          <th>Notes</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <h2>Open the underlying observations</h2>
+  <button id="show-sql" class="btn secondary">Show SQL preview</button>
+  <div id="sql-mount"></div>
+
+  <p class="crosslinks">
+    Cross-references:
+    <a href="./index.html">ADHS landing</a>
+    <a href="../mcdph/index.html">MCDPH</a>
+    <a href="../../heat/04-vulnerable-populations.html">heat-Q4 vulnerable populations</a>
+    <a href="../../heat/index.html">heat focus group</a>
+    <a href="../../schema/heat.sql">schema/heat.sql</a>
+  </p>
+</main>
+
+<footer class="dash-footer">
+  Source: ADHS heat-related mortality reports (2012–2023) &middot;
+  MCDPH Heat Surveillance.
+</footer>
+
+<script type="module">
+  import { mountAuthStub } from '../shared/auth-stub.js';
+  import { renderSparkline } from '../shared/sparkline.js';
+  import { fetchMock, renderSqlPreview } from '../shared/kg-client.js';
+
+  mountAuthStub(document.getElementById('auth-stub'), 'adhs');
+  document.getElementById('print-date').textContent = new Date().toISOString().slice(0, 10);
+
+  fetchMock('heat-mortality.json').then(d => {
+    // headline tiles
+    const row = document.getElementById('headline-row');
+    const h = d.headline || {};
+    const tile = (label, value) => {
+      const el = document.createElement('div');
+      el.className = 'status-tile';
+      el.innerHTML = `<span class="label">${label}</span><span class="value">${value}</span>`;
+      return el;
+    };
+    row.appendChild(tile('AZ deaths 2013–2024', (h.statewide_deaths_2013_2024 || 0).toLocaleString()));
+    row.appendChild(tile('AZ deaths 2023',      (h.statewide_deaths_2023 || 0).toLocaleString()));
+    row.appendChild(tile('Avg ED visits / yr',  (h.annual_er_visits_avg || 0).toLocaleString()));
+    row.appendChild(tile('Maricopa unsheltered share 2016', `${h.maricopa_unsheltered_share_pct_2016 || 0}%`));
+    row.appendChild(tile('Maricopa male share',  `${h.maricopa_male_share_pct || 0}%`));
+
+    // weekly table
+    const tbody = document.querySelector('#weekly-table tbody');
+    tbody.innerHTML = '';
+    const az = d.weekly_statewide || [];
+    const mc = d.weekly_maricopa  || [];
+    const merged = az.map((w, i) => ({ az: w, mc: mc[i] || {} }));
+    merged.forEach(r => {
+      const tr = document.createElement('tr');
+      tr.innerHTML =
+        `<td>${r.az.iso_week}</td>` +
+        `<td class="num">${r.az.deaths_provisional}</td>` +
+        `<td class="num">${r.az.er_visits}</td>` +
+        `<td class="num">${r.mc.deaths_provisional ?? '—'}</td>` +
+        `<td class="num">${r.mc.er_visits ?? '—'}</td>` +
+        `<td class="spark"></td>`;
+      tbody.appendChild(tr);
+    });
+    if (merged.length) {
+      // last row gets the sparkline of the full series
+      const lastSpark = tbody.lastElementChild.querySelector('td.spark');
+      lastSpark.appendChild(renderSparkline(az.map(w => w.deaths_provisional), {
+        title: 'AZ provisional deaths — 8 weeks'
+      }));
+    }
+
+    // vulnerable-population table
+    const vbody = document.querySelector('#vuln-table tbody');
+    vbody.innerHTML = '';
+    (d.vulnerable_populations || []).forEach(g => {
+      const tr = document.createElement('tr');
+      const latest = g.weekly && g.weekly.length ? g.weekly[g.weekly.length - 1] : '—';
+      tr.innerHTML =
+        `<td>${g.group}</td>` +
+        `<td class="num">${g.rate_per_100k_2024 != null ? g.rate_per_100k_2024.toFixed(1) : '—'}</td>` +
+        `<td class="num">${latest}</td>` +
+        `<td class="spark"></td>` +
+        `<td>${g.notes || ''}</td>`;
+      vbody.appendChild(tr);
+      tr.querySelector('td.spark').appendChild(renderSparkline(g.weekly || [], {
+        title: `${g.group} — weekly counts`
+      }));
+    });
+  });
+
+  document.getElementById('show-sql').addEventListener('click', () => {
+    const sql =
+`-- ADHS heat-mortality drill-down. Joins provisional weekly deaths
+-- to MCDPH ED-visit counts and the vulnerability dimension tables.
+SELECT  iso_week,
+        SUM(deaths_provisional)            AS az_deaths,
+        SUM(er_visits)                     AS az_er_visits,
+        SUM(CASE WHEN county = 'Maricopa'
+                 THEN deaths_provisional END) AS maricopa_deaths
+FROM    surveillance.heat_weekly
+WHERE   iso_week >= '2026-W12'
+GROUP BY iso_week
+ORDER BY iso_week;`;
+    renderSqlPreview(document.getElementById('sql-mount'), sql,
+      'Heat mortality — weekly statewide vs Maricopa');
+  });
+</script>
+
+</body>
+</html>
