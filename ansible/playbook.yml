@@ -49,6 +49,7 @@
     - { role: claude_code,  tags: [claude_code, claude] }
     - { role: mcp_servers,  tags: [mcp_servers, mcp] }
     - { role: ducklake,     tags: [ducklake, kg, db] }
+    - { role: mongodb,      tags: [mongodb, db] }
     - { role: fastapi,      tags: [fastapi, api] }
     - { role: app,          tags: [app, frontend] }
     - { role: nginx,        tags: [nginx, web] }

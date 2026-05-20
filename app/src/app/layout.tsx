@@ -4,6 +4,7 @@ import './globals.css';
 
 import { AuthProvider } from '@/components/AuthProvider';
 import { AppShell } from '@/components/AppShell';
+import { OfflineFlusher } from '@/components/OfflineFlusher';
 
 // Inter exposed as a CSS variable so Tailwind's `font-sans` token
 // (tailwind.config.ts → var(--font-inter)) picks it up.
@@ -40,6 +41,7 @@ export default function RootLayout({
     <html lang="en" className={inter.variable}>
       <body className="font-sans antialiased">
         <AuthProvider>
+          <OfflineFlusher />
           <AppShell>{children}</AppShell>
         </AuthProvider>
       </body>

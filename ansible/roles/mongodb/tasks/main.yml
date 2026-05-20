@@ -1,0 +1,66 @@
+---
+# Self-hosted MongoDB Community Edition — the mobile-channel write-path store
+# (plan/09 Phase B). Bound to 127.0.0.1, authorization enabled, with an app
+# user from the vault. Runs before `fastapi` so MONGODB_URI is live before the
+# API and the Mongo->DuckLake sync start.
+#
+# First-run user creation uses MongoDB's localhost exception (allowed while no
+# users exist yet, even with auth enabled), then auth is enforced on restart.
+# A marker file makes the create-user step run exactly once.
+
+- name: Add the MongoDB apt GPG key
+  ansible.builtin.get_url:
+    url: "https://www.mongodb.org/static/pgp/server-{{ mongodb_version }}.asc"
+    dest: "/etc/apt/keyrings/mongodb-server-{{ mongodb_version }}.asc"
+    mode: "0644"
+    force: false
+
+- name: Add the MongoDB apt repository
+  ansible.builtin.apt_repository:
+    repo: >-
+      deb [signed-by=/etc/apt/keyrings/mongodb-server-{{ mongodb_version }}.asc]
+      https://repo.mongodb.org/apt/ubuntu {{ ansible_distribution_release }}/mongodb-org/{{ mongodb_version }} multiverse
+    filename: "mongodb-org-{{ mongodb_version }}"
+    state: present
+    update_cache: true
+
+- name: Install MongoDB
+  ansible.builtin.apt:
+    name: mongodb-org
+    state: present
+
+- name: Start + enable mongod
+  ansible.builtin.systemd:
+    name: mongod
+    enabled: true
+    state: started
+
+- name: Wait for mongod to accept connections
+  ansible.builtin.wait_for:
+    host: 127.0.0.1
+    port: 27017
+    timeout: 30
+
+# First run only: no users exist yet, so the localhost exception lets us
+# create the app user without credentials. Subsequent runs skip (marker).
+- name: Create the MongoDB app user (first run, via localhost exception)
+  ansible.builtin.shell:
+    cmd: |
+      set -euo pipefail
+      mongosh --quiet --host 127.0.0.1 --eval '
+        db.getSiblingDB("admin").createUser({
+          user: "{{ mongodb_app_user }}",
+          pwd: "{{ vault_mongodb_password }}",
+          roles: [{ role: "readWrite", db: "{{ mongodb_db_name }}" }]
+        })'
+      touch {{ onehealth_root }}/.mongo-user-created
+    creates: "{{ onehealth_root }}/.mongo-user-created"
+    executable: /bin/bash
+  no_log: true
+
+- name: Harden mongod config (loopback bind + auth enabled)
+  ansible.builtin.template:
+    src: mongod.conf.j2
+    dest: /etc/mongod.conf
+    mode: "0644"
+  notify: Restart mongod
