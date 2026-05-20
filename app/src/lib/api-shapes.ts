@@ -25,17 +25,21 @@ export type EventClass =
   | 'human.rash_or_bite'
   | 'human.exposure_water'
   | 'human.exposure_animal'
+  | 'human.animal_bite_scratch'
   | 'animal.dead_wildlife'
   | 'animal.dead_livestock'
   | 'animal.sick_unusual_behaviour'
   | 'animal.mass_die_off'
   | 'animal.unusual_species_sighting'
+  | 'animal.pet_sick'
+  | 'animal.malnourishment'
   | 'env.sewage'
   | 'env.smoke_or_burn'
   | 'env.standing_water'
   | 'env.water_quality'
   | 'env.air_quality'
-  | 'env.illegal_dumping';
+  | 'env.illegal_dumping'
+  | 'env.food_safety';
 
 export type SeverityIcon = 'grin' | 'neutral' | 'frown' | 'alarm';
 

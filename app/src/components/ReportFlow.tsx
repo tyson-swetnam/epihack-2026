@@ -50,6 +50,7 @@ const eventClassesByType: Record<
     { value: 'human.rash_or_bite', label: 'Rash or bite', emoji: '🦟' },
     { value: 'human.exposure_water', label: 'Water exposure', emoji: '🌊' },
     { value: 'human.exposure_animal', label: 'Animal exposure', emoji: '🐀' },
+    { value: 'human.animal_bite_scratch', label: 'Animal bite or scratch', emoji: '🐕' },
   ],
   animal: [
     { value: 'animal.dead_wildlife', label: 'Dead wildlife', emoji: '🦌' },
@@ -57,6 +58,8 @@ const eventClassesByType: Record<
     { value: 'animal.sick_unusual_behaviour', label: 'Sick / odd behaviour', emoji: '🦝' },
     { value: 'animal.mass_die_off', label: 'Mass die-off', emoji: '⚠️' },
     { value: 'animal.unusual_species_sighting', label: 'Unusual species', emoji: '🦂' },
+    { value: 'animal.pet_sick', label: 'Sick or injured pet', emoji: '🐾' },
+    { value: 'animal.malnourishment', label: 'Malnourished animal', emoji: '🦴' },
   ],
   environmental: [
     { value: 'env.sewage', label: 'Sewage', emoji: '🪣' },
@@ -65,6 +68,7 @@ const eventClassesByType: Record<
     { value: 'env.water_quality', label: 'Water quality', emoji: '🚱' },
     { value: 'env.air_quality', label: 'Air quality', emoji: '🌫️' },
     { value: 'env.illegal_dumping', label: 'Illegal dumping', emoji: '🗑️' },
+    { value: 'env.food_safety', label: 'Spoiled food / vendor', emoji: '🍔' },
   ],
 };
 

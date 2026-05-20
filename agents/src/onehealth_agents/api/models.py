@@ -32,12 +32,15 @@ EventClass = Literal[
     "human.rash_or_bite",
     "human.exposure_water",
     "human.exposure_animal",
+    "human.animal_bite_scratch",
     # animal
     "animal.dead_wildlife",
     "animal.dead_livestock",
     "animal.sick_unusual_behaviour",
     "animal.mass_die_off",
     "animal.unusual_species_sighting",
+    "animal.pet_sick",
+    "animal.malnourishment",
     # env
     "env.sewage",
     "env.smoke_or_burn",
@@ -45,6 +48,7 @@ EventClass = Literal[
     "env.water_quality",
     "env.air_quality",
     "env.illegal_dumping",
+    "env.food_safety",
 ]
 
 SymptomCategory = Literal[
