@@ -28,3 +28,8 @@ yarn-error.log*
 # OS
 .DS_Store
 Thumbs.db
+
+# generated / build artifacts
+next-env.d.ts
+*.tsbuildinfo
+/src/lib/api-types.ts

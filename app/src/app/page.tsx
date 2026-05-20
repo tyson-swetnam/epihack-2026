@@ -1,121 +1,75 @@
 /**
- * Landing page — the three-button report picker.
- *
- * Anonymity defaults per plan/06-mobile-app.md:
- *   - human:         anonymous by default, opt-in clinician contact via profile
- *   - animal:        FULLY anonymous (workplace whistleblower scenarios)
- *   - environmental: FULLY anonymous (workplace whistleblower scenarios)
+ * Welcome screen — ported from Elbaraaa/OneHealth (plan/08 Phase 2).
+ * "Start" → /report (the three-type picker). No login, no name.
  */
 import Link from 'next/link';
+import {
+  ArrowRight,
+  Globe2,
+  Heart,
+  LockKeyhole,
+  Shield,
+  Sparkles,
+} from 'lucide-react';
 
-type ReportType = 'human' | 'animal' | 'environmental';
-
-interface PickerCard {
-  type: ReportType;
-  emoji: string;
-  label: string;
-  sub: string;
-  ariaLabel: string;
-}
-
-const cards: PickerCard[] = [
-  {
-    type: 'human',
-    emoji: '🤒',
-    label: 'Person',
-    sub: 'Illness, heat, exposure',
-    ariaLabel: 'Report a human health event (illness, heat distress, exposure)',
-  },
-  {
-    type: 'animal',
-    emoji: '🦌',
-    label: 'Animal',
-    sub: 'Sick, dead, unusual',
-    ariaLabel: 'Report a sick, dead, or unusual animal — fully anonymous',
-  },
-  {
-    type: 'environmental',
-    emoji: '🪣',
-    label: 'Environment',
-    sub: 'Sewage, burn, smoke, water',
-    ariaLabel:
-      'Report an environmental hazard (sewage, burn, smoke, water) — fully anonymous',
-  },
-];
+import { AppTopBar } from '@/components/AppShell';
+import { AuthBadge } from '@/components/AuthBadge';
 
 export default function HomePage() {
   return (
     <>
-      <section className="hero">
-        <h1>What did you see?</h1>
-        <p>No login. No name. Just tap one.</p>
-      </section>
+      <AppTopBar brand right={<AuthBadge />} />
 
-      <div className="picker" role="group" aria-label="Report type picker">
-        {cards.map((card) => (
-          <Link
-            key={card.type}
-            href={`/report/${card.type}`}
-            className="picker-btn"
-            aria-label={card.ariaLabel}
-          >
-            <span className="picker-emoji" aria-hidden="true">
-              {card.emoji}
-            </span>
-            <span className="picker-label">{card.label}</span>
-            <span className="picker-sub">{card.sub}</span>
-          </Link>
-        ))}
-      </div>
+      <section className="flex min-h-[calc(100dvh-88px)] flex-col px-5 pb-8 pt-10 text-center">
+        <div className="mx-auto grid size-32 place-items-center rounded-lg border border-teal-900/10 bg-white/70 shadow-[0_16px_42px_rgba(0,121,107,0.10)]">
+          <div className="relative grid size-20 place-items-center">
+            <div className="absolute inset-2 rotate-45 rounded-[28px] bg-gradient-to-br from-teal-300 via-public-teal to-public-blue shadow-lg" />
+            <div className="absolute left-3 top-5 size-4 rounded-full bg-warm-gold" />
+            <div className="absolute right-3 top-3 size-3 rounded-full bg-cyan-300" />
+            <Shield className="relative z-10 size-7 text-white" aria-hidden="true" />
+            <Sparkles
+              className="absolute bottom-4 right-5 z-10 size-4 text-white"
+              aria-hidden="true"
+            />
+          </div>
+        </div>
 
-      <p className="muted small privacy-stamp">
-        <span aria-hidden="true">🛡️ </span>
-        Animal and Environment reports stay fully anonymous. Person reports
-        are anonymous by default — you choose later whether to share contact
-        details with a clinician.
-      </p>
-
-      <hr className="rule" />
-
-      <section className="legacy-flows">
-        <h2>Other flows (legacy prototype)</h2>
-        <p className="muted small">
-          The Phase-0/1 vanilla flows are preserved while they&apos;re ported
-          to React. Each link below is one of the original demo paths.
+        <h1 className="mt-8 text-2xl font-extrabold tracking-tight text-ink">
+          What did you see?
+        </h1>
+        <p className="mx-auto mt-3 max-w-[280px] text-base leading-6 text-slate-600">
+          Report a health worry about people, animals, or the environment.
         </p>
-        <ul>
-          <li>
-            <a href="/epihack-2026/app/legacy/tick/">Submit a tick</a>
-            <span className="muted small"> · VBD · Phase 0</span>
-          </li>
-          <li>
-            <a href="/epihack-2026/app/legacy/heat/check-in/">
-              Heat check-in (CHW)
-            </a>
-            <span className="muted small"> · Heat · Phase 1</span>
-          </li>
-          <li>
-            <a href="/epihack-2026/app/legacy/heat/self-report/">
-              Heat self-report
-            </a>
-            <span className="muted small"> · Heat · Phase 1</span>
-          </li>
-          <li>
-            <a href="/epihack-2026/app/legacy/heat/cool-off/">
-              Where can I cool off?
-            </a>
-            <span className="muted small"> · Heat · Phase 1</span>
-          </li>
-        </ul>
-      </section>
+        <p className="mx-auto mt-3 max-w-[290px] text-sm leading-5 text-slate-600">
+          No login. No name. It is safe and private.
+        </p>
 
-      <p className="meta">
-        Cross-references:{' '}
-        <a href="/epihack-2026/map/index.html">map of AZ</a> ·{' '}
-        <a href="/epihack-2026/graph/index.html">pathogen graph</a> ·{' '}
-        <a href="/epihack-2026/plan/index.html">plan</a> ·{' '}
-        <a href="/epihack-2026/plan/06-mobile-app.html">plan 06 (this app)</a>
-      </p>
+        <div className="mt-6 flex items-center justify-center gap-2 text-xs font-bold">
+          <span className="inline-flex items-center gap-1 rounded-md bg-teal-100 px-2 py-1 text-teal-700">
+            <LockKeyhole className="size-3" aria-hidden="true" />
+            Private
+          </span>
+          <span className="inline-flex items-center gap-1 rounded-md bg-public-teal px-2 py-1 text-white">
+            <Heart className="size-3" aria-hidden="true" />
+            Caring
+          </span>
+          <span className="inline-flex items-center gap-1 rounded-md bg-[#bd6847] px-2 py-1 text-white">
+            <Globe2 className="size-3" aria-hidden="true" />
+            One Health
+          </span>
+        </div>
+
+        <div className="mt-7">
+          <Link href="/report" className="app-button">
+            Start
+            <ArrowRight className="size-4" aria-hidden="true" />
+          </Link>
+        </div>
+
+        <p className="mt-4 text-[10px] font-medium text-slate-500">
+          Takes about 2 minutes · EXIF GPS stripped on your device
+        </p>
+      </section>
     </>
   );
 }

@@ -1,3 +1,10 @@
+/* Tailwind (added in plan/08 Phase 0). Existing hand-written rules below
+ * still load and override where they are more specific, so the current UI
+ * keeps working until the Phase-1/2 redesign replaces it. */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 /*
  * AZ One Health Sentinel — global styles
  *
@@ -250,3 +257,62 @@ body {
 .account-dl { display: grid; grid-template-columns: max-content 1fr; gap: .35rem 1rem; margin: 1rem 0; }
 .account-dl dt { color: var(--c-mute); }
 .account-dl dd { margin: 0; }
+
+/* === plan/08 Phase 1 — design system ported from Elbaraaa/OneHealth === */
+.focus-ring {
+  @apply focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-public-teal;
+}
+
+.phone-page {
+  min-height: 100dvh;
+  display: flex;
+  justify-content: center;
+  padding: 22px 10px;
+}
+
+.phone-screen {
+  width: min(100%, 390px);
+  min-height: calc(100dvh - 44px);
+  overflow: hidden;
+  border-radius: 12px;
+  background: #f4fbf8;
+  box-shadow: 0 22px 70px rgba(0, 0, 0, 0.28);
+}
+
+.phone-screen-flat {
+  background: linear-gradient(180deg, #e9fbf6 0%, #f8fcfa 42%, #f8fcfa 100%);
+}
+
+.app-button {
+  @apply focus-ring inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-md bg-public-teal px-4 py-3 text-sm font-extrabold text-white shadow-[0_8px_18px_rgba(0,121,107,0.22)] transition hover:bg-teal-800;
+}
+
+.app-button-secondary {
+  @apply focus-ring inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-md border border-public-teal bg-white px-4 py-3 text-sm font-extrabold text-public-teal transition hover:bg-soft-mint;
+}
+
+.choice-row {
+  @apply flex w-full items-center gap-3 rounded-md border border-slate-200 bg-white px-3 py-3 text-left shadow-sm transition hover:border-teal-200 hover:bg-white;
+}
+
+.progress-track {
+  @apply h-1.5 w-full rounded-full bg-slate-200;
+}
+
+.progress-fill {
+  @apply h-1.5 rounded-full bg-public-teal;
+}
+
+/* Phone-frame backdrop — overrides the legacy body rule above. */
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  min-height: 100vh;
+  color: #0e1f1f;
+  background:
+    radial-gradient(circle, rgba(255, 255, 255, 0.18) 1px, transparent 1px),
+    #202020;
+  background-size: 14px 14px;
+}

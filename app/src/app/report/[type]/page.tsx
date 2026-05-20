@@ -16,7 +16,14 @@ import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 
 import { ReportFlow } from '@/components/ReportFlow';
+import { AppTopBar } from '@/components/AppShell';
 import type { ReportType } from '@/lib/api-client';
+
+const TITLES: Record<ReportType, string> = {
+  human: 'Report a person',
+  animal: 'Report an animal',
+  environmental: 'Report a hazard',
+};
 
 const TYPES: ReportType[] = ['human', 'animal', 'environmental'];
 
@@ -26,27 +33,35 @@ export function generateStaticParams() {
   return TYPES.map((type) => ({ type }));
 }
 
-export function generateMetadata({
+// Next 16: `params` is a Promise and must be awaited.
+export async function generateMetadata({
   params,
 }: {
-  params: { type: string };
-}): Metadata {
-  if (!isReportType(params.type)) return {};
+  params: Promise<{ type: string }>;
+}): Promise<Metadata> {
+  const { type } = await params;
+  if (!isReportType(type)) return {};
   const title = {
     human: 'Report a person',
     animal: 'Report an animal event',
     environmental: 'Report an environmental hazard',
-  }[params.type];
+  }[type];
   return { title: `${title} — AZ One Health Sentinel` };
 }
 
-export default function ReportTypePage({
+export default async function ReportTypePage({
   params,
 }: {
-  params: { type: string };
+  params: Promise<{ type: string }>;
 }) {
-  if (!isReportType(params.type)) notFound();
-  return <ReportFlow reportType={params.type} />;
+  const { type } = await params;
+  if (!isReportType(type)) notFound();
+  return (
+    <>
+      <AppTopBar backHref="/report" title={TITLES[type]} />
+      <ReportFlow reportType={type} />
+    </>
+  );
 }
 
 function isReportType(s: string): s is ReportType {
