@@ -48,7 +48,10 @@ In scope:
 
 * Anything under [`mcp/`](./mcp/), [`agents/`](./agents/),
   [`schema/`](./schema/), [`app/`](./app/), [`dashboard/`](./dashboard/),
-  [`today/`](./today/).
+  [`today/`](./today/), and the deploy config under [`ansible/`](./ansible/).
+* The dual-sink report write path: the FastAPI `/v1/reports` endpoint,
+  the DuckLake (`kg_writer`) and MongoDB (`mongo_writer`) sinks, and the
+  `mongo_to_ducklake` sync (see [`plan/09`](./plan/09-mobile-datastore.md)).
 * Documented integrations (VectorSurv, NWS, MAG HRN, USGS WHISPers,
   iNaturalist, the ADHS / 211 / Great AZ Tick Check mock backends).
 * The static site served via GitHub Pages.
@@ -88,6 +91,10 @@ household.
   [`plan/CLUSTER-CALIBRATION.md`](./plan/CLUSTER-CALIBRATION.md).
 * Dashboards apply tribal suppression *before* aggregation so cell
   counts cannot be back-computed from neighbouring cells.
+* The mobile **MongoDB sink stores the same coarse fields as DuckLake**
+  (ZIP or 1 km grid only) and digests for free-text/claim tokens — the
+  re-identification surface is identical across channels because
+  coarsening and suppression run *before* the sink is chosen.
 
 ### 2. MCP-server credential leakage
 
@@ -105,6 +112,11 @@ committed `.env`.
   raw payloads or headers.
 * Credentials are per-process and per-MCP-server, not shared across
   the orchestrator.
+* The MongoDB sink reads `MONGODB_URI` from the environment
+  (vault-managed at deploy time); when it is unset the writer falls back
+  to an in-memory `mongomock` client, so dev and tests need no real
+  credential. Self-hosted MongoDB is bound to `127.0.0.1` with
+  authorization enabled and an app user created from the vault password.
 
 ### 3. Malicious agency-token reuse
 
@@ -117,7 +129,8 @@ read data outside that CHW's caseload.
 
 * The Validation Agent is the single write-enforcement point and
   checks `consent_profile` on every write regardless of caller
-  identity.
+  identity — and it runs *before* the per-channel sink (DuckLake or
+  MongoDB) is selected, so neither channel can bypass it.
 * The `knowledge-graph-mcp` SQL escape-hatch (`kg_sql`) is **SELECT-only**:
   the server parses the SQL and rejects any non-SELECT keyword
   before execution. Do not weaken this filter.
@@ -212,6 +225,32 @@ you can close any of these, please open a PR.
   quarterly tabletop review; we have not yet scheduled the first
   one. ITCA-TEC notification on tribal-touching reports is policy,
   not yet automation.
+* **Server-side EXIF check is a placeholder.** On the write-path branch
+  the server-side `_photo_has_exif_gps` defence-in-depth check
+  (`agents/.../api/routes/reports.py`) currently returns `False`; the
+  **client-side strip** (`app/src/lib/exif-stripper.ts`) is the only
+  active control today. The server-side check and the full
+  Triage/Enrichment agent chain land in a later phase
+  (plan/07, plan/09); until then the contract's `photo_exif_gps_present`
+  (422) rejection is specified but not yet enforced at the wire.
+* **Mobile→DuckLake sync is eventually consistent.** Mobile-channel
+  reports persist to MongoDB immediately but reach DuckLake — and thus
+  the agents, MCP analytics, and cluster detection — only on the next
+  `mongo_to_ducklake` tick. Cluster signals from mobile-only reports
+  therefore lag by the timer interval. The job is idempotent on
+  `observation_id`, so re-runs are safe; a change-stream consumer is the
+  lower-latency upgrade path.
+* **Offline queue retains report JSON on-device.** The app's offline
+  retry queue (`app/src/lib/offline-queue.ts`) parks the
+  already-coarsened, EXIF-free report payload in the device's
+  `localStorage` until it flushes on reconnect, and queued payloads
+  survive app restarts. That payload includes any free-text `notes` in
+  plaintext (the server digests them only on receipt); photos are not
+  queued. On a shared or compromised device the cache is readable until
+  the report lands.
+* **MongoDB write-path is new.** Production deployments must set a real
+  `MONGODB_URI` (vault-managed); the in-memory `mongomock` fallback
+  persists nothing across restarts and must never back a live deployment.
 
 ## Disclosure timeline
 
