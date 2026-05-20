@@ -110,6 +110,19 @@ paths:
            Notification agent chain (see plan/03).
         6. Return an `observation_id` plus a one-time `claim_token`
            the client can use to attach a profile or check status.
+      parameters:
+        - name: X-Client-Channel
+          in: header
+          required: false
+          schema:
+            type: string
+            enum: [web, mobile]
+            default: web
+          description: |
+            Which client filed the report. `mobile` routes the write to the
+            MongoDB store (synced to DuckLake for analytics); `web` (default)
+            writes straight to the DuckLake knowledge graph. See
+            plan/09-mobile-datastore.md.
       requestBody:
         required: true
         content:

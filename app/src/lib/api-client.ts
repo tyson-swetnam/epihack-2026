@@ -25,6 +25,11 @@ export type ReportType = 'human' | 'animal' | 'environmental';
 
 const BASE = process.env.NEXT_PUBLIC_API_BASE ?? 'mock';
 
+// Which client this build is. The Capacitor mobile build sets
+// NEXT_PUBLIC_CLIENT_CHANNEL=mobile so the API routes its writes to MongoDB;
+// the web build leaves it 'web' (DuckLake). See plan/09-mobile-datastore.md.
+const CLIENT_CHANNEL = process.env.NEXT_PUBLIC_CLIENT_CHANNEL ?? 'web';
+
 function isMock(): boolean {
   return BASE === 'mock';
 }
@@ -70,6 +75,7 @@ export async function createReport(
   if (photo) form.append('photo', photo, 'report.jpg');
   const res = await fetch(`${BASE}/v1/reports`, {
     method: 'POST',
+    headers: { 'X-Client-Channel': CLIENT_CHANNEL },
     body: form,
     signal: opts.signal,
   });

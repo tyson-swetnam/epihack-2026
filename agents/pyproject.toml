@@ -27,6 +27,11 @@ dependencies = [
     # DuckLake knowledge-graph writes: the reports intake write-path
     # (kg_writer.py) and the DuckLakeAuditSink persist into the catalog.
     "duckdb>=1.5",
+    # MongoDB mobile-channel write-path (plan/09). pymongo talks to a real
+    # Mongo when MONGODB_URI is set; mongomock is the in-memory fallback used
+    # until Phase B provisions Mongo (and in the offline tests).
+    "pymongo>=4.8",
+    "mongomock>=4.1",
 ]
 
 [project.optional-dependencies]
