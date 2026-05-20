@@ -12,6 +12,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 
+import { AppTopBar } from '@/components/AppShell';
 import { useSession } from '@/components/AuthProvider';
 import { signOut } from '@/lib/supabase';
 
@@ -25,64 +26,63 @@ export default function AccountPage() {
     }
   }, [loading, configured, user, router]);
 
-  if (loading || !user) return <p className="muted small">Loading…</p>;
+  if (loading || !user) {
+    return (
+      <>
+        <AppTopBar backHref="/" title="Your account" />
+        <p className="px-4 pt-6 text-sm text-slate-500">Loading…</p>
+      </>
+    );
+  }
 
   return (
-    <article className="account">
-      <nav className="crumbs">
-        <Link href="/">&laquo; Home</Link>
-      </nav>
+    <>
+      <AppTopBar backHref="/" title="Your account" />
+      <section className="flex flex-col gap-4 px-4 pb-8 pt-5">
+        <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 rounded-md bg-soft-mint p-3 text-sm">
+          <dt className="font-semibold text-ink">Email</dt>
+          <dd className="text-slate-600">{user.email ?? '—'}</dd>
+          <dt className="font-semibold text-ink">Provider</dt>
+          <dd className="text-slate-600">
+            {(user.app_metadata?.provider as string | undefined) ?? 'email'}
+          </dd>
+          <dt className="font-semibold text-ink">User ID</dt>
+          <dd className="break-all text-slate-600">
+            <code className="text-xs">{user.id}</code>
+          </dd>
+        </dl>
 
-      <h2>Your account</h2>
-      <dl className="account-dl">
-        <dt>Email</dt>
-        <dd>{user.email ?? '—'}</dd>
-        <dt>Provider</dt>
-        <dd>
-          {(user.app_metadata?.provider as string | undefined) ?? 'email'}
-        </dd>
-        <dt>User ID</dt>
-        <dd>
-          <code>{user.id}</code>
-        </dd>
-      </dl>
+        <div>
+          <h3 className="text-sm font-extrabold text-ink">Reports</h3>
+          <p className="mt-1 text-xs leading-5 text-slate-500">
+            Reports you&apos;ve <strong>attached</strong> to this account appear
+            here. Anonymous reports do not — a signed-in user can still file
+            fully anonymous reports.
+          </p>
+          <Link
+            href="/account/reports"
+            className="focus-ring mt-2 inline-block text-xs font-semibold text-public-teal"
+          >
+            See attached reports →
+          </Link>
+        </div>
 
-      <h3>Reports</h3>
-      <p className="muted small">
-        Reports you&apos;ve <strong>attached</strong> to this account appear here.
-        Anonymous reports do not. (Plan 07 case 3: a signed-in user can still
-        file fully anonymous reports.)
-      </p>
-      <p>
-        <Link href="/account/reports">See attached reports →</Link>
-      </p>
-
-      <h3>Privacy</h3>
-      <p className="muted small">
-        Persistent profile + per-field consent toggles (home ZIP,
-        contact channels, photo-GPS opt-in, demographic fields) land
-        in the next commit — they map 1-to-1 to the{' '}
-        <a href="/epihack-2026/api/openapi.yaml">
-          <code>AccountProfile</code>
-        </a>{' '}
-        shape in the OpenAPI spec.
-      </p>
-
-      <div className="actions">
-        <button
-          type="button"
-          className="btn secondary"
-          onClick={async () => {
-            await signOut();
-            router.replace('/');
-          }}
-        >
-          Sign out
-        </button>
-        <Link className="btn ghost" href="/account/delete">
-          Delete my account
-        </Link>
-      </div>
-    </article>
+        <div className="mt-2 flex gap-2">
+          <button
+            type="button"
+            className="app-button-secondary"
+            onClick={async () => {
+              await signOut();
+              router.replace('/');
+            }}
+          >
+            Sign out
+          </button>
+          <Link className="app-button-secondary" href="/account/delete">
+            Delete account
+          </Link>
+        </div>
+      </section>
+    </>
   );
 }

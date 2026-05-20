@@ -22,6 +22,9 @@ const initial: FormState = {
   share_photo_gps_human: false,
 };
 
+const fieldClass =
+  'focus-ring w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-normal';
+
 export function ProfileForm() {
   const [state, setState] = useState<FormState>(initial);
   const [status, setStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
@@ -49,8 +52,7 @@ export function ProfileForm() {
         ...(state.contact_sms ? { sms_phone: state.contact_sms } : {}),
       };
     }
-    if (state.share_photo_gps_animal_env)
-      patch.share_photo_gps_animal_env = true;
+    if (state.share_photo_gps_animal_env) patch.share_photo_gps_animal_env = true;
     if (state.share_photo_gps_human) patch.share_photo_gps_human = true;
 
     try {
@@ -62,9 +64,21 @@ export function ProfileForm() {
     }
   };
 
+  const toggle = (key: keyof FormState, label: string) => (
+    <label className="choice-row cursor-pointer">
+      <input
+        type="checkbox"
+        checked={state[key] as boolean}
+        onChange={(e) => setState({ ...state, [key]: e.target.checked })}
+        className="mt-0.5 size-4 shrink-0 accent-public-teal"
+      />
+      <span className="flex-1 text-sm text-ink">{label}</span>
+    </label>
+  );
+
   return (
-    <form onSubmit={onSubmit} className="profile-form">
-      <label className="field">
+    <form onSubmit={onSubmit} className="flex flex-col gap-4">
+      <label className="flex flex-col gap-1 text-sm font-semibold text-ink">
         Home ZIP (optional)
         <input
           type="text"
@@ -73,86 +87,66 @@ export function ProfileForm() {
           value={state.home_zip}
           onChange={(e) => setState({ ...state, home_zip: e.target.value })}
           autoComplete="postal-code"
+          className={fieldClass}
         />
       </label>
 
-      <fieldset>
-        <legend>Contact about my reports</legend>
-        <label className="field">
+      <fieldset className="flex flex-col gap-2">
+        <legend className="mb-1 text-xs font-bold uppercase tracking-wide text-public-teal">
+          Contact about my reports
+        </legend>
+        <label className="flex flex-col gap-1 text-sm font-semibold text-ink">
           Email
           <input
             type="email"
             value={state.contact_email}
-            onChange={(e) =>
-              setState({ ...state, contact_email: e.target.value })
-            }
+            onChange={(e) => setState({ ...state, contact_email: e.target.value })}
+            className={fieldClass}
           />
         </label>
-        <label className="field">
+        <label className="flex flex-col gap-1 text-sm font-semibold text-ink">
           SMS / phone
           <input
             type="tel"
             value={state.contact_sms}
-            onChange={(e) =>
-              setState({ ...state, contact_sms: e.target.value })
-            }
+            onChange={(e) => setState({ ...state, contact_sms: e.target.value })}
+            className={fieldClass}
           />
         </label>
       </fieldset>
 
-      <fieldset>
-        <legend>Share precise location with verified agencies?</legend>
-        <label className="toggle">
-          <input
-            type="checkbox"
-            checked={state.precise_location_consent}
-            onChange={(e) =>
-              setState({
-                ...state,
-                precise_location_consent: e.target.checked,
-              })
-            }
-          />
-          Allow agencies to read the precise GPS captured with my reports
-        </label>
-        <label className="toggle">
-          <input
-            type="checkbox"
-            checked={state.share_photo_gps_animal_env}
-            onChange={(e) =>
-              setState({
-                ...state,
-                share_photo_gps_animal_env: e.target.checked,
-              })
-            }
-          />
-          Keep photo GPS on animal &amp; environment reports
-        </label>
-        <label className="toggle">
-          <input
-            type="checkbox"
-            checked={state.share_photo_gps_human}
-            onChange={(e) =>
-              setState({ ...state, share_photo_gps_human: e.target.checked })
-            }
-          />
-          Keep photo GPS on person reports
-        </label>
+      <fieldset className="flex flex-col gap-2">
+        <legend className="mb-1 text-xs font-bold uppercase tracking-wide text-public-teal">
+          Share precise location with verified agencies?
+        </legend>
+        {toggle(
+          'precise_location_consent',
+          'Allow agencies to read the precise GPS captured with my reports'
+        )}
+        {toggle(
+          'share_photo_gps_animal_env',
+          'Keep photo GPS on animal & environment reports'
+        )}
+        {toggle('share_photo_gps_human', 'Keep photo GPS on person reports')}
       </fieldset>
 
-      <div className="actions">
-        <button type="submit" className="btn" disabled={status === 'saving'}>
-          {status === 'saving' ? 'Saving…' : 'Save profile'}
-        </button>
-      </div>
+      <button type="submit" className="app-button" disabled={status === 'saving'}>
+        {status === 'saving' ? 'Saving…' : 'Save profile'}
+      </button>
 
       {status === 'saved' && (
-        <p role="status" className="muted small">
-          ✅ Profile attached to your most recent report.
+        <p
+          role="status"
+          className="rounded-md border border-teal-200 bg-soft-mint px-3 py-2 text-sm text-public-teal"
+        >
+          ✓ Profile attached to your most recent report.
         </p>
       )}
       {error && (
-        <p role="alert" className="error-banner">
+        <p
+          role="alert"
+          className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700"
+        >
           {error}
         </p>
       )}

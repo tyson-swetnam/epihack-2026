@@ -9,7 +9,9 @@
  */
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { Loader2 } from 'lucide-react';
 
+import { AppTopBar } from '@/components/AppShell';
 import { getSupabase, isAuthConfigured } from '@/lib/supabase';
 
 export default function AuthCallbackPage() {
@@ -44,10 +46,23 @@ export default function AuthCallbackPage() {
   }, [router]);
 
   return (
-    <article>
-      <h2>Finishing sign-in…</h2>
-      {error && <p className="error-banner" role="alert">{error}</p>}
-      {!error && <p className="muted small">One moment.</p>}
-    </article>
+    <>
+      <AppTopBar title="Finishing sign-in" />
+      <section className="flex flex-col items-center gap-3 px-4 py-12 text-center">
+        {!error ? (
+          <>
+            <Loader2 className="size-7 animate-spin text-public-teal" aria-hidden="true" />
+            <p className="text-sm text-slate-600">One moment…</p>
+          </>
+        ) : (
+          <p
+            className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700"
+            role="alert"
+          >
+            {error}
+          </p>
+        )}
+      </section>
+    </>
   );
 }
