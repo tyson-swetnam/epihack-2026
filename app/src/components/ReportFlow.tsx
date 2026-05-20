@@ -11,6 +11,7 @@
  */
 import { useCallback, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   ArrowLeft,
   Camera,
@@ -102,11 +103,14 @@ const NEXT_ACTION_COPY: Record<NextAction, { title: string; hint: string }> = {
 };
 
 export function ReportFlow({ reportType }: { reportType: ReportType }) {
+  const router = useRouter();
   const [step, setStep] = useState<Step>('photo');
   const [photo, setPhoto] = useState<{ blob: Blob; originalHadGps: boolean } | null>(null);
   const [eventClass, setEventClass] = useState<EventClass | null>(null);
   const [coarseLocation, setCoarseLocation] = useState<CoarseLocation | null>(null);
-  const [consented, setConsented] = useState(false);
+  // Opt-in: set up a profile after submitting (e.g. to view the dashboard).
+  // Submitting anonymously requires NO checkbox — that's the default path.
+  const [wantProfile, setWantProfile] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [ack, setAck] = useState<ReportAck | null>(null);
 
@@ -144,9 +148,11 @@ export function ReportFlow({ reportType }: { reportType: ReportType }) {
     else if (raw === '') setCoarseLocation(null);
   }, []);
 
+  // Anonymous submit needs only an event class + a coarse location — no
+  // consent checkbox.
   const canSubmit = useMemo(
-    () => Boolean(eventClass && coarseLocation && consented),
-    [eventClass, coarseLocation, consented]
+    () => Boolean(eventClass && coarseLocation),
+    [eventClass, coarseLocation]
   );
 
   const onSubmit = useCallback(async () => {
@@ -161,12 +167,21 @@ export function ReportFlow({ reportType }: { reportType: ReportType }) {
       };
       const result = await createReport(payload, photo?.blob ?? null);
       setAck(result);
-      setStep('done');
+      // Stash the claim token so the profile flow can attach to this report.
+      try {
+        window.localStorage.setItem('lastObservationId', result.observation_id);
+        window.localStorage.setItem('lastClaimToken', result.claim_token);
+      } catch {
+        /* localStorage unavailable — profile attach just won't prefill */
+      }
+      // If the user opted into a profile at submit time, go straight there.
+      if (wantProfile) router.push('/profile');
+      else setStep('done');
     } catch (err) {
       setError((err as Error).message);
       setStep('consent');
     }
-  }, [eventClass, coarseLocation, reportType, photo]);
+  }, [eventClass, coarseLocation, reportType, photo, wantProfile, router]);
 
   const progressPct =
     step === 'done' || step === 'submitting'
@@ -314,17 +329,21 @@ export function ReportFlow({ reportType }: { reportType: ReportType }) {
         </section>
       )}
 
-      {/* ----- Consent ---------------------------------------------------- */}
+      {/* ----- Review & submit ------------------------------------------- */}
       {step === 'consent' && (
         <section className="flex flex-col gap-3">
-          <h2 className="text-base font-extrabold text-ink">Ready to submit?</h2>
+          <h2 className="text-base font-extrabold text-ink">Review &amp; submit</h2>
+          <p className="text-xs text-slate-500">
+            Submitting is anonymous — no account or checkbox needed. Here&apos;s
+            what we keep:
+          </p>
           <ul className="flex flex-col gap-2 rounded-md bg-soft-mint p-3 text-sm text-ink">
             {[
               'Coarse location is kept (ZIP or ~1 km cell).',
               'Precise GPS is discarded.',
               'Photo (if any) is kept without its GPS tag.',
               'Your IP is hashed and dropped — never stored.',
-              'No name, contact, or demographics are asked here.',
+              'No name, contact, or demographics are required.',
             ].map((line) => (
               <li key={line} className="flex items-start gap-2">
                 <Check className="mt-0.5 size-4 shrink-0 text-public-teal" aria-hidden="true" />
@@ -332,24 +351,31 @@ export function ReportFlow({ reportType }: { reportType: ReportType }) {
               </li>
             ))}
           </ul>
+
+          {/* Optional — opt into a profile (e.g. to view the dashboard). */}
           <label className="choice-row cursor-pointer">
             <input
               type="checkbox"
-              checked={consented}
-              onChange={(e) => setConsented(e.target.checked)}
-              className="size-4 accent-public-teal"
+              checked={wantProfile}
+              onChange={(e) => setWantProfile(e.target.checked)}
+              className="mt-0.5 size-4 shrink-0 accent-public-teal"
             />
             <span className="flex-1 text-sm text-ink">
-              I understand and want to submit this anonymously.
+              Set up a profile after I submit
+              <span className="block text-xs text-slate-500">
+                Optional — lets you follow up and view the public analytics
+                dashboard. You can also do this later.
+              </span>
             </span>
           </label>
+
           <div className="mt-2 flex gap-2">
             <button className="app-button-secondary" onClick={() => setStep('where')}>
               <ArrowLeft className="size-4" aria-hidden="true" />
               Back
             </button>
             <button className="app-button" disabled={!canSubmit} onClick={onSubmit}>
-              Submit
+              {wantProfile ? 'Submit & add profile' : 'Submit anonymously'}
             </button>
           </div>
         </section>
@@ -426,12 +452,16 @@ export function ReportFlow({ reportType }: { reportType: ReportType }) {
             Reference: <code>{ack?.observation_id ?? '—'}</code>
           </p>
 
-          <div className="mt-2 flex w-full gap-2">
+          <p className="max-w-[280px] text-xs text-slate-500">
+            Want to follow up or see the public analytics dashboard? Create a
+            profile — optional, and your report stays anonymous.
+          </p>
+          <div className="mt-1 flex w-full gap-2">
             <Link className="app-button-secondary" href="/report">
               File another
             </Link>
             <Link className="app-button" href="/profile">
-              Save a profile
+              Create a profile
             </Link>
           </div>
         </section>
