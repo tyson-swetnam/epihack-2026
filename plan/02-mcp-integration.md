@@ -24,6 +24,7 @@ server, not by negotiating bilateral integrations.
 | `211-az-mcp` | ⏳ planned | 211 Arizona resource directory | Heat |
 | `knowledge-graph-mcp` | ⏳ planned | This repo's DuckLake graph (read + write) | Both |
 | `outbreaks-near-me-mcp` | 🔭 future | Federation with Boston Children's [Outbreaks Near Me](https://outbreaksnearme.org/us/en-US) symptom-cluster platform (successor to Flu Near You). OBNM is the canonical human-symptom-side participatory-surveillance platform; this MCP would let the AZ agents pull symptom-cluster context for a user's ZIP and contribute Sentinel reports back upstream. Gated on a partnership with the HealthMap team. | Both |
+| `medsis-mcp` | 🔭 future / blocked | AZDHS **MEDSIS** communicable-disease surveillance — no public read API (PHI behind `connect.azdhs.gov`); only feasible as an *outbound* HL7/ELR reporting connector. See the [MEDSIS assessment](#medsis-azdhs-disease-surveillance--integration-assessment) below. | Both |
 
 ## Parameter-by-parameter source map
 
@@ -159,3 +160,59 @@ itself can be queried for "what MCP tools answer Heat Q1?".
 - **Personally-identifying observation data** never leaves the app
   client unless the user explicitly opts into a verified outreach
   contact. Default flows are anonymous + ZIP-coarse.
+
+## MEDSIS (AZDHS disease surveillance) — integration assessment
+
+**MEDSIS** is the **Medical/Disease Surveillance Information System**, the
+Arizona Department of Health Services' official communicable-disease
+surveillance system of record (clinicians, labs, and county health
+departments report reportable conditions into it).
+
+- **Access:** role-based login at `https://connect.azdhs.gov/`, registered
+  users only. Holds **PHI** — case reports, conditions, lab results, patient
+  demographics. Help desk: `medsishelpdesk@siren.az.gov`.
+- **Machine interfaces are inbound to ADHS only:**
+  - **AZ ELR** (Electronic Laboratory Reporting) feeds lab results *into*
+    MEDSIS using **HL7 v2.5.1 ELR2PH** (US Realm). It is a monitored,
+    **unidirectional daily batch**; senders onboard with the ADHS
+    implementation team and pass HL7 validation. >50% of lab results now
+    arrive via ELR.
+  - **AZ Syndromic Surveillance (AZSSIG)** ingests ED/urgent-care HL7 ADT.
+  - Otherwise reporting is manual MEDSIS data entry or fax.
+- **No public/REST read API and no documented outbound export.** (Confirmed
+  against the MEDSIS User Guide and the AZ ELR Implementation Guide v1.3.)
+
+### Can we build a `medsis-mcp`?
+
+**Not as a read-only data source — today this is blocked.** Unlike
+`vectorsurv-mcp` (open OpenAPI) or `adhs-mcp` (ADHS *open* data), MEDSIS
+exposes no public query API; all access is credentialed PHI behind
+`connect.azdhs.gov`. A read MCP would require an AZDHS data-sharing agreement
+plus MEDSIS service credentials, and would be returning PHI — incompatible
+with this project's anonymous, ZIP-coarse privacy contract.
+
+**The only feasible direction is *outbound reporting*** — a connector that
+formats Sentinel signals as **HL7 v2.5.1 ELR2PH / case-report** messages for
+submission to ADHS, making the Sentinel a *reporting source* rather than a
+data consumer. This is gated on:
+
+1. a formal **AZDHS partnership** + ELR sender enrollment + HL7 validation; and
+2. a **privacy reconciliation** — MEDSIS case/lab reports are *identified*
+   PHI, whereas Sentinel reports are anonymous and coarsened. Anonymous,
+   ZIP-coarse observations are **not** reportable case reports, so any feed
+   would be aggregate / syndromic-style signal counts agreed with ADHS,
+   **never row-level PII**. The Validation Agent's suppression rules and the
+   [Auth + data-sovereignty notes](#auth--data-sovereignty-notes) apply.
+
+**Recommendation:** keep `adhs-mcp` (ADHS *open* data) as the near-term ADHS
+integration. Treat `medsis-mcp` as a **future, partnership-gated outbound
+reporting connector**, tracked as 🔭 future / blocked in the inventory — not a
+Phase-1 data source. If a partnership lands, build it from the
+[spec template](#mcp-server-spec-template-for-each-new-server) with an HL7
+v2.5.1 ELR2PH message builder + a `MEDSIS_*` credential set, and add a
+sunset / MOU-renewal clause per `GOVERNANCE.md` (as with tribal-data servers).
+
+_Sources: AZDHS [MEDSIS User Guide](https://www.azdhs.gov/opioid/documents/medsis-user-guide-training.pdf);
+[AZ ELR Implementation Guide v1.3](https://www.azdhs.gov/documents/preparedness/epidemiology-disease-control/pi/az-emr-implementation-guide.pdf)
+(HL7 v2.5.1 ELR2PH); [AZ Syndromic Surveillance Implementation Guide](https://www.azdhs.gov/documents/preparedness/epidemiology-disease-control/pi/syndromic-surveillance/az-ss-implementation-guide.pdf);
+[AZDHS MEDSIS / Infectious Disease Services](https://azdhs.gov/medsis/)._
