@@ -62,8 +62,9 @@
   <p>A working knowledge framework for the
      <a href="https://endingpandemicsacademy.arizona.edu/trainings-events/epihack-arizona"
         style="color:#fff;text-decoration:underline">EpiHack Arizona</a>
-     event &mdash; reference figures, breakout-session worksheets, focus-group
-     materials, and a DuckLake / DuckDB / Postgres knowledge graph.</p>
+     event &mdash; a mobile-first reporting app, an eight-agent FastAPI
+     backend, eleven MCP servers, and a dual MongoDB + DuckLake datastore
+     over a DuckDB / Postgres knowledge graph.</p>
 </div>
 
 <h2>Reference frameworks</h2>
@@ -118,10 +119,11 @@
 <div class="section-grid">
   <a class="card" href="plan/index.html" style="--c: #1F3A93">
     <h3>AZ One Health Sentinel — plan</h3>
-    <p>Five-document plan for a mobile-first participatory-surveillance
-       app spanning Vector-Borne Disease and Heat: parameter mapping,
-       MCP integration, agentic architecture, end-to-end data flows,
-       and a phased roadmap tied to the Figure 3 timeliness milestones.</p>
+    <p>Nine-part plan (01&ndash;09) for a mobile-first
+       participatory-surveillance app spanning Vector-Borne Disease and
+       Heat: parameter mapping, MCP integration, agentic architecture,
+       end-to-end data flows, auth, the mobile UX revamp, the dual
+       MongoDB / DuckLake datastore, and a phased roadmap.</p>
     <div class="badges">
       <span class="badge">plan</span>
       <span class="badge">agentic</span>
@@ -152,20 +154,25 @@
   </a>
 </div>
 
-<h2>Prototype app (Phase 0 + 1)</h2>
+<h2>Reporting app (Phase 0 + 1)</h2>
 <div class="section-grid">
   <a class="card" href="app/index.html" style="--c: #1F3A93">
     <h3>AZ One Health Sentinel &mdash; reporting app</h3>
-    <p>Next.js + TypeScript + React, typed against the
+    <p>Next.js&nbsp;16 + React&nbsp;19 + TypeScript + Tailwind, typed against the
        <a href="api/openapi.yaml">OpenAPI spec</a>. Anonymous-first
        Human / Animal / Environmental reporting, EXIF-stripped photos,
-       ZIP / 1&nbsp;km coarsening, never-diagnose triage. See
-       <a href="plan/06-mobile-app.html">plan&nbsp;06</a>.</p>
+       ZIP / 1&nbsp;km coarsening, never-diagnose triage, an offline retry
+       queue, and an <code>X-Client-Channel</code> header routing mobile
+       writes to MongoDB and web writes to DuckLake. See
+       <a href="plan/06-mobile-app.html">plan&nbsp;06</a> +
+       <a href="plan/09-mobile-datastore.html">plan&nbsp;09</a>.</p>
     <div class="badges">
       <span class="badge">vbd</span>
       <span class="badge">heat</span>
       <span class="badge">env</span>
       <span class="badge">react</span>
+      <span class="badge">offline</span>
+      <span class="badge">mongo</span>
     </div>
   </a>
   <a class="card" href="app/legacy/index.html" style="--c: #C0392B">
@@ -251,6 +258,20 @@
        6 tools, 21 canned AZ observations, place_id=53.</p>
     <div class="badges"><span class="badge">vbd</span><span class="badge">shipped</span></div>
   </a>
+  <a class="card" href="mcp/sms-entry-mcp/README.html" style="--c: #00897B">
+    <h3>sms-entry-mcp</h3>
+    <p>SMS-only intake adapter for feature-phone reporting &mdash; Twilio
+       HMAC-SHA1 signature verification, message normalisation, and
+       intent parsing. 6 tools, mock-by-default.</p>
+    <div class="badges"><span class="badge">both</span><span class="badge">shipped</span></div>
+  </a>
+  <a class="card" href="mcp/wearable-mcp/README.html" style="--c: #E6A038">
+    <h3>wearable-mcp</h3>
+    <p>HealthKit / Health Connect readings (skin temp, HRV, sweat rate,
+       heart rate) for heat-strain signals. On-device-only privacy
+       posture; 4 tools, mock-by-default.</p>
+    <div class="badges"><span class="badge">heat</span><span class="badge">shipped</span></div>
+  </a>
 </div>
 
 <h2>Interactive visualizations</h2>
@@ -310,7 +331,11 @@
 <h2>Knowledge graph</h2>
 <p>The structured content above is mirrored in SQL seeds for a property
 graph encoded in <strong>DuckLake</strong> (with <strong>Postgres</strong> as
-the catalog) and queried via <strong>DuckDB</strong>:</p>
+the catalog) and queried via <strong>DuckDB</strong>. DuckLake is the
+<strong>web + analytics store</strong>; the mobile app writes to
+<strong>MongoDB</strong>, synced back into DuckLake so the agents, MCP
+servers, and cluster detection see one dataset
+(<a href="plan/09-mobile-datastore.html">plan&nbsp;09</a>):</p>
 <ul>
   <li><a href="schema/knowledge_graph.sql"><code>schema/knowledge_graph.sql</code></a> &mdash; core nodes, edges, properties from Figures 1&ndash;4.</li>
   <li><a href="schema/system_designs.sql"><code>schema/system_designs.sql</code></a> &mdash; worksheet template, focus areas, completed designs.</li>
