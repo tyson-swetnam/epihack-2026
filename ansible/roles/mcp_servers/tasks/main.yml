@@ -27,11 +27,13 @@
 
 - name: Verify Claude Code lists every MCP server
   become_user: "{{ onehealth_user }}"
-  ansible.builtin.shell: |
-    set -euo pipefail
-    export PATH="{{ onehealth_home }}/.npm-global/bin:$PATH"
-    cd {{ onehealth_repo_path }}
-    claude mcp list || true   # tolerate the case where claude can't reach the LLM during smoke
+  ansible.builtin.shell:
+    cmd: |
+      set -euo pipefail
+      export PATH="{{ onehealth_home }}/.npm-global/bin:$PATH"
+      cd {{ onehealth_repo_path }}
+      claude mcp list || true   # tolerate the case where claude can't reach the LLM during smoke
+    executable: /bin/bash
   register: mcp_list
   changed_when: false
 

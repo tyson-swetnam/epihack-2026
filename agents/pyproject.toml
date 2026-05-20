@@ -24,6 +24,9 @@ dependencies = [
     # Supabase-issued JWT validation (plan/07-auth.md).
     "PyJWT[crypto]>=2.9",
     "email-validator>=2.2",
+    # DuckLake knowledge-graph writes: the reports intake write-path
+    # (kg_writer.py) and the DuckLakeAuditSink persist into the catalog.
+    "duckdb>=1.5",
 ]
 
 [project.optional-dependencies]

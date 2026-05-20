@@ -8,9 +8,36 @@
   ansible.builtin.command:
     cmd: uv sync
     chdir: "{{ onehealth_repo_path }}/agents"
-    creates: "{{ onehealth_repo_path }}/agents/.venv/bin/uvicorn"
+  # No `creates:` guard — uv sync is idempotent and fast, and we must pick up
+  # dependency changes (e.g. duckdb for the DuckLake write-path) on re-deploy.
+  register: agents_uv_sync
+  changed_when: "'Installed' in agents_uv_sync.stderr or 'Prepared' in agents_uv_sync.stderr"
+  notify: Restart fastapi
   environment:
     PATH: "/usr/local/bin:/usr/bin:/bin"
+
+- name: Create the DuckDB extension home for the API service
+  ansible.builtin.file:
+    path: "{{ ducklake_duckdb_home }}"
+    state: directory
+    owner: "{{ onehealth_user }}"
+    group: "{{ onehealth_group }}"
+    mode: "0750"
+
+# Pre-install the ducklake + postgres extensions for the agents venv's exact
+# duckdb version, so the running service never needs network at request time.
+- name: Pre-install DuckDB extensions for the API's duckdb
+  become_user: "{{ onehealth_user }}"
+  ansible.builtin.command:
+    cmd: >
+      {{ onehealth_repo_path }}/agents/.venv/bin/python -c
+      "import duckdb; c=duckdb.connect();
+      c.execute('INSTALL ducklake'); c.execute('INSTALL postgres');
+      c.execute('LOAD ducklake'); c.execute('LOAD postgres')"
+  environment:
+    HOME: "{{ ducklake_duckdb_home }}"
+  register: ext_install
+  changed_when: false
 
 - name: Write the FastAPI env file
   ansible.builtin.template:

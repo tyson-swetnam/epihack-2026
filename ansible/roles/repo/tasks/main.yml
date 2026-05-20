@@ -1,19 +1,77 @@
 ---
-# Clone the repo to {{ onehealth_repo_path }}. Idempotent — re-runs pull.
+# Put the project source at {{ onehealth_repo_path }}.
+#
+# Two modes, chosen by the shape of {{ onehealth_repo_url }}:
+#   * Remote URL (https://, git@)  -> git clone/pull (force: true; the build
+#     steps regenerate tracked lockfiles, so the tree is expected dirty).
+#   * Local path (/..., file://)   -> rsync the working copy into place. This
+#     is what the localhost inventory uses so iterative source edits (incl.
+#     uncommitted changes) deploy without a push. Build artifacts are excluded
+#     and preserved on the target across runs.
 
-- name: Clone the repo
+- name: Decide whether the source is a local path
+  ansible.builtin.set_fact:
+    repo_is_local: "{{ onehealth_repo_url is match('^(/|file://)') }}"
+    repo_local_src: "{{ onehealth_repo_url | regex_replace('^file://', '') }}"
+
+# --- Local working-copy mode -------------------------------------------------
+- name: Ensure the target directory exists (local mode)
+  when: repo_is_local
+  ansible.builtin.file:
+    path: "{{ onehealth_repo_path }}"
+    state: directory
+    owner: "{{ onehealth_user }}"
+    group: "{{ onehealth_user }}"
+    mode: "0755"
+
+- name: Sync the local working copy into place (root reads src, excludes build dirs)
+  when: repo_is_local
+  ansible.builtin.command:
+    cmd: >
+      rsync -a --delete
+      --exclude='.git/'
+      --exclude='node_modules/'
+      --exclude='.venv/'
+      --exclude='__pycache__/'
+      --exclude='.next/'
+      --exclude='app/out/'
+      --exclude='*.duckdb'
+      --exclude='ansible/'
+      {{ repo_local_src }}/ {{ onehealth_repo_path }}/
+  register: repo_rsync
+  changed_when: repo_rsync.stdout | length > 0
+  # New source must reach the running API — restart it when the tree changes.
+  notify: Restart fastapi
+
+- name: Hand the synced tree to the deploy user (local mode)
+  when: repo_is_local
+  ansible.builtin.file:
+    path: "{{ onehealth_repo_path }}"
+    owner: "{{ onehealth_user }}"
+    group: "{{ onehealth_user }}"
+    recurse: true
+
+# --- Remote git mode ---------------------------------------------------------
+- name: Clone the repo (git mode)
+  when: not repo_is_local
   become_user: "{{ onehealth_user }}"
   ansible.builtin.git:
     repo: "{{ onehealth_repo_url }}"
     dest: "{{ onehealth_repo_path }}"
     version: "{{ onehealth_repo_branch }}"
     update: true
-    force: false                  # never overwrite a dirty tree
+    # This clone is disposable build source: `uv sync` / `npm install`
+    # regenerate tracked lockfiles and dirty the tree, so reset on every run.
+    force: true
   register: repo_clone
+  notify: Restart fastapi
 
-- name: Record the deployed SHA in {{ onehealth_root }}/DEPLOYED_SHA
+# --- Record what was deployed ------------------------------------------------
+- name: Record the deployed source marker in {{ onehealth_root }}/DEPLOYED_SHA
   become_user: "{{ onehealth_user }}"
   ansible.builtin.copy:
-    content: "{{ repo_clone.after }}\n"
+    content: >-
+      {{ (repo_clone.after | default('')) if not repo_is_local
+         else 'local-working-copy ' + ansible_date_time.iso8601 }}
     dest: "{{ onehealth_root }}/DEPLOYED_SHA"
     mode: "0644"

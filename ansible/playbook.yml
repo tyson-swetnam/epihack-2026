@@ -18,8 +18,17 @@
   become: true
   gather_facts: true
 
+  # group_vars/all.yml is AUTO-LOADED from the adjacent group_vars/ directory,
+  # so we deliberately do NOT list it under vars_files: play vars_files outrank
+  # inventory host/group vars and would silently clobber per-host overrides
+  # (repo source, fqdn, auth-mock, CORS, …). Auto-loaded group_vars sit at the
+  # correct, lower precedence so inventory overrides win.
+  #
+  # all.vault.yml is NOT auto-loaded (its basename "all.vault" != the group
+  # name "all"), so it must be listed explicitly. It contains only vault_*
+  # secrets, which are never set per-host, so loading it here can't clobber
+  # any inventory override.
   vars_files:
-    - group_vars/all.yml
     - group_vars/all.vault.yml
 
   pre_tasks:
@@ -39,6 +48,7 @@
     - { role: repo,         tags: [repo] }
     - { role: claude_code,  tags: [claude_code, claude] }
     - { role: mcp_servers,  tags: [mcp_servers, mcp] }
+    - { role: ducklake,     tags: [ducklake, kg, db] }
     - { role: fastapi,      tags: [fastapi, api] }
     - { role: app,          tags: [app, frontend] }
     - { role: nginx,        tags: [nginx, web] }

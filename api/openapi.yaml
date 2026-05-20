@@ -582,7 +582,7 @@ components:
       properties:
         report_type:    { $ref: "#/components/schemas/ReportType" }
         event_class:    { $ref: "#/components/schemas/EventClass" }
-        coarse_location:{ $ref: "#/components/schemas/CoarseLocation" }
+        coarse_location: { $ref: "#/components/schemas/CoarseLocation" }
         event_date:
           type: string
           format: date

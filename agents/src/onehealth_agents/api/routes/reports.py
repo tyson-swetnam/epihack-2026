@@ -47,13 +47,34 @@ async def _run_agent_chain(
     user: Optional[AuthedUser],
     request_ip: Optional[str],
 ) -> ReportAck:
-    """Bridge to the orchestrator. Stub returns a synthetic ack."""
-    from uuid import uuid4
+    """Persist the report into DuckLake, then ack.
 
-    observation_id = str(uuid4())
+    The full LLM agent chain (triage/enrichment) lands later and needs an
+    Anthropic key; this write-path durably *logs* every submission into the
+    DuckLake knowledge graph (privacy-respecting: free text and the claim
+    token are stored only as digests) so no report is dropped and DuckLake's
+    snapshots version the full submission history.
+    """
+    from ...kg_writer import get_writer
+
+    user_id = user.user_id if user is not None else None
+    try:
+        observation_id, claim_token = get_writer().persist_observation(payload, user_id)
+    except Exception:  # noqa: BLE001 - never lose the report to a write error
+        logger.exception("kg intake persist failed; falling back to ephemeral ack")
+        from uuid import uuid4
+
+        observation_id, claim_token = str(uuid4()), uuid4().hex
+        return ReportAck(
+            observation_id=observation_id,
+            claim_token=claim_token,
+            status_url=f"/v1/reports/{observation_id}",
+            queued=True,
+        )
+
     return ReportAck(
         observation_id=observation_id,
-        claim_token=uuid4().hex,
+        claim_token=claim_token,
         status_url=f"/v1/reports/{observation_id}",
         queued=False,
     )
@@ -106,7 +127,20 @@ async def get_report(
     observation_id: str,
     claim_token: str = ClaimTokenDep,
 ) -> ReportStatus:
-    # Stub: real implementation looks up the observation in DuckLake and
-    # verifies claim_token matches before returning anything.
-    _ = claim_token  # silenced until the lookup is wired
-    return ReportStatus(observation_id=observation_id, state="triaged")
+    # Look the observation up in DuckLake and verify the claim_token (stored
+    # as a digest) before returning anything.
+    from ...kg_writer import get_writer
+
+    try:
+        state = get_writer().read_status(observation_id, claim_token)
+    except PermissionError:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={"code": "claim_token_invalid", "message": "claim_token does not match."},
+        )
+    if state is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": "not_found", "message": "No such observation."},
+        )
+    return ReportStatus(observation_id=observation_id, state=state)

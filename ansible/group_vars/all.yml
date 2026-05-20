@@ -27,6 +27,20 @@ postgres_db_name:      epihack
 postgres_db_user:      onehealth
 postgres_listen:       "127.0.0.1"    # bind only to loopback; nginx never proxies to it
 
+# --- DuckLake (knowledge-graph lakehouse) ------------------------------------
+# DuckDB query engine + DuckLake catalog in Postgres + Parquet data files on
+# local disk. Seeded once by the `ducklake` role; read by knowledge-graph-mcp
+# and written by the FastAPI reports write-path + audit sink at runtime.
+ducklake_data_path: "{{ onehealth_root }}/ducklake-data"
+# DuckDB needs a writable HOME for its per-version extension cache. The API
+# runs under systemd with ProtectHome=true (so /home is hidden) — give it a
+# dedicated home under /srv that the unit's ReadWritePaths covers.
+ducklake_duckdb_home: "{{ onehealth_root }}/duckdb-home"
+ducklake_uri: "ducklake:postgres:dbname={{ postgres_db_name }} host=127.0.0.1 user={{ postgres_db_user }} password={{ vault_postgres_password }}"
+# The kg-mcp venv ships duckdb (>=1.5) + the knowledge_graph_mcp package, so we
+# seed through it — exact version match with the runtime, no extra download.
+kg_mcp_venv_python: "{{ onehealth_repo_path }}/mcp/knowledge-graph-mcp/.venv/bin/python"
+
 # --- Claude Code --------------------------------------------------------------
 claude_code_npm_package: "@anthropic-ai/claude-code"
 # Set in the vault: vault_anthropic_api_key
@@ -48,6 +62,16 @@ mcp_servers:
   - inaturalist-mcp
   - sms-entry-mcp
   - wearable-mcp
+
+# The python module is normally `<server-dir>` with dashes → underscores, but
+# a few packages don't follow that (and a module name can't start with a digit).
+# Override here; the claude.json template falls back to the dash→underscore rule.
+mcp_modules:
+  211-az-mcp: az211_mcp
+
+# iNaturalist's MCP server refuses to start without a descriptive User-Agent
+# (the iNat API requires every client to identify itself). Override per deploy.
+inat_user_agent: "az-onehealth-sentinel/0.1 (+https://github.com/tyson-swetnam/epihack-2026)"
 
 # --- FastAPI backend ----------------------------------------------------------
 fastapi_bind_host:     "127.0.0.1"

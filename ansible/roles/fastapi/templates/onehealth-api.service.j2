@@ -9,6 +9,10 @@ User={{ onehealth_user }}
 Group={{ onehealth_group }}
 WorkingDirectory={{ onehealth_repo_path }}/agents
 EnvironmentFile=/etc/onehealth-api.env
+# DuckDB stores its per-version extension cache under $HOME/.duckdb. With
+# ProtectHome=true the real /home is hidden, so point HOME at a writable dir
+# under /srv (covered by ReadWritePaths below).
+Environment=HOME={{ ducklake_duckdb_home }}
 ExecStart={{ onehealth_repo_path }}/agents/.venv/bin/uvicorn \
     onehealth_agents.api:app \
     --host {{ fastapi_bind_host }} \
@@ -22,7 +26,9 @@ RestartSec=5
 NoNewPrivileges=true
 ProtectSystem=strict
 ProtectHome=true
-ReadWritePaths={{ onehealth_repo_path }}
+# Repo (rsynced source), the DuckLake Parquet data dir, and the DuckDB
+# extension home all need to be writable by the service.
+ReadWritePaths={{ onehealth_repo_path }} {{ ducklake_data_path }} {{ ducklake_duckdb_home }}
 PrivateTmp=true
 ProtectKernelTunables=true
 ProtectKernelModules=true

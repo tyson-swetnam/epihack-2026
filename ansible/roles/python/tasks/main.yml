@@ -10,17 +10,16 @@
     state: present
 
 - name: Install uv (system-wide) via the standalone installer
+  # Install the real binaries straight into /usr/local/bin via UV_INSTALL_DIR.
+  # Symlinking out of /root/.local/bin breaks for the unprivileged onehealth
+  # user — root's home is 0700, so executing the symlink target gives EACCES.
   ansible.builtin.shell: |
     set -euo pipefail
-    curl -LsSf https://astral.sh/uv/install.sh | sh -s -- --no-modify-path --quiet
-    # The installer drops uv into /root/.local/bin; symlink it into /usr/local/bin
-    # so every user picks it up.
-    ln -sf /root/.local/bin/uv /usr/local/bin/uv
-    ln -sf /root/.local/bin/uvx /usr/local/bin/uvx
+    curl -LsSf https://astral.sh/uv/install.sh \
+      | env UV_INSTALL_DIR=/usr/local/bin INSTALLER_NO_MODIFY_PATH=1 sh -s -- --quiet
   args:
     creates: /usr/local/bin/uv
-  environment:
-    HOME: /root
+    executable: /bin/bash
 
 - name: Verify uv is on PATH
   ansible.builtin.command: uv --version

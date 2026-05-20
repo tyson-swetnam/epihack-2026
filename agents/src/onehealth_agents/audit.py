@@ -276,7 +276,25 @@ class DuckLakeAuditSink:
 
             uri = ducklake_uri or os.environ.get("KG_DUCKLAKE_URI")
             if uri:
-                connection = duckdb.connect(uri)
+                # A DuckLake URI is not a database file: open an in-memory
+                # DuckDB, load the extensions, then ATTACH the catalog and
+                # USE it. Forward KG_DUCKLAKE_DATA_PATH as the DATA_PATH
+                # attach option when present (matches loader.attach_ducklake).
+                connection = duckdb.connect(":memory:")
+                for ext in ("ducklake", "postgres"):
+                    try:
+                        connection.execute(f"INSTALL {ext}; LOAD {ext};")
+                    except Exception:  # noqa: BLE001 - extension may be bundled
+                        pass
+                attach_opts = ""
+                data_path = os.environ.get("KG_DUCKLAKE_DATA_PATH")
+                if data_path:
+                    attach_opts = f" (DATA_PATH '{data_path.replace(chr(39), chr(39) * 2)}')"
+                safe_uri = uri.replace("'", "''")
+                connection.execute(
+                    f"ATTACH '{safe_uri}' AS epihack{attach_opts};"
+                )
+                connection.execute("USE epihack;")
             else:
                 connection = duckdb.connect(":memory:")
 

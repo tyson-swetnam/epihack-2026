@@ -5,7 +5,7 @@
       "mcpServers": {
 {% set comma = joiner(",") %}
 {% for name in mcp_servers %}
-{%- set pkg = name | replace('-', '_') %}
+{%- set pkg = mcp_modules.get(name, name | replace('-', '_')) %}
 {{ comma() }}        "{{ name }}": {
           "command": "{{ onehealth_repo_path }}/mcp/{{ name }}/.venv/bin/python",
           "args": ["-m", "{{ pkg }}"],
@@ -23,7 +23,11 @@
             "SMS_TWILIO_AUTH_TOKEN": "{{ vault_sms_twilio_auth_token }}",
             "SMS_MODE": "mock"
 {% elif name == 'knowledge-graph-mcp' %}
-            "KG_DUCKDB_PATH": "{{ onehealth_repo_path }}/schema/epihack.duckdb"
+            "KG_DUCKLAKE_URI": "{{ ducklake_uri }}",
+            "KG_DUCKLAKE_DATA_PATH": "{{ ducklake_data_path }}",
+            "KG_SCHEMA_PATH": "{{ onehealth_repo_path }}/schema"
+{% elif name == 'inaturalist-mcp' %}
+            "INAT_USER_AGENT": "{{ inat_user_agent }}"
 {% else %}
             "PYTHONUNBUFFERED": "1"
 {% endif %}

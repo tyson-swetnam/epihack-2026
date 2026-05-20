@@ -1,0 +1,44 @@
+---
+# Provision the DuckLake knowledge-graph lakehouse:
+#   * DuckDB query engine (already in the kg-mcp venv)
+#   * DuckLake catalog in the epihack Postgres DB (ACID metadata)
+#   * Parquet data files under {{ ducklake_data_path }}
+# then seed the schema once (idempotent). knowledge-graph-mcp reads this
+# catalog at runtime; the FastAPI reports write-path + audit sink write to it.
+#
+# Runs after `repo` (schema files) + `postgres` (catalog DB) + `mcp_servers`
+# (the kg-mcp venv that ships duckdb + the loader).
+
+- name: Create the DuckLake Parquet data directory
+  ansible.builtin.file:
+    path: "{{ ducklake_data_path }}"
+    state: directory
+    owner: "{{ onehealth_user }}"
+    group: "{{ onehealth_group }}"
+    mode: "0750"
+
+# The seed script lives under roles/ducklake/files (in exouser's home, 0750),
+# which the onehealth user can't read — copy it into onehealth-owned space.
+- name: Stage the DuckLake bootstrap script
+  ansible.builtin.copy:
+    src: bootstrap_ducklake.py
+    dest: "{{ onehealth_root }}/bootstrap_ducklake.py"
+    owner: "{{ onehealth_user }}"
+    group: "{{ onehealth_group }}"
+    mode: "0755"
+
+- name: Seed the DuckLake catalog (idempotent — skips if kg.node populated)
+  become_user: "{{ onehealth_user }}"
+  ansible.builtin.command:
+    cmd: "{{ kg_mcp_venv_python }} {{ onehealth_root }}/bootstrap_ducklake.py"
+  environment:
+    KG_DUCKLAKE_URI: "{{ ducklake_uri }}"
+    KG_DUCKLAKE_DATA_PATH: "{{ ducklake_data_path }}"
+    KG_SCHEMA_PATH: "{{ onehealth_repo_path }}/schema"
+  register: ducklake_seed
+  changed_when: "'SEEDED:' in ducklake_seed.stdout"
+  no_log: false
+
+- name: Report DuckLake seed result
+  ansible.builtin.debug:
+    msg: "{{ ducklake_seed.stdout_lines }}"

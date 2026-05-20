@@ -9,13 +9,21 @@
     mode: "0600"
   no_log: true
 
-- name: npm ci (clean, reproducible install)
+- name: Detect a committed lockfile
+  ansible.builtin.stat:
+    path: "{{ onehealth_repo_path }}/app/package-lock.json"
+  register: app_lockfile
+
+# `npm ci` is clean + reproducible but *requires* a committed lockfile. The
+# repo doesn't ship one, so on a fresh clone fall back to `npm install` (which
+# also writes package-lock.json); subsequent runs then use `npm ci`.
+- name: Install app dependencies
   become_user: "{{ onehealth_user }}"
   ansible.builtin.command:
-    cmd: npm ci
+    cmd: "{{ 'npm ci' if app_lockfile.stat.exists else 'npm install' }}"
     chdir: "{{ onehealth_repo_path }}/app"
-  register: npm_ci
-  changed_when: "'added' in npm_ci.stdout or 'removed' in npm_ci.stdout"
+  register: npm_install
+  changed_when: "'added' in npm_install.stdout or 'removed' in npm_install.stdout or 'changed' in npm_install.stdout"
   environment:
     PATH: "{{ onehealth_home }}/.npm-global/bin:/usr/local/bin:/usr/bin:/bin"
 

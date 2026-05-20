@@ -43,6 +43,8 @@
     set -euo pipefail
     export PATH="{{ onehealth_home }}/.npm-global/bin:$PATH"
     claude --version
+  args:
+    executable: /bin/bash
   register: claude_version
   changed_when: false
 

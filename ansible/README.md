@@ -27,13 +27,37 @@ ansible-playbook -i inventory.yml playbook.yml --ask-vault-pass
 
 10–15 minutes later: a working deployment.
 
+### Localhost (single-box) deployment
+
+To deploy onto the machine you're sitting at (no remote VM), the
+`inventory.yml` here points at `127.0.0.1` with `ansible_connection: local`
+and overrides a few host vars. Two things differ from a remote run:
+
+- **Source is rsynced from the local working copy, not cloned from
+  GitHub.** Set `onehealth_repo_url` to a local path (e.g.
+  `/home/you/epihack-2026`) as a *host* var; the `repo` role then rsyncs
+  the working tree (uncommitted edits included) into
+  `/srv/onehealth/epihack-2026`, excluding build artifacts. A `https://`
+  or `git@` URL still triggers the git-clone path.
+- **Localhost overrides must be HOST vars, not group vars.** The play
+  auto-loads `group_vars/all.yml`; if you put overrides under a group's
+  inline `vars:` they rank *below* `group_vars/all` and get clobbered.
+  Put `onehealth_fqdn`, `fastapi_auth_mock`, `app_api_base`, etc. under
+  the host entry. (The play loads only `all.vault.yml` via `vars_files`,
+  never `all.yml`, precisely so host overrides win.)
+
+```bash
+# vault may be plaintext for a throwaway local box (skip --ask-vault-pass):
+ansible-playbook -i inventory.yml playbook.yml
+```
+
 ## Layout
 
 ```
 ansible/
   ansible.cfg               Inventory pointer + roles_path + vault prompt
   inventory.example.yml     Host + ssh user; copy → inventory.yml
-  playbook.yml              The entry-point; one play, ten roles in order
+  playbook.yml              The entry-point; one play, eleven roles in order
   requirements.yml          Ansible Galaxy collections (community.postgresql, …)
   group_vars/
     all.yml                 Non-secret defaults — edit in place is fine
@@ -43,11 +67,12 @@ ansible/
     node/                   Node.js 20 LTS via NodeSource
     python/                 Python 3.12 + uv
     postgres/               PostgreSQL 16 + onehealth DB + role
-    repo/                   clone the repo to /srv/onehealth/epihack-2026
+    repo/                   put source at /srv/onehealth/epihack-2026 (git clone OR local rsync)
     claude_code/            `npm i -g @anthropic-ai/claude-code` + ~/.claude/settings.json
     mcp_servers/            `uv sync` each mcp/<name>-mcp/; write ~/.claude.json
+    ducklake/               seed the DuckLake catalog (Postgres + local Parquet) from schema/
     fastapi/                uvicorn systemd unit for onehealth_agents.api:app
-    app/                    npm ci + npm run gen:api + npm run build (static export)
+    app/                    npm install + npm run gen:api + npm run build (static export)
     nginx/                  reverse-proxy /api/ → :8000, serve /app/ → static export
 ```
 
@@ -67,9 +92,10 @@ the services without touching anything else.
 | 5 | repo | `repo` |
 | 6 | claude_code | `claude_code`, `claude` |
 | 7 | mcp_servers | `mcp_servers`, `mcp` |
-| 8 | fastapi | `fastapi`, `api` |
-| 9 | app | `app`, `frontend` |
-| 10 | nginx | `nginx`, `web` |
+| 8 | ducklake | `ducklake`, `kg`, `db` |
+| 9 | fastapi | `fastapi`, `api` |
+| 10 | app | `app`, `frontend` |
+| 11 | nginx | `nginx`, `web` |
 
 Tag a subset to run just one step, e.g.:
 
@@ -116,6 +142,39 @@ The playbook is **not** idempotent on the *first* run if it gets
 interrupted mid-way (e.g. SSH drops during `npm ci`). Just re-run
 and Ansible will pick up where it left off.
 
+## DuckLake knowledge graph
+
+The `ducklake` role (runs after `mcp_servers`, before `fastapi`) brings up
+the knowledge-graph lakehouse so user reports are logged durably with
+time-travel versioning:
+
+- **Catalog:** a DuckLake catalog in the epihack Postgres DB
+  (`ducklake:postgres:dbname=epihack ...`, the `ducklake_uri` var).
+- **Data:** Parquet files under `ducklake_data_path`
+  (`/srv/onehealth/ducklake-data`).
+- **Seeding:** `roles/ducklake/files/bootstrap_ducklake.py` loads the
+  `schema/*.sql` + `schema/deep/*.sql` into an in-memory DuckDB (which
+  supports PK/FK), then **CTAS-copies** every table + view into DuckLake.
+  This is required because DuckLake does **not** support PRIMARY KEY /
+  UNIQUE / FK constraints or indexes — a plain `.read schema.sql` against
+  DuckLake fails. The seed is idempotent (skips if `kg.node` is populated).
+- **Runtime readers/writers:** `knowledge-graph-mcp` reads the catalog
+  (`KG_DUCKLAKE_URI` in `~/.claude.json`); the FastAPI reports write-path
+  (`agents/.../kg_writer.py`) and the audit sink write to it
+  (`KG_DUCKLAKE_URI` + `KG_DUCKLAKE_DATA_PATH` in the API env). The API
+  service needs `duckdb` (an `agents/` dependency) and a writable DuckDB
+  extension home — the `fastapi` role sets `HOME={{ ducklake_duckdb_home }}`
+  in the unit, widens `ReadWritePaths`, and pre-installs the
+  `ducklake`+`postgres` extensions for the API's duckdb version.
+
+Verify time-travel after a deploy:
+
+```sql
+-- in duckdb, attached as epihack:
+SELECT max(snapshot_id) FROM ducklake_snapshots('epihack');
+SELECT count(*) FROM kg.node AT (VERSION => 22);   -- historical read
+```
+
 ## Caveats
 
 - **Supabase project is external.** The playbook configures the VM
@@ -123,10 +182,13 @@ and Ansible will pick up where it left off.
   does not create the Supabase project, configure OAuth providers,
   or seed any tables. See [`../plan/07-auth.md`](../plan/07-auth.md)
   for the manual Supabase setup steps.
-- **DuckLake Parquet storage is external.** Postgres holds the
-  catalog; the actual Parquet files live in S3 / R2 / a local path,
-  configured via the `DUCKLAKE_DATA_PATH` env var in
-  `group_vars/all.yml`. The playbook does not provision S3.
+- **DuckLake is provisioned locally; object storage is optional.** The
+  `ducklake` role attaches a DuckLake catalog in the epihack Postgres DB
+  and seeds the `schema/` knowledge graph into it, with the Parquet data
+  files under `{{ ducklake_data_path }}` (default
+  `/srv/onehealth/ducklake-data`) on local disk — no S3 required. For a
+  production multi-node lakehouse you can repoint the data path at
+  S3 / R2 instead. See the `DuckLake` section below.
 - **OAuth callback domain.** The Supabase Auth dashboard needs the
   VM's public hostname in its allow-list before the OAuth dance
   works end-to-end. Add it after DNS resolves.
