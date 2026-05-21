@@ -1,6 +1,6 @@
 ---
 # Provision the DuckLake knowledge-graph lakehouse:
-#   * DuckDB query engine (already in the kg-mcp venv)
+#   * DuckDB CLI (operator shell) + query engine in the kg-mcp venv
 #   * DuckLake catalog in the epihack Postgres DB (ACID metadata)
 #   * Parquet data files under {{ ducklake_data_path }}
 # then seed the schema once (idempotent). knowledge-graph-mcp reads this
@@ -8,6 +8,41 @@
 #
 # Runs after `repo` (schema files) + `postgres` (catalog DB) + `mcp_servers`
 # (the kg-mcp venv that ships duckdb + the loader).
+
+# --- DuckDB command-line shell (operator convenience) ------------------------
+# Lets an operator `duckdb` into the DuckLake catalog directly. The runtime
+# (kg-mcp + FastAPI write-path) uses the venv's duckdb, not this binary.
+- name: Map host architecture to the DuckDB CLI asset name
+  ansible.builtin.set_fact:
+    duckdb_cli_arch: "{{ 'arm64' if ansible_architecture == 'aarch64' else 'amd64' }}"
+
+- name: Check the installed DuckDB CLI version (if any)
+  ansible.builtin.command: duckdb --version
+  register: duckdb_cli_installed
+  changed_when: false
+  failed_when: false
+
+- name: Install the DuckDB CLI {{ duckdb_cli_version }}
+  when: duckdb_cli_version not in (duckdb_cli_installed.stdout | default(''))
+  block:
+    - name: Ensure unzip is present (the DuckDB CLI ships as a .zip)
+      ansible.builtin.apt:
+        name: unzip
+        state: present
+        update_cache: true
+
+    - name: Download + unpack the DuckDB CLI to /usr/local/bin
+      ansible.builtin.unarchive:
+        src: "https://github.com/duckdb/duckdb/releases/download/v{{ duckdb_cli_version }}/duckdb_cli-linux-{{ duckdb_cli_arch }}.zip"
+        dest: /usr/local/bin
+        remote_src: true
+        owner: root
+        group: root
+
+    - name: Ensure the DuckDB CLI is executable
+      ansible.builtin.file:
+        path: /usr/local/bin/duckdb
+        mode: "0755"
 
 - name: Create the DuckLake Parquet data directory
   ansible.builtin.file:

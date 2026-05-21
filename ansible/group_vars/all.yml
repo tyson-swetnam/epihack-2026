@@ -40,6 +40,21 @@ ducklake_uri: "ducklake:postgres:dbname={{ postgres_db_name }} host=127.0.0.1 us
 # The kg-mcp venv ships duckdb (>=1.5) + the knowledge_graph_mcp package, so we
 # seed through it — exact version match with the runtime, no extra download.
 kg_mcp_venv_python: "{{ onehealth_repo_path }}/mcp/knowledge-graph-mcp/.venv/bin/python"
+# Operator CLI: the DuckDB command-line shell, installed to /usr/local/bin by
+# the `ducklake` role so operators can query the DuckLake catalog directly
+# (the runtime read/write path goes through the kg-mcp venv, not the CLI).
+# Pinned to match the venv's duckdb so extension formats stay compatible.
+duckdb_cli_version: "1.5.3"
+
+# --- DuckDB-WASM query console (browser-side) --------------------------------
+# The /query/ page (Jekyll site) runs DuckDB entirely in the browser via
+# DuckDB-WASM and rebuilds the kg.* graph by fetching the schema/*.sql seeds.
+# DuckDB-WASM itself is delivered client-side from pinned jsDelivr — the same
+# CDN-pinning convention used for MapLibre (map/) and Cytoscape (graph/) — so
+# there is NO server-side package to install. The only server requirement is
+# that nginx serve the static page + the SQL seeds, wired up in the `nginx`
+# role. Set false to omit those two location blocks (e.g. app-only deploys).
+serve_query_console: true
 
 # --- MongoDB (mobile-channel store, plan/09) ---------------------------------
 # Self-hosted MongoDB CE, bound to loopback, auth enabled. The FastAPI

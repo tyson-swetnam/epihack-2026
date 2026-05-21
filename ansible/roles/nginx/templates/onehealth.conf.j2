@@ -41,6 +41,27 @@ server {
         try_files $uri =404;
     }
 
+{% if serve_query_console | default(true) %}
+    # ---- DuckDB-WASM query console ----------------------------------------
+    # Browser-side SQL viewer (Jekyll page under {{ onehealth_repo_path }}/query).
+    # DuckDB-WASM is loaded client-side from pinned jsDelivr (like MapLibre /
+    # Cytoscape), so there is no server package — we only serve the static page
+    # and the schema/*.sql seeds it fetches to rebuild the kg.* graph in-page.
+    # These prefix locations are more specific than `location /`, so they win.
+    location /query/ {
+        alias {{ onehealth_repo_path }}/query/;
+        index index.html;
+    }
+
+    location /schema/ {
+        alias {{ onehealth_repo_path }}/schema/;
+        # .sql isn't in the default mime map; serve it as readable text so the
+        # browser fetch() in the viewer gets a sensible Content-Type.
+        types { text/plain sql; }
+        default_type text/plain;
+    }
+{% endif %}
+
     location / {
         # Next.js static export emits /report/human/, etc. as directories
         # with index.html inside. Try the path, then the path-with-slash,
