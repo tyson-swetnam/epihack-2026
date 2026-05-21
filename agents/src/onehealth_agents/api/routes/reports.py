@@ -16,7 +16,7 @@ import json
 import logging
 from typing import Optional
 
-from fastapi import APIRouter, Depends, File, Form, Header, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Request, UploadFile, status
 
 from ..deps import AuthedUser, ClaimTokenDep, MaybeUserDep
 from ..models import ReportAck, ReportPayload, ReportStatus
@@ -105,8 +105,7 @@ async def _run_agent_chain(
     summary="File a new anonymous report",
 )
 async def create_report(
-    payload: str = Form(..., description="JSON-encoded ReportPayload"),
-    photo: Optional[UploadFile] = File(default=None),
+    request: Request,
     user: Optional[AuthedUser] = MaybeUserDep,
     x_client_channel: str = Header(
         default="web",
@@ -114,9 +113,28 @@ async def create_report(
         description="web (default) -> DuckLake; mobile -> MongoDB (plan/09).",
     ),
 ) -> ReportAck:
-    # Parse the JSON payload (multipart form value).
+    # Parse the multipart form by hand so `payload` is accepted whether the
+    # client sends it as a text field OR a file part (a Blob append produces a
+    # file part with filename "blob"). Both decode to the same JSON string.
+    form = await request.form()
+    raw_payload = form.get("payload")
+    if raw_payload is None:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail={"code": "validation_failed", "message": "Missing 'payload'."},
+        )
+    if hasattr(raw_payload, "read"):  # UploadFile (Blob/file part)
+        payload_str = (await raw_payload.read()).decode("utf-8", "replace")
+    else:
+        payload_str = str(raw_payload)
+
+    photo = form.get("photo")
+    if photo is not None and not hasattr(photo, "read"):
+        photo = None  # a stray text field named "photo" is not a file
+
+    # Parse the JSON payload.
     try:
-        body = ReportPayload.model_validate(json.loads(payload))
+        body = ReportPayload.model_validate(json.loads(payload_str))
     except (json.JSONDecodeError, ValueError) as exc:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
