@@ -28,6 +28,12 @@ exclude:
   - "*.log"
   - Gemfile
   - Gemfile.lock
+  # A custom exclude: overrides Jekyll's built-in defaults, so the CI gem
+  # cache (actions/setup-ruby bundler-cache -> ./vendor/bundle) is no longer
+  # auto-skipped and Jekyll chokes on the gems' own site templates. Re-add
+  # the vendor/bundler dirs explicitly.
+  - vendor
+  - .bundle
   # Next.js source for the new reporting app is built separately
   # (see .github/workflows/deploy-app.yml) and deployed to
   # gh-pages/app/. Jekyll must NOT try to process these.
