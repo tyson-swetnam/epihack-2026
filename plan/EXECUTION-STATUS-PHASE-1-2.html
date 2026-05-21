@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Phase 1 + 2 execution status</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      max-width: 1100px;
+      margin: 2rem auto;
+      padding: 0 1.25rem;
+      color: #1a1a1a;
+      line-height: 1.55;
+    }
+    nav.crumbs { font-size: .9rem; color: #555; margin-bottom: 1rem; }
+    nav.crumbs a { color: #1F3A93; text-decoration: none; }
+    h1 { border-bottom: 3px solid #1F3A93; padding-bottom: .35rem; }
+    h2 { margin-top: 2.25rem; color: #1F3A93; }
+    h3 { margin-top: 1.25rem; }
+    table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: .95rem; }
+    th, td { border: 1px solid #ddd; padding: .5rem .75rem; text-align: left; vertical-align: top; }
+    th { background: #f0f3f8; }
+    blockquote {
+      border-left: 4px solid #1F3A93;
+      background: #f4f6fb;
+      margin: 1rem 0;
+      padding: .75rem 1rem;
+    }
+    code { background: #f1f3f7; padding: 1px 5px; border-radius: 3px; font-size: .9em; }
+    pre code { display: block; padding: .75rem 1rem; overflow-x: auto; }
+    footer { margin-top: 4rem; padding-top: 1rem; border-top: 1px solid #ddd; color: #666; font-size: .85rem; }
+    a { color: #1F3A93; }
+  </style>
+</head>
+<body>
+  <nav class="crumbs">
+    <a href="/epihack-2026/">EpiHack AZ 2026</a>
+  </nav>
+
+  <h1 id="phase-1--2--execution-status">Phase 1 + 2 — execution status</h1>
+
+<p>Six more sub-agents have reported in. All Phase 1 and the
+independent slice of Phase 2 (the two non-tribal MCP servers) are
+merged on this branch.</p>
+
+<h2 id="shipped-since-phase-0">Shipped since Phase 0</h2>
+
+<h3 id="phase-1--heat-vertical">Phase 1 — Heat vertical</h3>
+
+<table>
+  <thead>
+    <tr>
+      <th>Component</th>
+      <th>Path</th>
+      <th>Verification</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">mag-hrn-mcp</code> (MAG Heat Relief Network)</td>
+      <td><a href="../mcp/mag-hrn-mcp/"><code class="language-plaintext highlighter-rouge">mcp/mag-hrn-mcp/</code></a></td>
+      <td><strong>5 tools + 2 resources</strong>, 35/35 offline tests, 12 canned Phoenix-metro cooling centers; <code class="language-plaintext highlighter-rouge">MAG_HRN_FEATURE_SERVICE_URL</code> env-overrides to the live ArcGIS Feature Service at <code class="language-plaintext highlighter-rouge">geo.azmag.gov/arcgis/rest/services/maps/Heat_Relief_Network/MapServer</code></td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">adhs-mcp</code> (ADHS surveillance summaries)</td>
+      <td><a href="../mcp/adhs-mcp/"><code class="language-plaintext highlighter-rouge">mcp/adhs-mcp/</code></a></td>
+      <td><strong>6 tools + 2 resources</strong>, 46/46 tests; canned data sourced from <code class="language-plaintext highlighter-rouge">heat/04-vulnerable-populations.md</code>, <code class="language-plaintext highlighter-rouge">schema/heat.sql</code>, and <code class="language-plaintext highlighter-rouge">schema/deep/standards.sql</code> (990 deaths in 2023, 602 in 2024, ≥4,320 cumulative, 4,298 ER visits/year)</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">211-az-mcp</code> (referrals + dispatch)</td>
+      <td><a href="../mcp/211-az-mcp/"><code class="language-plaintext highlighter-rouge">mcp/211-az-mcp/</code></a></td>
+      <td><strong>6 tools + 2 resources</strong>, 23/23 tests; in-memory dispatch tracking with chain-of-call consistency; <code class="language-plaintext highlighter-rouge">AZ211_BACKEND_URL</code> env-override for a real API later</td>
+    </tr>
+    <tr>
+      <td><strong>Heat app flows</strong></td>
+      <td><a href="../app/heat/"><code class="language-plaintext highlighter-rouge">app/heat/</code></a></td>
+      <td>3 new flows shipped (CHW check-in, anonymous self-report, “where can I cool off?”); 19 endpoints serve HTTP 200; node –check + html5lib strict + JSON validators all clean; 44×44 touch targets; Spanish bundle via <code class="language-plaintext highlighter-rouge">app/shared/i18n.js</code>; vulnerability-score thermometer; two-tap confirm-before-dispatch transport button</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3 id="phase-2-independent-slice--wildlife--citizen-science">Phase 2 (independent slice) — Wildlife / citizen-science</h3>
+
+<table>
+  <thead>
+    <tr>
+      <th>Component</th>
+      <th>Path</th>
+      <th>Verification</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">whispers-mcp</code> (USGS wildlife mortality)</td>
+      <td><a href="../mcp/whispers-mcp/"><code class="language-plaintext highlighter-rouge">mcp/whispers-mcp/</code></a></td>
+      <td><strong>6 tools + 2 resources</strong>, 15/15 tests; 10 canned events including 1993 Four Corners hantavirus, 2022-23 HPAI, 2024-25 plague, EHDV mule deer near Patagonia; base URL <code class="language-plaintext highlighter-rouge">https://whispers.usgs.gov/api</code> (env-overridable); silent canned-fallback on network errors</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">inaturalist-mcp</code> (citizen-science observations)</td>
+      <td><a href="../mcp/inaturalist-mcp/"><code class="language-plaintext highlighter-rouge">mcp/inaturalist-mcp/</code></a></td>
+      <td><strong>6 tools + 2 resources</strong>, 20/20 tests; 21 canned observations covering ticks, mosquitoes, fleas, and rodent reservoirs; AZ <code class="language-plaintext highlighter-rouge">place_id=53</code>; <code class="language-plaintext highlighter-rouge">INAT_USER_AGENT</code> requirement enforced at startup</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2 id="schema-follow-ups-all-merged">Schema follow-ups all merged</h2>
+
+<p>The five small follow-ups the Phase 0 sub-agents flagged are now in:</p>
+
+<ol>
+  <li><strong><code class="language-plaintext highlighter-rouge">outbreaks.sql</code> slug fix</strong> — <code class="language-plaintext highlighter-rouge">pathogen.y_pestis</code> → <code class="language-plaintext highlighter-rouge">pathogen.yersinia_pestis</code> (the Coconino 2025 plague outbreak row was orphaning).</li>
+  <li><strong><code class="language-plaintext highlighter-rouge">knowledge-graph-mcp</code> loader order</strong> — pins <code class="language-plaintext highlighter-rouge">deep/standards.sql</code> and <code class="language-plaintext highlighter-rouge">deep/pathogens.sql</code> to load <em>before</em> the rest of <code class="language-plaintext highlighter-rouge">deep/*.sql</code> alphabetically, so the SNOMED/ICD-10 crossReferences and pathogen FKs find their parents.</li>
+  <li><strong><code class="language-plaintext highlighter-rouge">schema/deep/followups.sql</code></strong> — adds SNOMED heat-illness codes (84362002, 52613005, 24079001), LOINC wearable codes (8867-4, 8310-5, 8328-7, 80404-7, 41950-7), and <code class="language-plaintext highlighter-rouge">lat</code>/<code class="language-plaintext highlighter-rouge">lon</code> numeric properties on every county.* and tribe.* node (centroid coords from <code class="language-plaintext highlighter-rouge">map/data.js</code>). Edge IDs 30000-30199.</li>
+  <li><strong>plan/03 tightening</strong> — triage-class enumeration as a 10-row table, full HEAT_SCORE_TABLE pinned with point values and triage thresholds, formal consent-suppression triggers per profile, full <code class="language-plaintext highlighter-rouge">agent_run</code> audit-log schema including the four token kinds and input/output digests.</li>
+  <li><strong>Orchestrator alignment</strong> — <code class="language-plaintext highlighter-rouge">agents/enrichment.py</code> + <code class="language-plaintext highlighter-rouge">agents/geo.py</code> + <code class="language-plaintext highlighter-rouge">agents/update.py</code> + <code class="language-plaintext highlighter-rouge">agents/mcp_client.py</code> updated to use the canonical per-server-prefixed tool names (<code class="language-plaintext highlighter-rouge">kg_outbreak_check</code>, <code class="language-plaintext highlighter-rouge">vectorsurv_get_pools</code>, <code class="language-plaintext highlighter-rouge">gattc_create_submission</code>, <code class="language-plaintext highlighter-rouge">nws_heatrisk</code>, <code class="language-plaintext highlighter-rouge">mag_search_centers</code>, <code class="language-plaintext highlighter-rouge">az211_transport_to_cooling_center</code>); 29/29 tests pass.</li>
+</ol>
+
+<h2 id="updated-sub-agent--mcp-tool-cross-check">Updated sub-agent → MCP tool cross-check</h2>
+
+<p>Every tool the <code class="language-plaintext highlighter-rouge">agents/</code> orchestrator calls is now backed by a shipped
+MCP server with the matching prefixed name:</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Server</th>
+      <th>Tool</th>
+      <th>Status</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">knowledge-graph-mcp</code></td>
+      <td><code class="language-plaintext highlighter-rouge">kg_regions_at_point</code></td>
+      <td>✅</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">knowledge-graph-mcp</code></td>
+      <td><code class="language-plaintext highlighter-rouge">kg_outbreak_check</code></td>
+      <td>✅</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">vectorsurv-mcp</code></td>
+      <td><code class="language-plaintext highlighter-rouge">vectorsurv_agency_region_intersect</code></td>
+      <td>✅</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">vectorsurv-mcp</code></td>
+      <td><code class="language-plaintext highlighter-rouge">vectorsurv_get_pools</code></td>
+      <td>✅</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">great-az-tick-check-mcp</code></td>
+      <td><code class="language-plaintext highlighter-rouge">gattc_create_submission</code></td>
+      <td>✅</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">nws-heatrisk-mcp</code></td>
+      <td><code class="language-plaintext highlighter-rouge">nws_heatrisk</code></td>
+      <td>✅</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">mag-hrn-mcp</code></td>
+      <td><code class="language-plaintext highlighter-rouge">mag_search_centers</code></td>
+      <td>✅</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">211-az-mcp</code></td>
+      <td><code class="language-plaintext highlighter-rouge">az211_transport_to_cooling_center</code></td>
+      <td>✅</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><code class="language-plaintext highlighter-rouge">whispers-mcp</code> and <code class="language-plaintext highlighter-rouge">inaturalist-mcp</code> are shipped but not yet wired
+into <code class="language-plaintext highlighter-rouge">agents/enrichment.py</code> — wiring them is one small commit
+queued as Phase 2 follow-up (add the bbox calls under the VBD branch).</p>
+
+<h2 id="whats-left">What’s left</h2>
+
+<h3 id="phase-2--tribal-partnerships--offline">Phase 2 — Tribal partnerships + offline</h3>
+
+<ul>
+  <li>MOU / DUA framework with ITCA-TEC (external; partnership work).</li>
+  <li>Optional <code class="language-plaintext highlighter-rouge">navajo-ec-mcp</code> proxy (gated behind tribal DUA — not built
+speculatively).</li>
+  <li>App offline / sync-on-reconnect for the field flows.</li>
+  <li>SMS-only entry point via a short code.</li>
+  <li>Indigenous-language UI: Diné Bizaad, Tohono O’odham (with
+native-speaker review — outside the agentic-build scope).</li>
+  <li>Validation Agent: row-level tribal-data suppression at write time.</li>
+  <li>Wire <code class="language-plaintext highlighter-rouge">whispers-mcp</code> + <code class="language-plaintext highlighter-rouge">inaturalist-mcp</code> calls into
+<code class="language-plaintext highlighter-rouge">agents/src/onehealth_agents/enrichment.py</code>.</li>
+</ul>
+
+<h3 id="phase-3--maricopa--coconino-pilot">Phase 3 — Maricopa + Coconino pilot</h3>
+
+<ul>
+  <li>Agency dashboards for MCDPH / ADHS / AZGFD / Coconino HHS.</li>
+  <li><code class="language-plaintext highlighter-rouge">agent_run</code> audit table materialized in the DuckLake catalog with
+the Figure-3 milestone join queries.</li>
+  <li>Public-facing aggregated dashboard.</li>
+  <li>Calibration of cluster-detection thresholds against the historical
+outbreaks already encoded in <code class="language-plaintext highlighter-rouge">schema/deep/outbreaks.sql</code>.</li>
+</ul>
+
+<h3 id="phase-4--statewide--evaluation">Phase 4 — Statewide + evaluation</h3>
+
+<ul>
+  <li>15-county rollout.</li>
+  <li>Federated cluster detection with tribal partners.</li>
+  <li>Wearable integration (HealthKit / Health Connect).</li>
+  <li>Independent evaluation report scored against the Figure 3
+timeliness intervals.</li>
+</ul>
+
+
+  <footer>
+    Source: Ending Pandemics Academy &middot; University of Arizona Mel &amp;
+    Enid Zuckerman College of Public Health &middot; Global Health Institute.
+  </footer>
+</body>
+</html>

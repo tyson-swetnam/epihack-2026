@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>WHISPers MCP server</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      max-width: 1100px;
+      margin: 2rem auto;
+      padding: 0 1.25rem;
+      color: #1a1a1a;
+      line-height: 1.55;
+    }
+    nav.crumbs { font-size: .9rem; color: #555; margin-bottom: 1rem; }
+    nav.crumbs a { color: #1F3A93; text-decoration: none; }
+    h1 { border-bottom: 3px solid #1F3A93; padding-bottom: .35rem; }
+    h2 { margin-top: 2.25rem; color: #1F3A93; }
+    h3 { margin-top: 1.25rem; }
+    table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: .95rem; }
+    th, td { border: 1px solid #ddd; padding: .5rem .75rem; text-align: left; vertical-align: top; }
+    th { background: #f0f3f8; }
+    blockquote {
+      border-left: 4px solid #1F3A93;
+      background: #f4f6fb;
+      margin: 1rem 0;
+      padding: .75rem 1rem;
+    }
+    code { background: #f1f3f7; padding: 1px 5px; border-radius: 3px; font-size: .9em; }
+    pre code { display: block; padding: .75rem 1rem; overflow-x: auto; }
+    footer { margin-top: 4rem; padding-top: 1rem; border-top: 1px solid #ddd; color: #666; font-size: .85rem; }
+    a { color: #1F3A93; }
+  </style>
+</head>
+<body>
+  <nav class="crumbs">
+    <a href="/epihack-2026/">EpiHack AZ 2026</a>
+  </nav>
+
+  <h1 id="whispers-mcp--model-context-protocol-server-for-usgs-whispers"><code class="language-plaintext highlighter-rouge">whispers-mcp</code> — Model Context Protocol server for USGS WHISPers</h1>
+
+<p>A <a href="https://modelcontextprotocol.io/">Model Context Protocol</a> server
+that exposes the U.S. Geological Survey National Wildlife Health
+Center’s <a href="https://whispers.usgs.gov/">WHISPers</a> — the <strong>Wildlife
+Health Information Sharing Partnership event reporting system</strong> — as
+a set of tools an LLM (Claude Desktop, Claude Code, Claude API
+agents, or any other MCP client) can call.</p>
+
+<p>Built for the EpiHack Arizona 2026 <a href="../../wildlife/index.html">Wildlife &amp; Vector-Borne Diseases
+focus group</a>.</p>
+
+<h2 id="what-whispers-is">What WHISPers is</h2>
+
+<p>WHISPers is the federal source-of-truth for wildlife
+mortality/morbidity events. It is a web-based repository of basic
+information on current and historic wildlife mortality (death) and/or
+morbidity (illness) events — bird die-offs, prairie-dog plague,
+hantavirus rodent surveillance, HPAI in wild waterfowl — reported by
+federal, state, tribal, and academic partners and curated by the USGS
+NWHC. Partners use it to alert each other to emerging wildlife
+disease activity; the public-portal subset of events is the layer
+this MCP wraps.</p>
+
+<ul>
+  <li>Public portal: <a href="https://whispers.usgs.gov/">https://whispers.usgs.gov/</a></li>
+  <li>Backing service codebase:
+<a href="https://github.com/USGS-WiM/whispersservices">USGS-WiM/whispersservices</a>
+(archived 2023-06-30; active mirror at
+<a href="https://code.usgs.gov/WiM/whispersservices">code.usgs.gov/WiM/whispersservices</a>).</li>
+  <li>Production API root: <code class="language-plaintext highlighter-rouge">https://whispers.usgs.gov/api/</code> (confirmed
+against the Angular frontend’s
+<code class="language-plaintext highlighter-rouge">src/environments/environment.prod.ts</code>).</li>
+</ul>
+
+<h2 id="what-it-does">What it does</h2>
+
+<p>Every tool name starts with <code class="language-plaintext highlighter-rouge">whispers_</code>.</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>MCP tool</th>
+      <th>Backed by</th>
+      <th>Auth</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">whispers_events_recent</code></td>
+      <td><code class="language-plaintext highlighter-rouge">GET /api/eventsummaries/</code> (with <code class="language-plaintext highlighter-rouge">public=true</code> + date filter)</td>
+      <td>none</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">whispers_event_detail</code></td>
+      <td><code class="language-plaintext highlighter-rouge">GET /api/eventdetails/{id}/</code></td>
+      <td>none</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">whispers_events_bbox</code></td>
+      <td><code class="language-plaintext highlighter-rouge">GET /api/eventsummaries/</code> + client-side bbox filter</td>
+      <td>none</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">whispers_events_by_species</code></td>
+      <td><code class="language-plaintext highlighter-rouge">GET /api/eventsummaries/</code> (species substring)</td>
+      <td>none</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">whispers_events_by_diagnosis</code></td>
+      <td><code class="language-plaintext highlighter-rouge">GET /api/eventsummaries/</code> (diagnosis substring)</td>
+      <td>none</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">whispers_az_recent_summary</code></td>
+      <td><code class="language-plaintext highlighter-rouge">GET /api/eventsummaries/?administrative_level_one_name=AZ</code> + local aggregation</td>
+      <td>none</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>Plus two MCP <strong>resources</strong>:</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">whispers://event-types</code> — the WHISPers event-type enumeration
+(<code class="language-plaintext highlighter-rouge">Mortality/Morbidity</code>, <code class="language-plaintext highlighter-rouge">Surveillance</code>).</li>
+  <li><code class="language-plaintext highlighter-rouge">whispers://diagnosis-vocabulary</code> — a representative slice of the
+WHISPers diagnosis controlled vocabulary
+(<code class="language-plaintext highlighter-rouge">Avian influenza, HPAI</code>, <code class="language-plaintext highlighter-rouge">Yersinia pestis</code>, <code class="language-plaintext highlighter-rouge">Hantavirus</code>,
+<code class="language-plaintext highlighter-rouge">West Nile virus</code>, …). Refresh from
+<code class="language-plaintext highlighter-rouge">/api/diagnoses/?no_page=true</code> for the authoritative full list.</li>
+</ul>
+
+<h3 id="auth-boundary">Auth boundary</h3>
+
+<p>All read tools above are <strong>guaranteed-no-auth</strong>: the upstream
+<code class="language-plaintext highlighter-rouge">EventViewSet.get_queryset()</code> filters anonymous callers to rows where
+<code class="language-plaintext highlighter-rouge">public=True</code>, so the public subset of WHISPers is freely callable.
+A future write-oriented tool (creating events, adding diagnoses) or
+one calling non-public/admin-only viewsets — <code class="language-plaintext highlighter-rouge">userchangerequests</code>,
+<code class="language-plaintext highlighter-rouge">servicerequests</code>, drafts, restricted contacts — would need a
+WHISPers Gateway account. The MCP server keeps the auth boundary at
+the server process, never sending credentials through the LLM.</p>
+
+<h2 id="why-this-matters-for-epihack">Why this matters for EpiHack</h2>
+
+<p>WHISPers is exactly the kind of agency dataset the
+<a href="../../agents/src/onehealth_agents/enrichment.py"><code class="language-plaintext highlighter-rouge">EnrichmentAgent</code></a>
+needs to attach to community VBD reports: “did anyone find dead
+prairie dogs near this Coconino check-in last week?” One bbox call
+answers that. Scenario D in
+<a href="/epihack-2026/plan/04-data-flows.html"><code class="language-plaintext highlighter-rouge">plan/04-data-flows.md</code></a> walks through
+the exact ADHS dashboard query against the resulting graph nodes.</p>
+
+<h2 id="mock-by-default-fallback">Mock-by-default fallback</h2>
+
+<p>The build sandbox the MCP was authored in cannot reach
+<code class="language-plaintext highlighter-rouge">whispers.usgs.gov</code>, and many EpiHack venues will have similarly
+restrictive networks. To keep tests hermetic and demos resilient,
+<code class="language-plaintext highlighter-rouge">whispers-mcp</code> ships with a small canned AZ-centric dataset in
+<a href="/epihack-2026/mcp/whispers-mcp/src/whispers_mcp/canned.py"><code class="language-plaintext highlighter-rouge">src/whispers_mcp/canned.py</code></a>. The
+10-row dataset is modelled on real history:</p>
+
+<ul>
+  <li>1993 Four Corners hantavirus outbreak (deer mouse, Sin Nombre).</li>
+  <li>2022–2023 HPAI H5N1 wild-waterfowl detections in Maricopa and Yuma.</li>
+  <li>2024–2025 plague (Yersinia pestis) in Gunnison’s prairie dogs on
+the Colorado Plateau (Coconino + a cross-border NM control row).</li>
+  <li>2024 WNV-positive American crows in Pima County.</li>
+  <li>2025 EHDV in mule deer near Patagonia (matches Scenario A).</li>
+  <li>An out-of-state Salton Sea HPAI row so the bbox/state filters have
+a negative example.</li>
+</ul>
+
+<p>Fallback behaviour:</p>
+
+<table>
+  <thead>
+    <tr>
+      <th><code class="language-plaintext highlighter-rouge">WHISPERS_USE_MOCK</code></th>
+      <th>live host reachable</th>
+      <th>result</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>unset (default)</td>
+      <td>yes</td>
+      <td>live API</td>
+    </tr>
+    <tr>
+      <td>unset (default)</td>
+      <td>no</td>
+      <td>canned dataset (silent fallback)</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">1</code></td>
+      <td>—</td>
+      <td>canned dataset always</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>Set <code class="language-plaintext highlighter-rouge">WHISPERS_DISABLE_FALLBACK=1</code> to surface upstream errors
+instead of silently degrading — useful in production where you’d
+rather get paged than serve stale-looking data.</p>
+
+<p>Event IDs in the canned dataset are intentionally in the 9 000 000+
+range so they don’t collide with real WHISPers rows; the
+<code class="language-plaintext highlighter-rouge">public_url</code> fields will 404 against the live UI on purpose.</p>
+
+<h2 id="install--run">Install &amp; run</h2>
+
+<h3 id="as-a-claude-desktop-mcp-server">As a Claude Desktop MCP server</h3>
+
+<ol>
+  <li>Install <a href="https://docs.astral.sh/uv/"><code class="language-plaintext highlighter-rouge">uv</code></a> if you don’t have it.</li>
+  <li>Drop the snippet in
+<a href="/epihack-2026/mcp/whispers-mcp/examples/claude_desktop_config.json"><code class="language-plaintext highlighter-rouge">examples/claude_desktop_config.json</code></a>
+into your Claude Desktop config.</li>
+  <li>Replace the path with the absolute path to this directory.</li>
+  <li>Restart Claude Desktop.</li>
+</ol>
+
+<p>No credentials are required for the default tool set.</p>
+
+<h3 id="standalone">Standalone</h3>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">cd </span>mcp/whispers-mcp
+uv <span class="nb">sync
+</span>uv run whispers-mcp                                <span class="c"># stdio (default)</span>
+<span class="nv">MCP_TRANSPORT</span><span class="o">=</span>streamable-http uv run whispers-mcp  <span class="c"># HTTP</span>
+<span class="nv">WHISPERS_USE_MOCK</span><span class="o">=</span>1 uv run whispers-mcp            <span class="c"># force canned data</span>
+</code></pre></div></div>
+
+<h3 id="tests">Tests</h3>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">cd </span>mcp/whispers-mcp
+uv run pytest
+</code></pre></div></div>
+
+<p>All tests are offline; they exercise the canned dataset directly via
+the <code class="language-plaintext highlighter-rouge">WhispersClient(use_mock=True)</code> code path.</p>
+
+<h2 id="endpoint-overrides">Endpoint overrides</h2>
+
+<p>Every path is overridable via env — <code class="language-plaintext highlighter-rouge">WHISPERS_PATH_EVENTS</code>,
+<code class="language-plaintext highlighter-rouge">_EVENT_SUMMARIES</code>, <code class="language-plaintext highlighter-rouge">_EVENT_DETAILS</code>, <code class="language-plaintext highlighter-rouge">_EVENT_TYPES</code>,
+<code class="language-plaintext highlighter-rouge">_EVENT_LOCATIONS</code>, <code class="language-plaintext highlighter-rouge">_SPECIES</code>, <code class="language-plaintext highlighter-rouge">_DIAGNOSES</code>, <code class="language-plaintext highlighter-rouge">_ADMIN_L1</code>,
+<code class="language-plaintext highlighter-rouge">_ADMIN_L2</code>. Set <code class="language-plaintext highlighter-rouge">WHISPERS_BASE_URL</code> to point at a staging deploy.</p>
+
+<p>See <a href="./.env.example"><code class="language-plaintext highlighter-rouge">.env.example</code></a> for the full list.</p>
+
+<h2 id="license">License</h2>
+
+<p>MIT, alongside the rest of <code class="language-plaintext highlighter-rouge">epihack-2026</code>.</p>
+
+
+  <footer>
+    Source: Ending Pandemics Academy &middot; University of Arizona Mel &amp;
+    Enid Zuckerman College of Public Health &middot; Global Health Institute.
+  </footer>
+</body>
+</html>

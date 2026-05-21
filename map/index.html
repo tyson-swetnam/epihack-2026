@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Arizona Map — EpiHack Arizona 2026</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#1F3A93" />
+<link
+  href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css"
+  rel="stylesheet"
+/>
+<style>
+  :root {
+    --header-h: 88px;
+    --panel-w: 300px;
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  html, body { height: 100%; margin: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: #1a1a1a;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    -webkit-text-size-adjust: 100%;
+  }
+  header {
+    flex: 0 0 auto;
+    padding: .75rem 1rem;
+    border-bottom: 1px solid #d8dde6;
+    background: #fff;
+    z-index: 2;
+  }
+  header h1 { margin: 0 0 .15rem 0; font-size: 1.15rem; color: #1F3A93; }
+  header p  { margin: 0; color: #555; font-size: .85rem; }
+  header a  { color: #1F3A93; }
+
+  main {
+    flex: 1;
+    display: flex;
+    min-height: 0;
+    position: relative;
+  }
+  #map {
+    flex: 1;
+    min-height: 0;
+    min-width: 0;
+  }
+  #legend {
+    width: var(--panel-w);
+    background: #fafbfd;
+    border-left: 1px solid #d8dde6;
+    overflow-y: auto;
+    padding: 1rem 1.1rem calc(1rem + var(--safe-bottom));
+    box-sizing: border-box;
+    font-size: .9rem;
+    -webkit-overflow-scrolling: touch;
+  }
+  #legend h2 { margin: 0 0 .5rem 0; font-size: 1rem; color: #1F3A93; }
+  #legend h3 {
+    margin: 1rem 0 .25rem 0;
+    font-size: .78rem;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    color: #555;
+  }
+  .legend-row {
+    display: flex;
+    align-items: center;
+    gap: .55rem;
+    padding: .55rem .25rem;
+    cursor: pointer;
+    user-select: none;
+    min-height: 44px;          /* iOS Human Interface Guidelines touch target */
+    border-radius: 6px;
+  }
+  .legend-row:hover { background: #eef1f7; }
+  .legend-row:active { background: #e3e8ef; }
+  .legend-row input { margin: 0; width: 18px; height: 18px; }
+  .legend-swatch {
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    display: inline-block;
+    border: 2px solid #fff;
+    box-shadow: 0 0 0 1px #555;
+    flex: 0 0 auto;
+  }
+  .legend-swatch.square { border-radius: 3px; }
+  .legend-swatch.diamond { border-radius: 3px; transform: rotate(45deg); }
+  .legend-swatch.star { border-radius: 0; clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%); background: gold; }
+
+  /* Floating button to toggle the panel (visible on mobile only). */
+  #panel-toggle {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 3;
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    border: none;
+    background: #1F3A93;
+    color: #fff;
+    font-size: 1.1rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+    cursor: pointer;
+    display: none;
+  }
+  #panel-toggle:active { transform: scale(0.95); }
+
+  .popup-title { font-weight: 600; margin-bottom: .25rem; }
+  .popup-kv    { font-size: .8rem; color: #555; }
+  .popup-link  { display: inline-block; margin-top: .35rem; padding: 8px 10px; background: #1F3A93; color: #fff; border-radius: 4px; text-decoration: none; }
+  .maplibregl-popup-content {
+    font-family: inherit;
+    padding: .65rem .8rem;
+    max-width: 280px;
+  }
+
+  /* ----- Mobile (<=800px): stack panel below the map, make it collapsible ----- */
+  @media (max-width: 800px) {
+    :root { --header-h: 78px; --panel-w: 100%; }
+    main { flex-direction: column; }
+    #map {
+      flex: 1 1 auto;
+      height: 100%;
+    }
+    #legend {
+      width: 100%;
+      max-height: 45vh;
+      border-left: none;
+      border-top: 1px solid #d8dde6;
+      flex: 0 0 auto;
+      transition: max-height 0.25s ease, padding 0.25s ease;
+    }
+    body.panel-collapsed #legend {
+      max-height: 0;
+      padding-top: 0;
+      padding-bottom: 0;
+      overflow: hidden;
+    }
+    #panel-toggle { display: block; }
+    /* nudge the maplibre attribution / nav so they don't sit under the toggle */
+    .maplibregl-ctrl-top-right { padding-right: 60px; }
+    header h1 { font-size: 1.05rem; }
+    header p  { font-size: .78rem; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Arizona — Geospatial Knowledge-Graph Map</h1>
+  <p>
+    <a href="../index.html">&laquo; EpiHack AZ 2026</a> &middot; counties,
+    tribal nations, NEON sites, agency HQs, federal lands, and outbreaks;
+    every pin carries a <code>kg_node_id</code>.
+  </p>
+</header>
+
+<main>
+  <div id="map"></div>
+  <button id="panel-toggle" aria-label="Toggle layers panel" title="Toggle layers">
+    <span id="panel-toggle-icon">×</span>
+  </button>
+  <aside id="legend">
+    <h2>Layers</h2>
+
+    <h3>Wildlife &amp; Vectors</h3>
+    <label class="legend-row"><input type="checkbox" data-layer="counties" checked><span class="legend-swatch" style="background:#5BA3D0"></span>Counties (15)</label>
+    <label class="legend-row"><input type="checkbox" data-layer="tribes" checked><span class="legend-swatch diamond" style="background:#E6A038"></span>Tribal nations (22)</label>
+    <label class="legend-row"><input type="checkbox" data-layer="neon_sites" checked><span class="legend-swatch star"></span>NEON sites (D14)</label>
+    <label class="legend-row"><input type="checkbox" data-layer="federal_lands" checked><span class="legend-swatch square" style="background:#2C3E50"></span>Federal-land units</label>
+
+    <h3>Agencies</h3>
+    <label class="legend-row"><input type="checkbox" data-layer="agencies-state" checked><span class="legend-swatch square" style="background:#C0392B"></span>State agencies</label>
+    <label class="legend-row"><input type="checkbox" data-layer="agencies-county" checked><span class="legend-swatch square" style="background:#E84A7A"></span>County / regional</label>
+    <label class="legend-row"><input type="checkbox" data-layer="agencies-academic" checked><span class="legend-swatch square" style="background:#1F3A93"></span>Academic / research</label>
+    <label class="legend-row"><input type="checkbox" data-layer="agencies-federal" checked><span class="legend-swatch square" style="background:#2C3E50"></span>Federal</label>
+
+    <h3>Outbreaks</h3>
+    <label class="legend-row"><input type="checkbox" data-layer="outbreaks" checked><span class="legend-swatch" style="background:#6A1B9A;border-color:#fff;box-shadow:0 0 0 1px #6A1B9A"></span>Historical outbreaks</label>
+
+    <h3 style="margin-top:1.25rem">Notes</h3>
+    <p style="font-size:.78rem;color:#666;line-height:1.4">
+      Coordinates are approximate (county-seat / reservation-centroid).
+      Every feature carries a <code>kg_node_id</code> pointing back to
+      the corresponding node in the DuckLake knowledge graph.
+    </p>
+  </aside>
+</main>
+
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<script src="data.js"></script>
+<script>
+  const data = window.EPIHACK_MAP_DATA;
+
+  // Split agencies by jurisdiction so the legend can toggle them
+  function jurisdictionGroup(jur) {
+    if (jur === 'state') return 'state';
+    if (jur === 'county' || jur === 'regional' || jur === 'city') return 'county';
+    if (jur === 'academic' || jur === 'academic_tribal_partnership') return 'academic';
+    return 'federal';
+  }
+  const agenciesByGroup = {state:[], county:[], academic:[], federal:[]};
+  data.agencies.features.forEach(f => {
+    agenciesByGroup[jurisdictionGroup(f.properties.jurisdiction)].push(f);
+  });
+  const fc = arr => ({type:'FeatureCollection', features:arr});
+
+  const isMobile = () => window.matchMedia('(max-width: 800px)').matches;
+
+  const map = new maplibregl.Map({
+    container: 'map',
+    style: 'https://tiles.openfreemap.org/styles/positron',
+    center: [-111.7, 34.3],   // roughly the geographic center of AZ
+    zoom: isMobile() ? 5.3 : 6,
+    maxBounds: [[-117, 30.5], [-106, 38]],
+    cooperativeGestures: false,  // single-finger pan/zoom on mobile
+    touchZoomRotate: true,
+    touchPitch: false
+  });
+
+  map.addControl(new maplibregl.NavigationControl({showCompass:false}), 'top-right');
+  map.addControl(new maplibregl.ScaleControl({maxWidth: 120, unit: 'imperial'}), 'bottom-left');
+
+  map.on('load', () => {
+
+    // ------- sources -------
+    map.addSource('counties',      {type:'geojson', data: data.counties});
+    map.addSource('tribes',        {type:'geojson', data: data.tribes});
+    map.addSource('neon_sites',    {type:'geojson', data: data.neon_sites});
+    map.addSource('federal_lands', {type:'geojson', data: data.federal_lands});
+    map.addSource('outbreaks',     {type:'geojson', data: data.outbreaks});
+    map.addSource('agencies-state',    {type:'geojson', data: fc(agenciesByGroup.state)});
+    map.addSource('agencies-county',   {type:'geojson', data: fc(agenciesByGroup.county)});
+    map.addSource('agencies-academic', {type:'geojson', data: fc(agenciesByGroup.academic)});
+    map.addSource('agencies-federal',  {type:'geojson', data: fc(agenciesByGroup.federal)});
+
+    // ------- counties (circles + labels) -------
+    map.addLayer({
+      id: 'counties', source: 'counties', type: 'circle',
+      paint: {
+        'circle-radius': ['interpolate', ['linear'], ['zoom'], 5, 5, 10, 14],
+        'circle-color': ['case', ['get','vector_control'], '#1F6FB0', '#9BC4DD'],
+        'circle-stroke-color': '#fff',
+        'circle-stroke-width': 2
+      }
+    });
+    map.addLayer({
+      id: 'counties-labels', source: 'counties', type: 'symbol',
+      layout: {
+        'text-field': ['get', 'name'],
+        'text-size': ['interpolate', ['linear'], ['zoom'], 5, 10, 10, 13],
+        'text-offset': [0, 1.1],
+        'text-anchor': 'top',
+        'text-font': ['Noto Sans Regular']
+      },
+      paint: { 'text-halo-color': '#fff', 'text-halo-width': 1.2 }
+    });
+
+    // ------- tribes -------
+    map.addLayer({
+      id: 'tribes', source: 'tribes', type: 'circle',
+      paint: {
+        'circle-radius': ['interpolate', ['linear'], ['zoom'], 5, 5, 10, 9],
+        'circle-color': '#E6A038',
+        'circle-stroke-color': '#7A4E00',
+        'circle-stroke-width': 1.5
+      }
+    });
+
+    // ------- NEON sites -------
+    map.addLayer({
+      id: 'neon_sites', source: 'neon_sites', type: 'circle',
+      paint: {
+        'circle-radius': ['interpolate', ['linear'], ['zoom'], 5, 7, 10, 12],
+        'circle-color': '#FFD700',
+        'circle-stroke-color': '#444',
+        'circle-stroke-width': 2
+      }
+    });
+
+    // ------- federal-land units -------
+    map.addLayer({
+      id: 'federal_lands', source: 'federal_lands', type: 'circle',
+      paint: {
+        'circle-radius': ['interpolate', ['linear'], ['zoom'], 5, 6, 10, 10],
+        'circle-color': '#2C3E50',
+        'circle-stroke-color': '#fff',
+        'circle-stroke-width': 1.5
+      }
+    });
+
+    // ------- agencies -------
+    const agencyColors = {
+      'agencies-state':    '#C0392B',
+      'agencies-county':   '#E84A7A',
+      'agencies-academic': '#1F3A93',
+      'agencies-federal':  '#2C3E50'
+    };
+    Object.keys(agencyColors).forEach(id => {
+      map.addLayer({
+        id, source: id, type: 'circle',
+        paint: {
+          'circle-radius': ['interpolate', ['linear'], ['zoom'], 5, 4, 10, 8],
+          'circle-color': agencyColors[id],
+          'circle-stroke-color': '#fff',
+          'circle-stroke-width': 1.5
+        }
+      });
+    });
+
+    // ------- outbreaks -------
+    map.addLayer({
+      id: 'outbreaks', source: 'outbreaks', type: 'circle',
+      paint: {
+        'circle-radius': ['interpolate', ['linear'], ['zoom'], 5, 7, 10, 12],
+        'circle-color': ['interpolate', ['linear'], ['get','year'],
+                          1993, '#a48de8', 2025, '#4A148C'],
+        'circle-stroke-color': '#fff',
+        'circle-stroke-width': 2,
+        'circle-opacity': 0.85
+      }
+    });
+    map.addLayer({
+      id: 'outbreaks-labels', source: 'outbreaks', type: 'symbol',
+      layout: {
+        'text-field': ['to-string', ['get', 'year']],
+        'text-size': 10,
+        'text-font': ['Noto Sans Bold']
+      },
+      paint: {
+        'text-color': '#fff',
+        'text-halo-color': '#6A1B9A',
+        'text-halo-width': 0.6
+      }
+    });
+
+    // ------- pop-ups for every clickable layer -------
+    const clickableLayers = [
+      'counties','tribes','neon_sites','federal_lands','outbreaks',
+      'agencies-state','agencies-county','agencies-academic','agencies-federal'
+    ];
+    clickableLayers.forEach(layerId => {
+      map.on('click', layerId, (e) => {
+        const f = e.features[0];
+        const p = f.properties;
+        let html = `<div class="popup-title">${p.name}</div>`;
+        if (p.seat)               html += `<div class="popup-kv">County seat: ${p.seat}</div>`;
+        if (p.population_approx)  html += `<div class="popup-kv">Pop. ~${Number(p.population_approx).toLocaleString()}</div>`;
+        if (p.vector_control !== undefined)
+                                  html += `<div class="popup-kv">Vector control program: ${p.vector_control === 'true' || p.vector_control === true ? 'yes' : 'no'}</div>`;
+        if (p.jurisdiction)       html += `<div class="popup-kv">Jurisdiction: ${p.jurisdiction}</div>`;
+        if (p.agency)             html += `<div class="popup-kv">Agency: ${p.agency}</div>`;
+        if (p.kind)               html += `<div class="popup-kv">NEON site type: ${p.kind} (Domain ${p.domain || 'D14'})</div>`;
+        if (p.year)               html += `<div class="popup-kv">Year: ${p.year}</div>`;
+        if (p.pathogen)           html += `<div class="popup-kv">Pathogen / event: ${p.pathogen}</div>`;
+        if (p.kg_node_id)         html += `<div class="popup-kv"><code>${p.kg_node_id}</code></div>`;
+        if (p.page)               html += `<a class="popup-link" href="${p.page}">→ resource page</a>`;
+        new maplibregl.Popup({offset: 12, maxWidth: '280px'})
+          .setLngLat(e.lngLat)
+          .setHTML(html)
+          .addTo(map);
+      });
+      map.on('mouseenter', layerId, () => map.getCanvas().style.cursor = 'pointer');
+      map.on('mouseleave', layerId, () => map.getCanvas().style.cursor = '');
+    });
+
+    // ------- legend checkbox toggles -------
+    document.querySelectorAll('#legend input[data-layer]').forEach(cb => {
+      cb.addEventListener('change', () => {
+        const layer = cb.dataset.layer;
+        const visibility = cb.checked ? 'visible' : 'none';
+        if (map.getLayer(layer)) map.setLayoutProperty(layer, 'visibility', visibility);
+        if (layer === 'counties' && map.getLayer('counties-labels'))   map.setLayoutProperty('counties-labels',  'visibility', visibility);
+        if (layer === 'outbreaks' && map.getLayer('outbreaks-labels')) map.setLayoutProperty('outbreaks-labels', 'visibility', visibility);
+      });
+    });
+
+    // Recompute MapLibre size whenever the panel toggles or window resizes.
+    new ResizeObserver(() => map.resize()).observe(document.getElementById('map'));
+  });
+
+  // ------- mobile panel toggle -------
+  const panelToggle = document.getElementById('panel-toggle');
+  const panelIcon   = document.getElementById('panel-toggle-icon');
+  panelToggle.addEventListener('click', () => {
+    document.body.classList.toggle('panel-collapsed');
+    const collapsed = document.body.classList.contains('panel-collapsed');
+    panelIcon.textContent = collapsed ? '☰' : '×';
+    panelToggle.setAttribute('aria-label',
+      collapsed ? 'Show layers panel' : 'Hide layers panel');
+    // give CSS the transition tick, then resize the map canvas
+    setTimeout(() => map && map.resize(), 280);
+  });
+</script>
+
+</body>
+</html>

@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>AZ One Health Sentinel — agency dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      max-width: 1100px;
+      margin: 2rem auto;
+      padding: 0 1.25rem;
+      color: #1a1a1a;
+      line-height: 1.55;
+    }
+    nav.crumbs { font-size: .9rem; color: #555; margin-bottom: 1rem; }
+    nav.crumbs a { color: #1F3A93; text-decoration: none; }
+    h1 { border-bottom: 3px solid #1F3A93; padding-bottom: .35rem; }
+    h2 { margin-top: 2.25rem; color: #1F3A93; }
+    h3 { margin-top: 1.25rem; }
+    table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: .95rem; }
+    th, td { border: 1px solid #ddd; padding: .5rem .75rem; text-align: left; vertical-align: top; }
+    th { background: #f0f3f8; }
+    blockquote {
+      border-left: 4px solid #1F3A93;
+      background: #f4f6fb;
+      margin: 1rem 0;
+      padding: .75rem 1rem;
+    }
+    code { background: #f1f3f7; padding: 1px 5px; border-radius: 3px; font-size: .9em; }
+    pre code { display: block; padding: .75rem 1rem; overflow-x: auto; }
+    footer { margin-top: 4rem; padding-top: 1rem; border-top: 1px solid #ddd; color: #666; font-size: .85rem; }
+    a { color: #1F3A93; }
+  </style>
+</head>
+<body>
+  <nav class="crumbs">
+    <a href="/epihack-2026/">EpiHack AZ 2026</a>
+  </nav>
+
+  <h1 id="dashboard--agency-side-analyst-workspace"><code class="language-plaintext highlighter-rouge">dashboard/</code> — agency-side analyst workspace</h1>
+
+<p>This is the <strong>Phase 3 agency dashboard</strong> for the
+<a href="../plan/README.html">AZ One Health Sentinel</a>. It implements the
+workspace from
+<a href="../plan/04-data-flows.html#scenario-d--agency-side-cluster-review"><code class="language-plaintext highlighter-rouge">plan/04-data-flows.md</code> Scenario D</a>:
+an ADHS epi opens a flagged hantavirus cluster overnight, reviews the
+co-located WHISPers wildlife mortality events, and follows the chain
+of evidence back to its underlying observation nodes in the knowledge
+graph.</p>
+
+<p>See
+<a href="../plan/05-roadmap.html#phase-3--maricopa--coconino-pilot-month-69"><code class="language-plaintext highlighter-rouge">plan/05-roadmap.md</code> Phase 3</a>
+for the deliverable this folder fulfills:</p>
+
+<blockquote>
+  <p>Agency dashboard for MCDPH, ADHS, AZGFD, Coconino HHS — new.</p>
+</blockquote>
+
+<h2 id="audiences">Audiences</h2>
+
+<p>The dashboard is <strong>four-audience</strong> by design, mirroring the agencies
+engaged for Phase 3 pilot review boards and the focus-group docs:</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Slug</th>
+      <th>Agency</th>
+      <th>Focus</th>
+      <th>Scope</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">adhs</code></td>
+      <td>Arizona Department of Health Services — Vector-Borne &amp; Zoonotic Diseases</td>
+      <td>Statewide arbovirus + heat mortality</td>
+      <td>All 15 counties</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">mcdph</code></td>
+      <td>Maricopa County Department of Public Health — Heat Surveillance team</td>
+      <td>Heat clusters + WNV vector index</td>
+      <td>Maricopa County</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">azgfd</code></td>
+      <td>Arizona Game &amp; Fish Department — Wildlife Health Program</td>
+      <td>WHISPers + AZGFD + iNaturalist</td>
+      <td>Statewide wildlife</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">coconino</code></td>
+      <td>Coconino County Health &amp; Human Services</td>
+      <td>Plague + hantavirus + Grand Canyon NPS coordination</td>
+      <td>Coconino + GRCA</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>Every audience landing page renders the same five components:</p>
+
+<ol>
+  <li><strong>Status card</strong> — count of new alerts in the last 24h / 7d / 30d.</li>
+  <li><strong>Cluster feed</strong> — top 5 recent spatial-temporal clusters from the
+Cluster Detection Agent (the Scenario D hantavirus cluster is the
+canonical example).</li>
+  <li><strong>Arizona map embed</strong> — recent observations + outbreak pins via
+the same MapLibre runtime <a href="../map/"><code class="language-plaintext highlighter-rouge">map/</code></a> uses, lazy-loaded to
+keep the page fast on analyst workstations.</li>
+  <li><strong>Case-counts table</strong> — weekly + cumulative, with one SVG
+sparkline per row via the <a href="/epihack-2026/dashboard/shared/sparkline.js"><code class="language-plaintext highlighter-rouge">sparkline.js</code></a>
+component.</li>
+  <li><strong>“Open the underlying observations” button</strong> — exposes the SQL
+the analyst would run against the read-only
+<a href="../mcp/knowledge-graph-mcp/"><code class="language-plaintext highlighter-rouge">knowledge-graph-mcp</code></a> endpoint.
+The dashboard <strong>never executes the query from the browser</strong>.</li>
+</ol>
+
+<h2 id="stack">Stack</h2>
+
+<p>Plain HTML + ES-module JS + one shared CSS file, same as
+<a href="../app/"><code class="language-plaintext highlighter-rouge">app/</code></a>, <a href="../map/"><code class="language-plaintext highlighter-rouge">map/</code></a>, and <a href="../graph/"><code class="language-plaintext highlighter-rouge">graph/</code></a>.
+No bundler, no framework, no CSS toolkit.</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>dashboard/
+  index.html              landing page with four audience cards
+  shared/
+    style.css             palette + analyst-table styling + print rules
+    kg-client.js          fetch wrapper around knowledge-graph-mcp HTTP transport
+    auth-stub.js          stub "Sign in as &lt;agency&gt;" toggle (placeholder for SSO)
+    cluster-feed.js       polls the cluster-detection feed
+    map-embed.js          lazy-loads MapLibre and renders pin GeoJSON
+    sparkline.js          pure-SVG sparkline for time-series cells
+  adhs/
+    index.html            ADHS statewide arbovirus + heat-mortality dashboard
+    arbovirus.html        drill-down: WNV + SLEV vector index by county
+    heat-mortality.html   drill-down: weekly + cumulative deaths, disparities
+  mcdph/
+    index.html            Maricopa heat-surveillance pins + WNV vector index
+    heat-clusters.html    drill-down: spatial-temporal ZCTA scan
+  azgfd/
+    index.html            WHISPers + AZGFD + iNaturalist wildlife overlay
+  coconino/
+    index.html            plague + hantavirus + Grand-Canyon NPS coordination
+  mock/
+    cluster-feed.json     canned cluster-detection events
+    arbovirus-feed.json   canned WNV/SLEV MIR + cases by county
+    heat-mortality.json   canned weekly heat-death + disparity series
+    wildlife-events.json  canned WHISPers + AZGFD + iNat overlay
+  README.md               this file
+</code></pre></div></div>
+
+<h2 id="run-locally">Run locally</h2>
+
+<p>From the repo root:</p>
+
+<div class="language-sh highlighter-rouge"><div class="highlight"><pre class="highlight"><code>python <span class="nt">-m</span> http.server 8000
+</code></pre></div></div>
+
+<p>then visit <a href="http://localhost:8000/dashboard/">http://localhost:8000/dashboard/</a>.</p>
+
+<h2 id="wiring-to-real-mcp-servers">Wiring to real MCP servers</h2>
+
+<p>By default every page renders against the canned JSON under
+<a href="./mock"><code class="language-plaintext highlighter-rouge">mock/</code></a>. To swap in a live
+<a href="../mcp/knowledge-graph-mcp/"><code class="language-plaintext highlighter-rouge">knowledge-graph-mcp</code></a> HTTP endpoint:</p>
+
+<div class="language-html highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nt">&lt;body</span> <span class="na">data-agency=</span><span class="s">"adhs"</span> <span class="na">data-kg-base=</span><span class="s">"http://localhost:8765/mcp"</span><span class="nt">&gt;</span>
+</code></pre></div></div>
+
+<p>When <code class="language-plaintext highlighter-rouge">data-kg-base</code> is set, <code class="language-plaintext highlighter-rouge">shared/kg-client.js</code> issues
+<code class="language-plaintext highlighter-rouge">tools/call</code> JSON-RPC envelopes against the
+<code class="language-plaintext highlighter-rouge">MCP_TRANSPORT=streamable-http</code> mode of <code class="language-plaintext highlighter-rouge">knowledge-graph-mcp</code>. The
+mock-fallback path is preserved unless explicitly opted out.</p>
+
+<p>In a deployed install the dashboard would also be wired to:</p>
+
+<ul>
+  <li><a href="../mcp/vectorsurv-mcp/"><code class="language-plaintext highlighter-rouge">vectorsurv-mcp</code></a> for live vector-index
+readings (<code class="language-plaintext highlighter-rouge">vectorsurv_calculate_infection_rate</code>).</li>
+  <li><a href="../mcp/adhs-mcp/"><code class="language-plaintext highlighter-rouge">adhs-mcp</code></a> for ADHS arbovirus + heat-mortality
+summaries.</li>
+  <li><a href="../mcp/whispers-mcp/"><code class="language-plaintext highlighter-rouge">whispers-mcp</code></a> for AZGFD’s wildlife
+mortality events.</li>
+  <li><a href="../mcp/inaturalist-mcp/"><code class="language-plaintext highlighter-rouge">inaturalist-mcp</code></a> for citizen-science
+overlays.</li>
+</ul>
+
+<p>A small per-agency proxy (not in this prototype) would consolidate
+those calls into the single endpoint pointed to by <code class="language-plaintext highlighter-rouge">data-kg-base</code>,
+so the dashboard never speaks more than one HTTP wire-protocol.</p>
+
+<h2 id="read-only-by-construction">Read-only by construction</h2>
+
+<p>The dashboard is <strong>read-only</strong>. The “Verify outbreak” workflow from
+Scenario D step 6 (a <code class="language-plaintext highlighter-rouge">Verify</code> milestone event written back to the
+knowledge graph via <code class="language-plaintext highlighter-rouge">knowledge-graph-mcp</code>) is described as a
+future-work box on every page; it ships as a separate, audited write
+workflow outside this folder.</p>
+
+<h2 id="authentication">Authentication</h2>
+
+<p>Production wiring will use federated <strong>agency SSO</strong> (ADHS Entra ID,
+MCDPH Active Directory, AZGFD employee portal, Coconino HHS) plus a
+per-agency <strong>data-use agreement (DUA)</strong>. None of those exist yet, so
+the dashboard ships with <a href="/epihack-2026/dashboard/shared/auth-stub.js"><code class="language-plaintext highlighter-rouge">shared/auth-stub.js</code></a>
+— a header dropdown that just switches the active landing page and
+records the choice in <code class="language-plaintext highlighter-rouge">localStorage</code>.</p>
+
+<h2 id="accessibility--responsive-design">Accessibility &amp; responsive design</h2>
+
+<ul>
+  <li>Desktop-first (analyst workstations), but breakpoints kick in at
+≤ 800px: cluster feed and analyst tables collapse cleanly, the map
+fills the viewport with a panel-toggle button (same pattern as
+<a href="/epihack-2026/map/index.html"><code class="language-plaintext highlighter-rouge">map/index.html</code></a>).</li>
+  <li>Print-friendly: <code class="language-plaintext highlighter-rouge">@media print</code> hides nav + interactive controls;
+the case-counts table becomes a clean printable report for
+daily / weekly review packets.</li>
+  <li>All cards and tiles use the project palette (<code class="language-plaintext highlighter-rouge">#1F3A93</code> navy,
+<code class="language-plaintext highlighter-rouge">#C0392B</code> red, <code class="language-plaintext highlighter-rouge">#E84A2B</code> heat-orange, <code class="language-plaintext highlighter-rouge">#4CAF50</code> green) plus a
+<code class="language-plaintext highlighter-rouge">#6A1B9A</code> Coconino-only accent so agency views stay
+visually distinct without losing the family resemblance.</li>
+</ul>
+
+<h2 id="cross-references">Cross-references</h2>
+
+<ul>
+  <li><a href="../plan/04-data-flows.html#scenario-d--agency-side-cluster-review">Scenario D — agency cluster review</a> — the canonical walk-through.</li>
+  <li><a href="../plan/05-roadmap.html#phase-3--maricopa--coconino-pilot-month-69">Phase 3 roadmap entry</a> — what this folder fulfills.</li>
+  <li><a href="../plan/03-agentic-architecture.html">Agentic architecture</a> — the
+Cluster Detection Agent + Notification Agent that put rows on the
+feed.</li>
+  <li><a href="../map/"><code class="language-plaintext highlighter-rouge">map/</code></a> — the geospatial knowledge-graph viewer the map
+embed lazy-loads.</li>
+  <li><a href="../graph/"><code class="language-plaintext highlighter-rouge">graph/</code></a> — pathogen knowledge graph for nodes that
+appear in popups.</li>
+  <li><a href="../app/"><code class="language-plaintext highlighter-rouge">app/</code></a> — the field-facing mobile app whose CHW + tick +
+heat flows feed observations into the same graph.</li>
+  <li><a href="../heat/04-vulnerable-populations.html"><code class="language-plaintext highlighter-rouge">heat/04-vulnerable-populations.md</code></a>
+and <a href="../wildlife/02-zoonotic-surveillance.html"><code class="language-plaintext highlighter-rouge">wildlife/02-zoonotic-surveillance.md</code></a>
+— focus-group docs that drove the audience splits.</li>
+</ul>
+
+
+  <footer>
+    Source: Ending Pandemics Academy &middot; University of Arizona Mel &amp;
+    Enid Zuckerman College of Public Health &middot; Global Health Institute.
+  </footer>
+</body>
+</html>

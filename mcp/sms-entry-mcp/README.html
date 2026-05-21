@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>SMS-entry MCP server</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      max-width: 1100px;
+      margin: 2rem auto;
+      padding: 0 1.25rem;
+      color: #1a1a1a;
+      line-height: 1.55;
+    }
+    nav.crumbs { font-size: .9rem; color: #555; margin-bottom: 1rem; }
+    nav.crumbs a { color: #1F3A93; text-decoration: none; }
+    h1 { border-bottom: 3px solid #1F3A93; padding-bottom: .35rem; }
+    h2 { margin-top: 2.25rem; color: #1F3A93; }
+    h3 { margin-top: 1.25rem; }
+    table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: .95rem; }
+    th, td { border: 1px solid #ddd; padding: .5rem .75rem; text-align: left; vertical-align: top; }
+    th { background: #f0f3f8; }
+    blockquote {
+      border-left: 4px solid #1F3A93;
+      background: #f4f6fb;
+      margin: 1rem 0;
+      padding: .75rem 1rem;
+    }
+    code { background: #f1f3f7; padding: 1px 5px; border-radius: 3px; font-size: .9em; }
+    pre code { display: block; padding: .75rem 1rem; overflow-x: auto; }
+    footer { margin-top: 4rem; padding-top: 1rem; border-top: 1px solid #ddd; color: #666; font-size: .85rem; }
+    a { color: #1F3A93; }
+  </style>
+</head>
+<body>
+  <nav class="crumbs">
+    <a href="/epihack-2026/">EpiHack AZ 2026</a>
+  </nav>
+
+  <h1 id="sms-entry-mcp--model-context-protocol-server-for-sms-only-intake"><code class="language-plaintext highlighter-rouge">sms-entry-mcp</code> — Model Context Protocol server for SMS-only intake</h1>
+
+<p>A <a href="https://modelcontextprotocol.io/">Model Context Protocol</a> server that
+runs the <strong>SMS-only entry point</strong> for users without a smartphone: a user
+texts <code class="language-plaintext highlighter-rouge">tick</code> or <code class="language-plaintext highlighter-rouge">heat</code> to a Twilio short code and the server walks them
+through the same Minimum Dataset intake the mobile app drives.</p>
+
+<p>Built for EpiHack Arizona 2026, <strong>Phase 2</strong> of the OneHealth roadmap
+(<a href="/epihack-2026/plan/05-roadmap.html"><code class="language-plaintext highlighter-rouge">plan/05-roadmap.md</code></a>: <em>“SMS-only flow for
+users with no smartphone (Twilio / agency short code)”</em>).</p>
+
+<blockquote>
+  <p><strong>Mock-by-default.</strong> Twilio webhooks require a real Twilio account, so
+the server defaults to an in-memory transcript that callers can drive
+end-to-end with tool calls. Flip <code class="language-plaintext highlighter-rouge">SMS_MODE=twilio</code> plus
+<code class="language-plaintext highlighter-rouge">SMS_TWILIO_AUTH_TOKEN</code> in the gateway HTTP service to wire it up to
+a real short code.</p>
+</blockquote>
+
+<h2 id="what-it-does">What it does</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>MCP tool</th>
+      <th>Purpose</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">sms_inbound(from_number, body, message_sid?, lang?)</code></td>
+      <td>Simulate one inbound SMS. Returns the outbound reply + state + (once finished) a <code class="language-plaintext highlighter-rouge">MinimumDataset</code> dict.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">sms_outbound_log(from_number, limit=20)</code></td>
+      <td>Read the last N outbound messages sent to a phone number.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">sms_set_consent(from_number, profile)</code></td>
+      <td>Override the consent profile on a phone’s session (defaults: <code class="language-plaintext highlighter-rouge">consent.anonymous_heat</code> for heat, <code class="language-plaintext highlighter-rouge">consent.tick_mailin</code> for tick).</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">sms_state(from_number)</code></td>
+      <td>Inspect a phone number’s current conversation state + answers + final dataset.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">sms_reset(from_number)</code></td>
+      <td>Clear conversation state.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">sms_twilio_webhook_signature_verify(body, signature, url, auth_token?)</code></td>
+      <td>Pure-function Twilio HMAC-SHA1 signature check.</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>Plus three MCP <strong>resources</strong>:</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">sms://supported-languages</code> — the language codes the state machine
+answers in (<code class="language-plaintext highlighter-rouge">en</code>, <code class="language-plaintext highlighter-rouge">es</code>).</li>
+  <li><code class="language-plaintext highlighter-rouge">sms://state-machine</code> — a plain-text rendering of every state + every
+transition, so an LLM can answer <em>“what happens if a user texts X?”</em>
+introspectively.</li>
+  <li><code class="language-plaintext highlighter-rouge">sms://prompts/{lang}</code> — every outbound prompt for a given language
+(for translation review).</li>
+</ul>
+
+<h2 id="the-conversation-flow">The conversation flow</h2>
+
+<p>The state machine is single-purpose: walk a user through the tick or
+heat minimum-dataset over SMS, then hand the result to the agents
+pipeline. Every outbound message is kept under 160 chars so it ships as
+a single SMS segment.</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>greet ─────► vertical_select ──┬─ tick_zip ──► tick_attached_date
+                               │                       │
+                               │                       ▼
+                               │              tick_attached_hours
+                               │                       │
+                               │                       ▼
+                               │              tick_bite_location
+                               │                       │
+                               │                       ▼
+                               │                  tick_photo
+                               │                       │
+                               │                       ▼
+                               │                tick_confirm ──► submit
+                               │
+                               ├─ heat_zip ──► heat_unsheltered
+                               │                       │
+                               │                       ▼
+                               │                   heat_ac
+                               │                       │
+                               │                       ▼
+                               │               heat_symptoms
+                               │                       │
+                               │                       ▼
+                               │               heat_confirm ──► submit
+                               │
+                               └─ help_menu
+</code></pre></div></div>
+
+<p>Universal: <code class="language-plaintext highlighter-rouge">STOP</code> / <code class="language-plaintext highlighter-rouge">CANCEL</code> / <code class="language-plaintext highlighter-rouge">ALTO</code> resets.</p>
+
+<p>When the conversation reaches <code class="language-plaintext highlighter-rouge">submit</code>, <code class="language-plaintext highlighter-rouge">sms_inbound</code> returns a
+<code class="language-plaintext highlighter-rouge">minimum_dataset</code> dict that mirrors <code class="language-plaintext highlighter-rouge">onehealth_agents.MinimumDataset</code>
+exactly: <code class="language-plaintext highlighter-rouge">{general, exposure, human, auxiliary, environmental, channel,
+vertical, consent_profile}</code>. The MCP server does <strong>not</strong> call the
+agents pipeline itself; that’s the gateway HTTP service’s job.</p>
+
+<h2 id="spanish">Spanish</h2>
+
+<p>The first inbound message decides the language. Triggers like <code class="language-plaintext highlighter-rouge">hola</code>,
+<code class="language-plaintext highlighter-rouge">ayuda</code>, <code class="language-plaintext highlighter-rouge">salud</code>, <code class="language-plaintext highlighter-rouge">garrapata</code>, <code class="language-plaintext highlighter-rouge">calor</code>, or <code class="language-plaintext highlighter-rouge">español</code> flip the session
+to Spanish (<code class="language-plaintext highlighter-rouge">lang="es"</code>); explicit <code class="language-plaintext highlighter-rouge">lang="es"</code> on <code class="language-plaintext highlighter-rouge">sms_inbound</code> does
+the same. Yes/no parsers accept both English and Spanish forms (<code class="language-plaintext highlighter-rouge">yes /
+si / sí</code>, <code class="language-plaintext highlighter-rouge">no / non</code>). Symptom keyword extraction recognises both
+languages (e.g. <code class="language-plaintext highlighter-rouge">mareo</code> -&gt; <code class="language-plaintext highlighter-rouge">dizziness</code>, <code class="language-plaintext highlighter-rouge">dolor de cabeza</code> -&gt; <code class="language-plaintext highlighter-rouge">headache</code>).</p>
+
+<h2 id="real-twilio-wiring">Real-Twilio wiring</h2>
+
+<p>The MCP server stays stateless w.r.t. Twilio. A thin HTTP gateway is
+what actually talks to Twilio:</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Twilio webhook (POST /sms)
+      │
+      ▼
+gateway HTTP service
+  1. sms_twilio_webhook_signature_verify(body, signature, url)
+  2. sms_inbound(from_number=From, body=Body, message_sid=MessageSid)
+  3. if result.minimum_dataset is not None:
+         observation = await Orchestrator.process(result.minimum_dataset)
+         # then translate observation.notifications -&gt; outbound SMS via sms_adapter
+      ▼
+gateway returns TwiML wrapping result.outbound
+      ▼
+Twilio sends the reply SMS
+</code></pre></div></div>
+
+<p>Env vars consumed by the gateway:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">export </span><span class="nv">SMS_MODE</span><span class="o">=</span>twilio
+<span class="nb">export </span><span class="nv">SMS_TWILIO_AUTH_TOKEN</span><span class="o">=</span>your_twilio_auth_token   <span class="c"># from Twilio Console</span>
+<span class="nb">export </span><span class="nv">SMS_TWILIO_PHONE_NUMBER</span><span class="o">=</span>+15555550199           <span class="c"># provisioned short code</span>
+</code></pre></div></div>
+
+<p>A <code class="language-plaintext highlighter-rouge">.env.example</code> template is included; copy to <code class="language-plaintext highlighter-rouge">.env</code> and source it.</p>
+
+<p>The <code class="language-plaintext highlighter-rouge">agents/src/onehealth_agents/sms_adapter.py</code> helper handles the
+final hop: it takes the <code class="language-plaintext highlighter-rouge">MinimumDataset</code> dict, runs it through
+<code class="language-plaintext highlighter-rouge">Orchestrator.process()</code>, and returns a single ≤160-char outbound SMS
+summarising the triage decision + a follow-up link.</p>
+
+<h2 id="install--run">Install &amp; run</h2>
+
+<h3 id="standalone">Standalone</h3>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">cd </span>mcp/sms-entry-mcp
+uv <span class="nb">sync
+</span>uv run sms-entry-mcp                            <span class="c"># stdio (default)</span>
+<span class="nv">MCP_TRANSPORT</span><span class="o">=</span>streamable-http uv run sms-entry-mcp  <span class="c"># HTTP</span>
+</code></pre></div></div>
+
+<h3 id="as-a-claude-desktop-mcp-server">As a Claude Desktop MCP server</h3>
+
+<p>Drop the snippet in
+<a href="/epihack-2026/mcp/sms-entry-mcp/examples/claude_desktop_config.json"><code class="language-plaintext highlighter-rouge">examples/claude_desktop_config.json</code></a>
+into your Claude Desktop config; replace the path with the absolute
+path to this directory and restart Claude Desktop.</p>
+
+<h3 id="tests">Tests</h3>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">cd </span>mcp/sms-entry-mcp
+uv run pytest
+</code></pre></div></div>
+
+<p>Tests are offline and exercise the four cases listed in
+<code class="language-plaintext highlighter-rouge">plan/05-roadmap.md</code> Phase 2:</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">tests/test_tick_flow.py</code> — full happy-path tick mail-in over SMS.</li>
+  <li><code class="language-plaintext highlighter-rouge">tests/test_heat_flow.py</code> — heat triage hand-off carries
+unsheltered + AC + symptoms.</li>
+  <li><code class="language-plaintext highlighter-rouge">tests/test_signature_verify.py</code> — Twilio HMAC-SHA1 vectors.</li>
+  <li><code class="language-plaintext highlighter-rouge">tests/test_es_flow.py</code> — Spanish trigger switches the prompts.</li>
+</ul>
+
+<h2 id="license">License</h2>
+
+<p>MIT, alongside the rest of <code class="language-plaintext highlighter-rouge">epihack-2026</code>.</p>
+
+
+  <footer>
+    Source: Ending Pandemics Academy &middot; University of Arizona Mel &amp;
+    Enid Zuckerman College of Public Health &middot; Global Health Institute.
+  </footer>
+</body>
+</html>

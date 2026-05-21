@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>EpiHack Arizona 2026 — Governance</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      max-width: 1100px;
+      margin: 2rem auto;
+      padding: 0 1.25rem;
+      color: #1a1a1a;
+      line-height: 1.55;
+    }
+    nav.crumbs { font-size: .9rem; color: #555; margin-bottom: 1rem; }
+    nav.crumbs a { color: #1F3A93; text-decoration: none; }
+    h1 { border-bottom: 3px solid #1F3A93; padding-bottom: .35rem; }
+    h2 { margin-top: 2.25rem; color: #1F3A93; }
+    h3 { margin-top: 1.25rem; }
+    table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: .95rem; }
+    th, td { border: 1px solid #ddd; padding: .5rem .75rem; text-align: left; vertical-align: top; }
+    th { background: #f0f3f8; }
+    blockquote {
+      border-left: 4px solid #1F3A93;
+      background: #f4f6fb;
+      margin: 1rem 0;
+      padding: .75rem 1rem;
+    }
+    code { background: #f1f3f7; padding: 1px 5px; border-radius: 3px; font-size: .9em; }
+    pre code { display: block; padding: .75rem 1rem; overflow-x: auto; }
+    footer { margin-top: 4rem; padding-top: 1rem; border-top: 1px solid #ddd; color: #666; font-size: .85rem; }
+    a { color: #1F3A93; }
+  </style>
+</head>
+<body>
+  <nav class="crumbs">
+    <a href="/epihack-2026/">EpiHack AZ 2026</a>
+  </nav>
+
+  <h1 id="governance">Governance</h1>
+
+<p>This document defines how the EpiHack Arizona 2026 stack is governed
+post-event. It encodes the cross-cutting governance track from
+<a href="/epihack-2026/plan/05-roadmap.html"><code class="language-plaintext highlighter-rouge">plan/05-roadmap.md</code></a> and is binding on
+maintainers, agency-affiliated committers, and contributing
+agents (human or LLM).</p>
+
+<p>The intent is not bureaucracy. It is a small, durable structure that
+keeps the four founding agencies in the loop on anything that could
+change how surveillance data is collected, suppressed, or routed —
+and that gives tribal partners a hard veto on anything touching
+tribal data.</p>
+
+<h2 id="standing-review-board">Standing review board</h2>
+
+<p>The standing review board has four seats. Membership is by
+organization, not by individual, so transitions inside an agency do
+not require a repo change.</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Seat</th>
+      <th>Organization</th>
+      <th>Scope of authority</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>ADHS</strong></td>
+      <td>Arizona Department of Health Services — Vector-Borne &amp; Zoonotic Diseases program and the Heat Preparedness Network</td>
+      <td>Statewide arbovirus + heat-mortality surveillance; reportable-condition definitions; triage-class thresholds</td>
+    </tr>
+    <tr>
+      <td><strong>AZGFD</strong></td>
+      <td>Arizona Game and Fish Department — Wildlife Health Program</td>
+      <td>Wildlife observation flows; WHISPers + iNaturalist enrichment behaviour; species-attribution rules</td>
+    </tr>
+    <tr>
+      <td><strong>ITCA-TEC</strong></td>
+      <td>Inter Tribal Council of Arizona — Tribal Epidemiology Center</td>
+      <td>All decisions touching tribal data; veto authority below</td>
+    </tr>
+    <tr>
+      <td><strong>Maricopa Vector Control</strong></td>
+      <td>Maricopa County Environmental Services Department, Vector Control Division</td>
+      <td>Mosquito / tick pool data flows; cluster-detection threshold calibration for VBD; Phoenix-metro cooling-center integrations</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>The board operates by lazy consensus on the GitHub PR thread (any
+member can request changes; absence is consent after a 5-business-day
+window). Two domains escape lazy consensus and require explicit signoff:</p>
+
+<ul>
+  <li><strong>Tribal-data changes</strong> require ITCA-TEC explicit approval (see
+<a href="#tribal-partner-veto">Tribal-partner veto</a> below).</li>
+  <li><strong>Cluster-detection threshold changes</strong> require explicit approval
+from at least one of ADHS or Maricopa Vector Control, depending on
+vertical.</li>
+</ul>
+
+<h2 id="proposal-then-merge-cadence">Proposal-then-merge cadence</h2>
+
+<p>Changes fall into three buckets with different review depths.</p>
+
+<h3 id="schema-changes--proposal-first">Schema changes — <em>proposal first</em></h3>
+
+<p>Anything in <a href="./schema/"><code class="language-plaintext highlighter-rouge">schema/</code></a> — node types, edge predicates,
+property keys, slug renames, view definitions.</p>
+
+<ul>
+  <li>Open an <strong>issue first</strong> describing the proposed change, the
+affected seeds, and the downstream consumers (<code class="language-plaintext highlighter-rouge">mcp/knowledge-graph-mcp/</code>,
+<code class="language-plaintext highlighter-rouge">dashboard/</code>, <code class="language-plaintext highlighter-rouge">today/</code>, <code class="language-plaintext highlighter-rouge">agents/</code>).</li>
+  <li>Wait at least <strong>5 business days</strong> for review-board comment.</li>
+  <li>Then open the PR implementing the change, linking the issue.</li>
+  <li>Slug renames must include a deprecation note in the PR description;
+the old slug stays valid (as an alias edge) for one full release
+cycle.</li>
+</ul>
+
+<h3 id="runtime--orchestrator-changes--pr-first-fast-review">Runtime / orchestrator changes — <em>PR first, fast review</em></h3>
+
+<p>Changes in <a href="./agents/"><code class="language-plaintext highlighter-rouge">agents/</code></a>, <a href="./app/"><code class="language-plaintext highlighter-rouge">app/</code></a>,
+<a href="./dashboard/"><code class="language-plaintext highlighter-rouge">dashboard/</code></a>, <a href="./today/"><code class="language-plaintext highlighter-rouge">today/</code></a>.</p>
+
+<ul>
+  <li>Open the PR. The board reviews on the standard lazy-consensus
+cadence.</li>
+  <li>Cluster-detection threshold edits (<code class="language-plaintext highlighter-rouge">agents/src/onehealth_agents/cluster.py</code>,
+<code class="language-plaintext highlighter-rouge">plan/CLUSTER-CALIBRATION.md</code>) trigger the explicit-approval rule
+above.</li>
+  <li>Consent-enforcement edits (<code class="language-plaintext highlighter-rouge">agents/src/onehealth_agents/validation.py</code>)
+trigger ITCA-TEC explicit approval if the change weakens any
+tribal-data check, removes any cell-suppression rule, or expands
+what enters <code class="language-plaintext highlighter-rouge">agent_run</code> digests.</li>
+</ul>
+
+<h3 id="mcp-server-changes--pr-first-prefix-scoped-review">MCP server changes — <em>PR first, prefix-scoped review</em></h3>
+
+<p>Changes in <a href="./mcp/"><code class="language-plaintext highlighter-rouge">mcp/&lt;server&gt;/</code></a>.</p>
+
+<ul>
+  <li>New MCP server: follow the recipe in <a href="/epihack-2026/mcp/README.html"><code class="language-plaintext highlighter-rouge">mcp/README.md</code></a>
+and <a href="/epihack-2026/CONTRIBUTING.html"><code class="language-plaintext highlighter-rouge">CONTRIBUTING.md</code></a>.</li>
+  <li>Existing MCP server: the seat whose agency owns the upstream data
+source is the de-facto reviewer (ADHS for <code class="language-plaintext highlighter-rouge">adhs-mcp</code>, AZGFD for
+<code class="language-plaintext highlighter-rouge">whispers-mcp</code> + <code class="language-plaintext highlighter-rouge">inaturalist-mcp</code> wildlife-context use, Maricopa
+Vector Control for <code class="language-plaintext highlighter-rouge">mag-hrn-mcp</code> and <code class="language-plaintext highlighter-rouge">vectorsurv</code> pool tools, etc.).</li>
+  <li><code class="language-plaintext highlighter-rouge">knowledge-graph-mcp</code> SQL-escape-hatch edits require approval from
+any two seats (the escape hatch is the highest-blast-radius surface
+in the repo).</li>
+</ul>
+
+<h2 id="tribal-partner-veto">Tribal-partner veto</h2>
+
+<p>ITCA-TEC and any participating tribal nation hold an unconditional
+veto on every change that touches tribal data, including but not
+limited to:</p>
+
+<ul>
+  <li>New MCP servers that proxy tribal data sources (e.g. the optional
+<code class="language-plaintext highlighter-rouge">navajo-ec-mcp</code> proxy described in
+<a href="/epihack-2026/plan/05-roadmap.html"><code class="language-plaintext highlighter-rouge">plan/05-roadmap.md</code></a> Phase 2).</li>
+  <li>Changes to the Validation Agent’s tribal-data suppression rules.</li>
+  <li>New dashboard views, public or private, that aggregate at a
+geography below the county level if any constituent ZCTA
+intersects tribal land.</li>
+  <li>New triage classes, cluster-detection thresholds, or notification
+routes that change how tribal observations are handled.</li>
+  <li>Changes to <code class="language-plaintext highlighter-rouge">consent_profile</code> semantics in
+<a href="/epihack-2026/schema/deep/application.sql"><code class="language-plaintext highlighter-rouge">schema/deep/application.sql</code></a>.</li>
+  <li>Changes to what tribal-jurisdiction observations contribute to
+<code class="language-plaintext highlighter-rouge">agent_run</code> digests or to any public-facing artifact.</li>
+</ul>
+
+<p>A veto is recorded on the PR. There is no override mechanism.</p>
+
+<h2 id="tribal-partner-opt-in-posture">Tribal-partner opt-in posture</h2>
+
+<p>The default for every new tribal partner is <strong>no data flows in
+either direction</strong> until an MOU is signed <em>and</em> a corresponding
+<code class="language-plaintext highlighter-rouge">consent_profile</code> row is added with <code class="language-plaintext highlighter-rouge">default = opt_in</code>. There is no
+opt-out posture and no default that shares tribal data; tribes opt in
+explicitly per data source.</p>
+
+<p>Concretely:</p>
+
+<ul>
+  <li>New <code class="language-plaintext highlighter-rouge">tribe.*</code> nodes are added to
+<a href="/epihack-2026/schema/deep/tribes.sql"><code class="language-plaintext highlighter-rouge">schema/deep/tribes.sql</code></a> for reference
+but ship with <code class="language-plaintext highlighter-rouge">consent_profile.default = suppress</code> until an MOU
+attaches an opt-in.</li>
+  <li>MCP servers that proxy tribal data sources do not deploy until the
+MOU is recorded in the repo and the sunset clause below is
+encoded in the server’s <code class="language-plaintext highlighter-rouge">pyproject.toml</code> <code class="language-plaintext highlighter-rouge">description</code> and README.</li>
+  <li>Public dashboards apply tribal-suppression <em>before</em> aggregation,
+not after, so cell-count thresholds cannot be reverse-engineered
+from neighbouring cells.</li>
+</ul>
+
+<h2 id="conflict-of-interest-disclosure">Conflict-of-interest disclosure</h2>
+
+<p>Committers affiliated with one of the standing-board agencies (ADHS,
+AZGFD, ITCA-TEC, Maricopa Vector Control) or any state, county, or
+tribal health authority must disclose that affiliation:</p>
+
+<ul>
+  <li>In their <strong>GitHub profile</strong> (the <code class="language-plaintext highlighter-rouge">Company</code> field is sufficient), or</li>
+  <li>In the <strong>PR description</strong> of any PR they author or review when the
+PR materially affects their agency’s data flow or threshold
+decisions, or</li>
+  <li>In a comment on this file if a structural conflict exists (e.g.
+serving simultaneously as a committer and a vendor whose product
+this repo integrates with).</li>
+</ul>
+
+<p>A disclosed conflict does not disqualify the contributor; it informs
+reviewers, who may ask for an independent second review. An
+<strong>undisclosed</strong> conflict that is later discovered is grounds for
+revoking commit access pending board review.</p>
+
+<h2 id="sunset-clauses">Sunset clauses</h2>
+
+<p>Any MCP server that acts as a proxy for a tribal data source operates
+<strong>only as long as the underlying MOU is live</strong>. Specifically:</p>
+
+<ul>
+  <li>The MOU expiry date is captured in the server’s <code class="language-plaintext highlighter-rouge">pyproject.toml</code>
+<code class="language-plaintext highlighter-rouge">description</code> field and in the first line of the server’s
+<code class="language-plaintext highlighter-rouge">README.md</code>.</li>
+  <li>On MOU expiry, the server’s <code class="language-plaintext highlighter-rouge">__main__.py</code> entry point refuses to
+start unless <code class="language-plaintext highlighter-rouge">MOU_RENEWED_THROUGH=&lt;ISO-date&gt;</code> is set in the
+environment to a date later than today. This is a hard runtime
+gate, not just a comment.</li>
+  <li>Renewal is recorded as a PR updating both files plus a corresponding
+<code class="language-plaintext highlighter-rouge">consent_profile</code> row in the kg.</li>
+  <li>The board reviews proxy-server status quarterly; any proxy whose
+MOU has lapsed for more than 90 days is removed from the repo
+(not just disabled) at the next maintenance cycle.</li>
+</ul>
+
+<p>The same posture applies, less formally, to MCP servers proxying
+non-tribal partner data (ADHS, MAG, 211 Arizona, USGS WHISPers,
+iNaturalist): if the data-sharing agreement lapses, the server is
+disabled in deployment configs and the README header is updated.</p>
+
+<h2 id="amending-this-document">Amending this document</h2>
+
+<p>This file is amended via PR, with the same lazy-consensus rules as
+runtime changes, <em>plus</em>: amendments to the <a href="#standing-review-board">Standing review
+board</a> section, the <a href="#tribal-partner-veto">Tribal-partner
+veto</a> section, or the <a href="#sunset-clauses">Sunset
+clauses</a> section require explicit approval from all
+four seats. Other sections may be amended by lazy consensus.</p>
+
+
+  <footer>
+    Source: Ending Pandemics Academy &middot; University of Arizona Mel &amp;
+    Enid Zuckerman College of Public Health &middot; Global Health Institute.
+  </footer>
+</body>
+</html>

@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Plan 07 — Authentication (account + Google / Facebook / Apple OAuth)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      max-width: 1100px;
+      margin: 2rem auto;
+      padding: 0 1.25rem;
+      color: #1a1a1a;
+      line-height: 1.55;
+    }
+    nav.crumbs { font-size: .9rem; color: #555; margin-bottom: 1rem; }
+    nav.crumbs a { color: #1F3A93; text-decoration: none; }
+    h1 { border-bottom: 3px solid #1F3A93; padding-bottom: .35rem; }
+    h2 { margin-top: 2.25rem; color: #1F3A93; }
+    h3 { margin-top: 1.25rem; }
+    table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: .95rem; }
+    th, td { border: 1px solid #ddd; padding: .5rem .75rem; text-align: left; vertical-align: top; }
+    th { background: #f0f3f8; }
+    blockquote {
+      border-left: 4px solid #1F3A93;
+      background: #f4f6fb;
+      margin: 1rem 0;
+      padding: .75rem 1rem;
+    }
+    code { background: #f1f3f7; padding: 1px 5px; border-radius: 3px; font-size: .9em; }
+    pre code { display: block; padding: .75rem 1rem; overflow-x: auto; }
+    footer { margin-top: 4rem; padding-top: 1rem; border-top: 1px solid #ddd; color: #666; font-size: .85rem; }
+    a { color: #1F3A93; }
+  </style>
+</head>
+<body>
+  <nav class="crumbs">
+    <a href="/epihack-2026/">EpiHack AZ 2026</a>
+  </nav>
+
+  <h1 id="07--authentication">07 — Authentication</h1>
+
+<p>Optional account system layered <strong>on top of</strong> the anonymous-first
+reporting flow from
+<a href="./06-mobile-app.html">plan/06-mobile-app.md</a>. Users can:</p>
+
+<ol>
+  <li><strong>File reports without an account</strong> — the anonymous path stays
+the default and is never gated by sign-in.</li>
+  <li><strong>Create an email-password account</strong> for cross-device profile
+storage and report history.</li>
+  <li><strong>Use a common OAuth provider</strong> — Google, Facebook, or Apple —
+to sign up / sign in with one tap.</li>
+</ol>
+
+<h2 id="hard-rules-dont-break-these">Hard rules (don’t break these)</h2>
+
+<p>These are non-negotiable; every later decision derives from them.</p>
+
+<ol>
+  <li><strong>Anonymous reporting NEVER requires authentication.</strong> The
+three-button picker on the landing page works whether the user is
+signed in or signed out. The OpenAPI spec enforces this — <code class="language-plaintext highlighter-rouge">POST
+/v1/reports</code> accepts an unauthenticated request and returns a
+one-time <code class="language-plaintext highlighter-rouge">claim_token</code>.</li>
+  <li><strong>Linking a report to an account is a per-report opt-in.</strong> After
+submit, a signed-in user is <em>offered</em> “attach this report to my
+account” via <code class="language-plaintext highlighter-rouge">POST /v1/auth/claim</code>. The default is to not attach.</li>
+  <li><strong>OAuth identity is PII.</strong> A Google / Facebook / Apple user’s
+email + provider-id is personally identifying. It lands in
+<code class="language-plaintext highlighter-rouge">auth.users</code> (private) and never appears on <code class="language-plaintext highlighter-rouge">public.observation</code>
+or the public dashboard, even for reports the user has attached
+to their account.</li>
+  <li><strong>Sign in with Apple is required.</strong> App Store Review Guideline
+4.8 says any app offering Google / Facebook social login MUST
+also offer Sign in with Apple, and it must appear at least as
+prominently. Apple’s private-email-relay (<code class="language-plaintext highlighter-rouge">@privaterelay.appleid.com</code>)
+is a first-class email format we must support.</li>
+  <li><strong>Right to erasure is a real button.</strong> <code class="language-plaintext highlighter-rouge">DELETE /v1/auth/me</code>
+removes the user record and detaches them from any reports they
+had previously linked (the report itself stays in the graph; the
+<code class="language-plaintext highlighter-rouge">user_id ↔ observation_id</code> edge is severed).</li>
+  <li><strong>No third-party tracking pixels.</strong> No Google Analytics, no
+Facebook Pixel, no Meta SDK telemetry. The OAuth dance uses
+Google / Facebook / Apple’s <em>identity</em> APIs only; nothing else.</li>
+  <li><strong>Every account control defaults conservative.</strong> Email-marketing
+opt-in: off. Cross-device sync: off. “Show my reports on a public
+leaderboard”: off. The toggles live next to the same consent
+surface from plan/06.</li>
+</ol>
+
+<h2 id="surfaces">Surfaces</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>Route</th>
+      <th>Purpose</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">/sign-in</code></td>
+      <td>Email + password, magic-link, and three OAuth buttons (Google, Apple, Facebook — Apple first per Guideline 4.8).</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">/sign-up</code></td>
+      <td>Same component; just a toggle. Email-verification email goes out on submit.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">/auth/callback</code></td>
+      <td>OAuth-provider redirect target. Reads <code class="language-plaintext highlighter-rouge">code</code> + <code class="language-plaintext highlighter-rouge">state</code> from the URL, hands off to the provider SDK.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">/account</code></td>
+      <td>Authenticated profile: name (optional), home ZIP, contact channels, language, accessibility needs, consent toggles — all opt-in.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">/account/reports</code></td>
+      <td>List of reports the user has <em>attached</em> to their account. The user can detach any one (severs the link, leaves the report intact).</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">/account/delete</code></td>
+      <td>Account deletion. Requires re-auth. Cascades to detach (not delete) attached reports.</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2 id="stack-supabase-auth-for-the-pilot">Stack: Supabase Auth for the pilot</h2>
+
+<p>The pilot uses <strong><a href="https://supabase.com/docs/guides/auth">Supabase Auth</a></strong>.</p>
+
+<p>Why:</p>
+
+<ul>
+  <li><strong>Open source + self-hostable.</strong> The same <code class="language-plaintext highlighter-rouge">supabase-js</code> SDK works
+against the hosted service or against a self-hosted Supabase
+instance. The pilot uses the hosted service; v1 migrates to a
+self-hosted Postgres + Supabase Auth if data sovereignty needs
+demand it.</li>
+  <li><strong>Postgres-native.</strong> Auth.users lives in Postgres — same engine
+as our DuckLake catalog. Row-level security policies bridge
+cleanly into the <code class="language-plaintext highlighter-rouge">consent_profile</code> work from
+<a href="/epihack-2026/schema/deep/application.sql"><code class="language-plaintext highlighter-rouge">schema/deep/application.sql</code></a>.</li>
+  <li><strong>All three providers + email built in.</strong> Google, Facebook, and
+Apple (with private-relay-email handling) ship as configuration,
+not code.</li>
+  <li><strong>Static-export friendly.</strong> The Next.js app stays <code class="language-plaintext highlighter-rouge">output: 'export'</code>;
+the OAuth dance happens on Supabase’s domain, and the React
+client only ever sees the resulting JWT.</li>
+  <li><strong>Magic-link path for low-friction first-time use.</strong> Email-only
+sign-in with a one-time link is well-suited to a public-health
+audience that may not want to manage another password.</li>
+</ul>
+
+<p>Alternatives considered:</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Option</th>
+      <th>Why not</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><a href="https://authjs.dev/">Auth.js (NextAuth)</a></td>
+      <td>Needs Next.js API routes (server runtime). Breaks <code class="language-plaintext highlighter-rouge">output: 'export'</code>.</td>
+    </tr>
+    <tr>
+      <td><a href="https://clerk.com/">Clerk</a></td>
+      <td>Excellent DX but proprietary and costs money at scale.</td>
+    </tr>
+    <tr>
+      <td><a href="https://auth0.com/">Auth0</a></td>
+      <td>Same — proprietary, paid.</td>
+    </tr>
+    <tr>
+      <td>Custom (PyJWT + Authlib + bcrypt)</td>
+      <td>Weeks of work to get OAuth + email-verify + password-reset + session-refresh right. Not worth it for the pilot. We can migrate later.</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2 id="architecture">Architecture</h2>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>┌────────────────────────────────────────────────────────────────┐
+│  Next.js app (browser)                                         │
+│                                                                │
+│   @supabase/supabase-js  ←─── OAuth + email + magic link       │
+│           │                                                    │
+│           ▼                                                    │
+│   Supabase JWT in HttpOnly cookie + memory                     │
+│           │                                                    │
+│           ▼                                                    │
+│   fetch('/api/v1/...', { headers: { Authorization: 'Bearer …'}})│
+└──────────────────────────────┬─────────────────────────────────┘
+                               │
+                               ▼
+┌────────────────────────────────────────────────────────────────┐
+│  FastAPI backend (agents/src/onehealth_agents/api/)            │
+│                                                                │
+│   • verify JWT against Supabase JWKS                          │
+│   • look up user_id in auth.users (Postgres)                  │
+│   • run the agent chain from plan/03                          │
+│   • write observation to DuckLake (precise zone or public)    │
+└────────────────────────────────────────────────────────────────┘
+</code></pre></div></div>
+
+<p>The React app <strong>never</strong> talks to our backend for sign-in. It uses
+the Supabase JS SDK directly, which handles every flow (email +
+password, magic-link, three OAuth providers, password reset, email
+verify, session refresh). The resulting JWT is then attached to
+every call to our backend.</p>
+
+<p>The backend doesn’t trust the client. It validates each JWT against
+Supabase’s published JWKS, extracts the <code class="language-plaintext highlighter-rouge">sub</code> claim (the user id),
+and looks up the user in the same Postgres database (Supabase Auth
+keeps <code class="language-plaintext highlighter-rouge">auth.users</code> rows alongside our <code class="language-plaintext highlighter-rouge">public.*</code> tables).</p>
+
+<h2 id="anonymous--authenticated-transitions">Anonymous → authenticated transitions</h2>
+
+<p>The Intake API supports four transition flows:</p>
+
+<ol>
+  <li><strong>Anonymous submit, anonymous claim</strong> <em>(default)</em>
+    <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>POST /v1/reports                  → { observation_id, claim_token }
+GET  /v1/reports/{id}             ← Authorization: Claim &lt;token&gt;
+PATCH /v1/reports/{id}/profile    ← Authorization: Claim &lt;token&gt;
+</code></pre></div>    </div>
+  </li>
+  <li><strong>Anonymous submit, attach to account after sign-in</strong>
+    <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>POST /v1/reports                  → { observation_id, claim_token }
+... user later signs in ...
+POST /v1/auth/claim               { claim_token }
+                                  → 204; observation_id is now linked
+                                    to auth.user_id
+</code></pre></div>    </div>
+  </li>
+  <li><strong>Authenticated submit, no attachment</strong>
+    <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>POST /v1/reports                  ← Authorization: Bearer &lt;jwt&gt;
+                                  payload includes { attach: false }
+                                  → { observation_id, claim_token }
+                                  ← observation has no user_id link
+</code></pre></div>    </div>
+    <p>This is the <strong>workplace-whistleblower</strong> case: a signed-in user
+files an Environmental report anonymously even though we know who
+they are. The server still returns a claim_token so they can
+manage the report later (e.g. add a photo) without ever having
+touched their account.</p>
+  </li>
+  <li><strong>Authenticated submit, attached to account</strong>
+    <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>POST /v1/reports                  ← Authorization: Bearer &lt;jwt&gt;
+                                  payload includes { attach: true }
+                                  → { observation_id }
+                                  ← observation.user_id = current user
+</code></pre></div>    </div>
+  </li>
+</ol>
+
+<h2 id="oauth-provider-notes">OAuth provider notes</h2>
+
+<h3 id="google-gmail">Google (Gmail)</h3>
+
+<ul>
+  <li>OAuth 2.0 + OIDC.</li>
+  <li>We request the <code class="language-plaintext highlighter-rouge">email</code> + <code class="language-plaintext highlighter-rouge">openid</code> scopes only. No <code class="language-plaintext highlighter-rouge">profile.read</code>,
+no Drive, no Calendar, no Contacts.</li>
+  <li>Email verification is implicit (Google verifies before issuing).</li>
+</ul>
+
+<h3 id="facebook">Facebook</h3>
+
+<ul>
+  <li>OAuth 2.0.</li>
+  <li>We request <code class="language-plaintext highlighter-rouge">email</code> only. No <code class="language-plaintext highlighter-rouge">public_profile</code> photo, no Friends
+list, no Pages.</li>
+  <li>Email verification is implicit.</li>
+</ul>
+
+<h3 id="apple-sign-in-with-apple">Apple (Sign in with Apple)</h3>
+
+<ul>
+  <li>OAuth 2.0 + JWT.</li>
+  <li>We support <strong>private email relay</strong> (<code class="language-plaintext highlighter-rouge">&lt;random&gt;@privaterelay.appleid.com</code>).
+These addresses are stored exactly like any other; relay forwarding
+is Apple’s concern.</li>
+  <li>Apple’s flow only returns the user’s name on the FIRST sign-in.
+We capture it then, optional. Subsequent sign-ins return only the
+sub-id and email.</li>
+  <li>The button must appear at least as prominently as the other social
+buttons (Guideline 4.8). The sign-in page renders Apple first.</li>
+</ul>
+
+<h3 id="email--password">Email + password</h3>
+
+<ul>
+  <li>Argon2id hashing (Supabase Auth default).</li>
+  <li>Minimum 12 characters; no upper/lower/number/symbol theatre.</li>
+  <li>Password-reset and email-verify use Supabase’s transactional
+email sender (configurable to SendGrid / Resend / Postmark; ours
+defaults to Resend).</li>
+</ul>
+
+<h3 id="magic-link-email">Magic-link email</h3>
+
+<ul>
+  <li>One-time link, expires in 1 hour.</li>
+  <li>Same email sender as password-reset.</li>
+  <li>Useful for low-friction first-time use — the user enters their
+email, clicks the link, and is in.</li>
+</ul>
+
+<h2 id="data-model">Data model</h2>
+
+<p>Supabase Auth gives us <code class="language-plaintext highlighter-rouge">auth.users</code> for free. We add a thin layer
+on top in <code class="language-plaintext highlighter-rouge">public.profile</code>:</p>
+
+<div class="language-sql highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">-- schema/deep/auth.sql (Phase 07.1 deliverable)</span>
+<span class="k">CREATE</span> <span class="k">TABLE</span> <span class="k">public</span><span class="p">.</span><span class="n">profile</span> <span class="p">(</span>
+  <span class="n">user_id</span>              <span class="n">uuid</span> <span class="k">PRIMARY</span> <span class="k">KEY</span> <span class="k">REFERENCES</span> <span class="n">auth</span><span class="p">.</span><span class="n">users</span><span class="p">(</span><span class="n">id</span><span class="p">)</span> <span class="k">ON</span> <span class="k">DELETE</span> <span class="k">CASCADE</span><span class="p">,</span>
+  <span class="n">display_name</span>         <span class="nb">text</span><span class="p">,</span>
+  <span class="n">home_zip</span>             <span class="nb">text</span> <span class="k">CHECK</span> <span class="p">(</span><span class="n">home_zip</span> <span class="o">~</span> <span class="s1">'^[0-9]{5}$'</span><span class="p">),</span>
+  <span class="n">primary_language</span>     <span class="nb">text</span><span class="p">,</span>
+  <span class="n">accessibility_needs</span>  <span class="nb">text</span><span class="p">[],</span>
+  <span class="n">contact_email_opt_in</span>    <span class="nb">boolean</span> <span class="k">NOT</span> <span class="k">NULL</span> <span class="k">DEFAULT</span> <span class="k">false</span><span class="p">,</span>
+  <span class="n">contact_sms_phone</span>       <span class="nb">text</span><span class="p">,</span>
+  <span class="n">contact_sms_opt_in</span>      <span class="nb">boolean</span> <span class="k">NOT</span> <span class="k">NULL</span> <span class="k">DEFAULT</span> <span class="k">false</span><span class="p">,</span>
+  <span class="n">precise_location_consent</span> <span class="nb">boolean</span> <span class="k">NOT</span> <span class="k">NULL</span> <span class="k">DEFAULT</span> <span class="k">false</span><span class="p">,</span>
+  <span class="n">share_photo_gps_animal_env</span> <span class="nb">boolean</span> <span class="k">NOT</span> <span class="k">NULL</span> <span class="k">DEFAULT</span> <span class="k">false</span><span class="p">,</span>
+  <span class="n">share_photo_gps_human</span>   <span class="nb">boolean</span> <span class="k">NOT</span> <span class="k">NULL</span> <span class="k">DEFAULT</span> <span class="k">false</span><span class="p">,</span>
+  <span class="n">created_at</span>  <span class="n">timestamptz</span> <span class="k">NOT</span> <span class="k">NULL</span> <span class="k">DEFAULT</span> <span class="n">now</span><span class="p">(),</span>
+  <span class="n">updated_at</span>  <span class="n">timestamptz</span> <span class="k">NOT</span> <span class="k">NULL</span> <span class="k">DEFAULT</span> <span class="n">now</span><span class="p">()</span>
+<span class="p">);</span>
+
+<span class="c1">-- One-to-many: a user can attach many observations; an observation</span>
+<span class="c1">-- has at most one user_id link. ON DELETE SET NULL preserves the</span>
+<span class="c1">-- observation under right-to-erasure.</span>
+<span class="k">ALTER</span> <span class="k">TABLE</span> <span class="k">public</span><span class="p">.</span><span class="n">observation</span>
+  <span class="k">ADD</span> <span class="k">COLUMN</span> <span class="n">user_id</span> <span class="n">uuid</span> <span class="k">REFERENCES</span> <span class="n">auth</span><span class="p">.</span><span class="n">users</span><span class="p">(</span><span class="n">id</span><span class="p">)</span> <span class="k">ON</span> <span class="k">DELETE</span> <span class="k">SET</span> <span class="k">NULL</span><span class="p">;</span>
+</code></pre></div></div>
+
+<p>Row-level security policies:</p>
+
+<div class="language-sql highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">-- A user can read / update only their own profile row.</span>
+<span class="k">ALTER</span> <span class="k">TABLE</span> <span class="k">public</span><span class="p">.</span><span class="n">profile</span> <span class="n">ENABLE</span> <span class="k">ROW</span> <span class="k">LEVEL</span> <span class="k">SECURITY</span><span class="p">;</span>
+<span class="k">CREATE</span> <span class="n">POLICY</span> <span class="n">profile_self_read</span>   <span class="k">ON</span> <span class="k">public</span><span class="p">.</span><span class="n">profile</span> <span class="k">FOR</span> <span class="k">SELECT</span> <span class="k">USING</span> <span class="p">(</span><span class="n">auth</span><span class="p">.</span><span class="n">uid</span><span class="p">()</span> <span class="o">=</span> <span class="n">user_id</span><span class="p">);</span>
+<span class="k">CREATE</span> <span class="n">POLICY</span> <span class="n">profile_self_update</span> <span class="k">ON</span> <span class="k">public</span><span class="p">.</span><span class="n">profile</span> <span class="k">FOR</span> <span class="k">UPDATE</span> <span class="k">USING</span> <span class="p">(</span><span class="n">auth</span><span class="p">.</span><span class="n">uid</span><span class="p">()</span> <span class="o">=</span> <span class="n">user_id</span><span class="p">);</span>
+
+<span class="c1">-- A user can read only their own attached observations.</span>
+<span class="k">CREATE</span> <span class="n">POLICY</span> <span class="n">observation_self_read</span>
+  <span class="k">ON</span> <span class="k">public</span><span class="p">.</span><span class="n">observation</span>
+  <span class="k">FOR</span> <span class="k">SELECT</span>
+  <span class="k">USING</span> <span class="p">(</span><span class="n">auth</span><span class="p">.</span><span class="n">uid</span><span class="p">()</span> <span class="o">=</span> <span class="n">user_id</span><span class="p">);</span>
+</code></pre></div></div>
+
+<p>Agency dashboards (MCDPH, ADHS, etc.) get separate Postgres roles
+that bypass RLS for governance-board-approved cohort queries; the
+tribal-data row-level suppression from plan/02 stays in force.</p>
+
+<h2 id="api-surface-added-to-the-spec">API surface added to the spec</h2>
+
+<p><a href="../api/openapi.yaml"><code class="language-plaintext highlighter-rouge">api/openapi.yaml</code></a> gets a new <code class="language-plaintext highlighter-rouge">auth</code> tag with:</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Endpoint</th>
+      <th>Purpose</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">GET /v1/auth/me</code></td>
+      <td>Current user (JWT-authenticated). Returns the user and their <code class="language-plaintext highlighter-rouge">public.profile</code> row.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">PATCH /v1/auth/me</code></td>
+      <td>Update the user’s profile. Per-field consent toggles default off; setting a value implies opt-in.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">DELETE /v1/auth/me</code></td>
+      <td>Right to erasure. Cascades to detach (NOT delete) attached observations.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">POST /v1/auth/sign-out</code></td>
+      <td>Invalidate the current session. (The Supabase JS SDK handles the local clear; this endpoint exists so server-side audit logs see the event.)</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">POST /v1/auth/claim</code></td>
+      <td>Attach a <code class="language-plaintext highlighter-rouge">claim_token</code> (from a previously anonymous report) to the current user. Optional and idempotent.</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>The sign-in / sign-up / OAuth dance itself is <strong>not</strong> in our spec —
+the React client talks to Supabase directly for that. Our spec
+documents only the part our backend serves.</p>
+
+<h2 id="react-ui-scaffold">React UI scaffold</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>Path</th>
+      <th>Component</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">app/src/lib/auth.ts</code></td>
+      <td>Supabase JS client + <code class="language-plaintext highlighter-rouge">useSession()</code> hook + <code class="language-plaintext highlighter-rouge">useUser()</code>.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">app/src/components/AuthProvider.tsx</code></td>
+      <td>React context that subscribes to <code class="language-plaintext highlighter-rouge">supabase.auth.onAuthStateChange</code> and exposes the session to the rest of the app.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">app/src/app/sign-in/page.tsx</code></td>
+      <td>Sign-in / sign-up page. Apple first, then Google, then Facebook. Email + magic-link below.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">app/src/app/auth/callback/page.tsx</code></td>
+      <td>OAuth-callback handler. Reads the URL hash, calls <code class="language-plaintext highlighter-rouge">supabase.auth.getSession()</code>, redirects to <code class="language-plaintext highlighter-rouge">/</code> or to the <code class="language-plaintext highlighter-rouge">next</code> query param.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">app/src/app/account/page.tsx</code></td>
+      <td>Authenticated settings page.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">app/src/app/account/reports/page.tsx</code></td>
+      <td>Attached-reports list.</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>The landing page (<code class="language-plaintext highlighter-rouge">/</code>) reads <code class="language-plaintext highlighter-rouge">useSession()</code> and shows a “Sign in”
+button when signed out, or a small chip with the user’s display
+name when signed in. The three-button picker is unchanged either
+way.</p>
+
+<h2 id="migration-plan">Migration plan</h2>
+
+<ul>
+  <li><strong>07.1</strong> (this commit): plan doc + OpenAPI auth endpoints + FastAPI
+backend scaffold + React sign-in / account / callback shell. The
+Supabase project is configured externally — Supabase URL + anon
+key land in <code class="language-plaintext highlighter-rouge">.env.local</code> (not committed).</li>
+  <li><strong>07.2</strong>: Wire <code class="language-plaintext highlighter-rouge">/v1/auth/me</code>, <code class="language-plaintext highlighter-rouge">/v1/auth/claim</code>, <code class="language-plaintext highlighter-rouge">/v1/auth/sign-out</code>
+to real Supabase JWT validation. Add <code class="language-plaintext highlighter-rouge">schema/deep/auth.sql</code> with
+the <code class="language-plaintext highlighter-rouge">public.profile</code> table and RLS policies. Apple-private-relay
+smoke test.</li>
+  <li><strong>07.3</strong>: Email-marketing opt-in (off by default), right-to-erasure
+audit log, tribal-data suppression policy applied to
+<code class="language-plaintext highlighter-rouge">public.observation</code> RLS.</li>
+  <li><strong>07.4</strong>: Self-hosted Supabase migration playbook (for v1 if needed).</li>
+</ul>
+
+<h2 id="open-questions">Open questions</h2>
+
+<ol>
+  <li><strong>Magic-link rate-limiting.</strong> What’s the per-IP send budget that
+keeps email-sender costs bounded without blocking legitimate
+first-time users in noisy networks (NAT, mobile carriers)?</li>
+  <li><strong>Cross-device session.</strong> Should a sign-in on a new device
+invalidate older sessions, or stay additive? The reporter audience
+skews “one phone forever” but CHWs may share tablets.</li>
+  <li><strong>Account merge.</strong> If a user signs up with email, then later signs
+in with Google using the same address, do we merge? Default
+<em>yes</em> (Supabase Auth handles this via “linking”), but we should
+confirm the UX.</li>
+  <li><strong>App Store metadata.</strong> Apple’s review requires a demo account
+that can complete the full flow. Plan how that account looks
+(test data only, clearly marked).</li>
+</ol>
+
+
+  <footer>
+    Source: Ending Pandemics Academy &middot; University of Arizona Mel &amp;
+    Enid Zuckerman College of Public Health &middot; Global Health Institute.
+  </footer>
+</body>
+</html>

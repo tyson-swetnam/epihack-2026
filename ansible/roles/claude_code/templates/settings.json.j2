@@ -1,0 +1,7 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "env": {
+    "ANTHROPIC_API_KEY": "{{ vault_anthropic_api_key }}"
+  }{% if claude_code_model %},
+  "model": "{{ claude_code_model }}"{% endif %}
+}

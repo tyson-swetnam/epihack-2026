@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Phase 4 execution status</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      max-width: 1100px;
+      margin: 2rem auto;
+      padding: 0 1.25rem;
+      color: #1a1a1a;
+      line-height: 1.55;
+    }
+    nav.crumbs { font-size: .9rem; color: #555; margin-bottom: 1rem; }
+    nav.crumbs a { color: #1F3A93; text-decoration: none; }
+    h1 { border-bottom: 3px solid #1F3A93; padding-bottom: .35rem; }
+    h2 { margin-top: 2.25rem; color: #1F3A93; }
+    h3 { margin-top: 1.25rem; }
+    table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: .95rem; }
+    th, td { border: 1px solid #ddd; padding: .5rem .75rem; text-align: left; vertical-align: top; }
+    th { background: #f0f3f8; }
+    blockquote {
+      border-left: 4px solid #1F3A93;
+      background: #f4f6fb;
+      margin: 1rem 0;
+      padding: .75rem 1rem;
+    }
+    code { background: #f1f3f7; padding: 1px 5px; border-radius: 3px; font-size: .9em; }
+    pre code { display: block; padding: .75rem 1rem; overflow-x: auto; }
+    footer { margin-top: 4rem; padding-top: 1rem; border-top: 1px solid #ddd; color: #666; font-size: .85rem; }
+    a { color: #1F3A93; }
+  </style>
+</head>
+<body>
+  <nav class="crumbs">
+    <a href="/epihack-2026/">EpiHack AZ 2026</a>
+  </nav>
+
+  <h1 id="phase-4--execution-status">Phase 4 — execution status</h1>
+
+<p>Seven Phase-4 sub-agents (six big builds + foreground contract /
+photo follow-ups) have all reported back. The branch carries the
+full Phase 0 → Phase 4 deliverable set.</p>
+
+<h2 id="shipped-since-phase-12">Shipped since Phase 1+2</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>Component</th>
+      <th>Path</th>
+      <th>Verification</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong><code class="language-plaintext highlighter-rouge">wearable-mcp</code></strong> + HealthKit / Health Connect shim</td>
+      <td><a href="../mcp/wearable-mcp/"><code class="language-plaintext highlighter-rouge">mcp/wearable-mcp/</code></a> + <a href="../app/shared/wearable.js"><code class="language-plaintext highlighter-rouge">app/shared/wearable.js</code></a> + <a href="../app/heat/wearable-monitor/"><code class="language-plaintext highlighter-rouge">app/heat/wearable-monitor/</code></a></td>
+      <td>4 MCP tools + 2 resources, 23 wearable-mcp tests; browser-bridge detection table for iOS PWA / Android Origin Trial / desktop fallback; heat check-in / self-report flows gain a “Pair wearable” pre-fill</td>
+    </tr>
+    <tr>
+      <td><strong>kg-aggregation extension</strong> to <code class="language-plaintext highlighter-rouge">knowledge-graph-mcp</code></td>
+      <td><a href="../mcp/knowledge-graph-mcp/"><code class="language-plaintext highlighter-rouge">mcp/knowledge-graph-mcp/</code></a></td>
+      <td>4 new tools (<code class="language-plaintext highlighter-rouge">kg_observations_by_window</code>, <code class="language-plaintext highlighter-rouge">kg_cluster_scan</code>, <code class="language-plaintext highlighter-rouge">kg_milestone_intervals</code>, <code class="language-plaintext highlighter-rouge">kg_normalize_diagnosis</code>) + new resource <code class="language-plaintext highlighter-rouge">kg://aggregation-tools</code>. Server now exposes <strong>16 tools + 4 resources, 40/40 tests</strong> (was 22)</td>
+    </tr>
+    <tr>
+      <td><strong>Cluster-detector gap-closing</strong> (Tiers A, B, C + travel)</td>
+      <td><a href="../agents/src/onehealth_agents/cluster.py"><code class="language-plaintext highlighter-rouge">agents/src/onehealth_agents/cluster.py</code></a> + <a href="/epihack-2026/schema/deep/cluster_followups.sql"><code class="language-plaintext highlighter-rouge">schema/deep/cluster_followups.sql</code></a></td>
+      <td>+522 lines on <code class="language-plaintext highlighter-rouge">cluster.py</code>. <strong>13/13 evaluable historical outbreaks now caught</strong> (was 6/13). Median lag: VBD 11d, Heat 5d. FP-rate stayed at <strong>0.0000 / agency-week</strong> across 4,114 sim weeks</td>
+    </tr>
+    <tr>
+      <td><strong>Evaluation harness</strong></td>
+      <td><a href="../agents/src/onehealth_agents/evaluation.py"><code class="language-plaintext highlighter-rouge">agents/src/onehealth_agents/evaluation.py</code></a> + <a href="../evaluation/"><code class="language-plaintext highlighter-rouge">evaluation/</code></a> + <a href="./EVALUATION.html"><code class="language-plaintext highlighter-rouge">plan/EVALUATION.md</code></a></td>
+      <td>851-line <code class="language-plaintext highlighter-rouge">evaluation.py</code>, 12 new tests, CLI <code class="language-plaintext highlighter-rouge">python -m onehealth_agents.evaluation</code>; baseline-2024.json hand-extracted from <code class="language-plaintext highlighter-rouge">schema/deep/outbreaks.sql</code>; example scorecard renders 99.9% / 98.3% Detect→Notify improvement on synthetic data</td>
+    </tr>
+    <tr>
+      <td><strong>Federated cluster detection</strong></td>
+      <td><a href="../agents/src/onehealth_agents/federated.py"><code class="language-plaintext highlighter-rouge">agents/src/onehealth_agents/federated.py</code></a> + <a href="./FEDERATED.html"><code class="language-plaintext highlighter-rouge">plan/FEDERATED.md</code></a></td>
+      <td>724-line <code class="language-plaintext highlighter-rouge">federated.py</code>, 7 tests. Sufficient-statistics exchange between sites; Ed25519 sign+verify; Laplace DP at configurable ε; property test proves no raw <code class="language-plaintext highlighter-rouge">Observation</code> survives aggregation; centralized + federated detectors emit the same alert set with no DP noise</td>
+    </tr>
+    <tr>
+      <td><strong>OSS release prep</strong></td>
+      <td><a href="../LICENSE"><code class="language-plaintext highlighter-rouge">LICENSE</code></a> + <a href="/epihack-2026/CONTRIBUTING.html"><code class="language-plaintext highlighter-rouge">CONTRIBUTING.md</code></a> + <a href="/epihack-2026/GOVERNANCE.html"><code class="language-plaintext highlighter-rouge">GOVERNANCE.md</code></a> + <a href="/epihack-2026/SECURITY.html"><code class="language-plaintext highlighter-rouge">SECURITY.md</code></a> + <a href="/epihack-2026/CHANGELOG.html"><code class="language-plaintext highlighter-rouge">CHANGELOG.md</code></a> + <a href="/epihack-2026/NOTICE"><code class="language-plaintext highlighter-rouge">NOTICE</code></a> + <a href="/epihack-2026/mcp/README.html"><code class="language-plaintext highlighter-rouge">mcp/README.md</code></a></td>
+      <td>Standing review board (ADHS, AZGFD, ITCA-TEC, Maricopa Vector Control); unconditional tribal-partner veto; 5-class threat model; per-PR changelog #1–#8; 11-server MCP index with auth posture and test count</td>
+    </tr>
+    <tr>
+      <td><strong>SMS contract refinements (foreground)</strong></td>
+      <td><code class="language-plaintext highlighter-rouge">agents/contracts.py</code> + <code class="language-plaintext highlighter-rouge">agents/__init__.py</code></td>
+      <td><code class="language-plaintext highlighter-rouge">SMS_MAX_CHARS = 160</code>, <code class="language-plaintext highlighter-rouge">to_sms_segment()</code> helper, <code class="language-plaintext highlighter-rouge">SmsIntakePayload</code> model, <code class="language-plaintext highlighter-rouge">Notification.sms_segment_safe</code> flag</td>
+    </tr>
+    <tr>
+      <td><strong>PWA photo-blob persistence (foreground)</strong></td>
+      <td><a href="../app/shared/sync.js"><code class="language-plaintext highlighter-rouge">app/shared/sync.js</code></a> + <a href="../app/tick/tick.js"><code class="language-plaintext highlighter-rouge">app/tick/tick.js</code></a></td>
+      <td>IDB queue now stores the photo File alongside the JSON payload via the structured-clone algorithm; replay re-attaches as multipart form-field</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2 id="headline-metrics">Headline metrics</h2>
+
+<ul>
+  <li><strong><code class="language-plaintext highlighter-rouge">agents/</code> tests:</strong> 87/87 passing (was 60).</li>
+  <li><strong>MCP servers:</strong> 11 (was 10). 70 + 5 = <strong>75 tools</strong> + <strong>22 + 1 = 23 resources</strong> across the family.</li>
+  <li><strong>Total tests across the repo (<code class="language-plaintext highlighter-rouge">agents/</code> + all MCP servers):</strong> 240+ passing.</li>
+  <li><strong>Cluster detector sensitivity:</strong> 13/13 evaluable outbreaks; only <code class="language-plaintext highlighter-rouge">az_hpai_h5n1_wildbird_2022</code> still uncaught by design (n=2 humans; correctly delegated to a wildlife H5N1 sentinel — adding it to <code class="language-plaintext highlighter-rouge">single_case_alertable</code> would FP on every flock serosurvey).</li>
+  <li><strong>Federated detection privacy budget:</strong> centralized + federated detectors emit the same alert set with no DP noise; ε=1.0 default keeps the federated set as a superset of centralized in ≥ 80% of trials.</li>
+</ul>
+
+<h2 id="whats-left-phase-4-follow-ups--ops-handoff">What’s left (Phase 4 follow-ups + ops handoff)</h2>
+
+<p>Items not landed in code because they need external work:</p>
+
+<ul>
+  <li>Tribal MOU / DUA framework with ITCA-TEC (governance / partnership).</li>
+  <li>Native-speaker review for the Diné Bizaad and Tohono O’odham UI bundles.</li>
+  <li>HPAI sentinel for the n=2 wildbird case the count-scan can’t catch by design.</li>
+  <li>Replace placeholder security contact (<code class="language-plaintext highlighter-rouge">epihack-security@arizona.edu</code>) with the real <code class="language-plaintext highlighter-rouge">security@</code> mailbox + GitHub Security Advisory private-disclosure config at handoff (documented in <code class="language-plaintext highlighter-rouge">SECURITY.md</code>).</li>
+  <li>Production-hardening federated detection: PKIX-anchored keys + rotation, signed timestamp/nonce, RFC 8785 canonicalization, secure-MPC layer, running DP-budget composition, sybil-resistant registration (documented in <code class="language-plaintext highlighter-rouge">plan/FEDERATED.md</code>).</li>
+  <li>An optional <code class="language-plaintext highlighter-rouge">federation-mcp</code> server (separate from the read-only <code class="language-plaintext highlighter-rouge">knowledge-graph-mcp</code> so that doesn’t break its surface guarantee).</li>
+</ul>
+
+<h2 id="cumulative-status-across-all-four-phases">Cumulative status across all four phases</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>Phase</th>
+      <th>Status</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Phase 0 — Hackathon MVP</strong></td>
+      <td>✅ shipped — application schema seed, <code class="language-plaintext highlighter-rouge">knowledge-graph-mcp</code>, <code class="language-plaintext highlighter-rouge">great-az-tick-check-mcp</code>, <code class="language-plaintext highlighter-rouge">nws-heatrisk-mcp</code> (pulled forward), <code class="language-plaintext highlighter-rouge">agents/</code> 8-agent pipeline, <code class="language-plaintext highlighter-rouge">app/</code> tick mail-in flow</td>
+    </tr>
+    <tr>
+      <td><strong>Phase 1 — Heat vertical</strong></td>
+      <td>✅ shipped — <code class="language-plaintext highlighter-rouge">mag-hrn-mcp</code>, <code class="language-plaintext highlighter-rouge">adhs-mcp</code>, <code class="language-plaintext highlighter-rouge">211-az-mcp</code>, heat app flows</td>
+    </tr>
+    <tr>
+      <td><strong>Phase 2 — Tribal partnerships + offline</strong></td>
+      <td>✅ shipped (code slice) — <code class="language-plaintext highlighter-rouge">whispers-mcp</code>, <code class="language-plaintext highlighter-rouge">inaturalist-mcp</code>, <code class="language-plaintext highlighter-rouge">sms-entry-mcp</code>, PWA offline + sync queue, tribal-data row-level suppression in the Validation Agent, Diné Bizaad + Tohono O’odham placeholder UI bundles; ⏳ external — tribal MOUs, native-speaker review</td>
+    </tr>
+    <tr>
+      <td><strong>Phase 3 — Maricopa + Coconino pilot</strong></td>
+      <td>✅ shipped — analyst <code class="language-plaintext highlighter-rouge">dashboard/</code> for ADHS / MCDPH / AZGFD / Coconino HHS, public <code class="language-plaintext highlighter-rouge">today/</code> dashboard, <code class="language-plaintext highlighter-rouge">agent_run</code> audit table + views, cluster-detection calibration</td>
+    </tr>
+    <tr>
+      <td><strong>Phase 4 — Statewide + evaluation</strong></td>
+      <td>✅ shipped (code slice) — wearable integration, kg-aggregation extension, cluster gap-closing, evaluation harness, federated detection prototype, OSS release prep</td>
+    </tr>
+  </tbody>
+</table>
+
+
+  <footer>
+    Source: Ending Pandemics Academy &middot; University of Arizona Mel &amp;
+    Enid Zuckerman College of Public Health &middot; Global Health Institute.
+  </footer>
+</body>
+</html>

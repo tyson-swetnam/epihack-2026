@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>EpiHack Arizona 2026</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      max-width: 1100px;
+      margin: 2rem auto;
+      padding: 0 1.25rem;
+      color: #1a1a1a;
+      line-height: 1.55;
+    }
+    nav.crumbs { font-size: .9rem; color: #555; margin-bottom: 1rem; }
+    nav.crumbs a { color: #1F3A93; text-decoration: none; }
+    h1 { border-bottom: 3px solid #1F3A93; padding-bottom: .35rem; }
+    h2 { margin-top: 2.25rem; color: #1F3A93; }
+    h3 { margin-top: 1.25rem; }
+    table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: .95rem; }
+    th, td { border: 1px solid #ddd; padding: .5rem .75rem; text-align: left; vertical-align: top; }
+    th { background: #f0f3f8; }
+    blockquote {
+      border-left: 4px solid #1F3A93;
+      background: #f4f6fb;
+      margin: 1rem 0;
+      padding: .75rem 1rem;
+    }
+    code { background: #f1f3f7; padding: 1px 5px; border-radius: 3px; font-size: .9em; }
+    pre code { display: block; padding: .75rem 1rem; overflow-x: auto; }
+    footer { margin-top: 4rem; padding-top: 1rem; border-top: 1px solid #ddd; color: #666; font-size: .85rem; }
+    a { color: #1F3A93; }
+  </style>
+</head>
+<body>
+  <nav class="crumbs">
+    <a href="/epihack-2026/">EpiHack AZ 2026</a>
+  </nav>
+
+  ---
+# Build the Next.js app's static export. nginx serves from app/out/.
+
+- name: Write .env.local from the playbook vars
+  become_user: ""
+  ansible.builtin.template:
+    src: app.env.local.j2
+    dest: "/app/.env.local"
+    mode: "0600"
+  no_log: true
+
+- name: Detect a committed lockfile
+  ansible.builtin.stat:
+    path: "/app/package-lock.json"
+  register: app_lockfile
+
+# `npm ci` is clean + reproducible but *requires* a committed lockfile. The
+# repo doesn't ship one, so on a fresh clone fall back to `npm install` (which
+# also writes package-lock.json); subsequent runs then use `npm ci`.
+- name: Install app dependencies
+  become_user: ""
+  ansible.builtin.command:
+    cmd: "npm ci"
+    chdir: "/app"
+  register: npm_install
+  changed_when: "'added' in npm_install.stdout or 'removed' in npm_install.stdout or 'changed' in npm_install.stdout"
+  environment:
+    PATH: "/.npm-global/bin:/usr/local/bin:/usr/bin:/bin"
+
+- name: Generate the TypeScript API types from api/openapi.yaml
+  become_user: ""
+  ansible.builtin.command:
+    cmd: npm run gen:api
+    chdir: "/app"
+  changed_when: true
+  environment:
+    PATH: "/.npm-global/bin:/usr/local/bin:/usr/bin:/bin"
+
+- name: Build the static export
+  become_user: ""
+  ansible.builtin.command:
+    cmd: npm run build
+    chdir: "/app"
+  register: next_build
+  changed_when: true
+  environment:
+    PATH: "/.npm-global/bin:/usr/local/bin:/usr/bin:/bin"
+    NEXT_BASE_PATH: ""                    # served at the FQDN root, not /epihack-2026/app
+    NEXT_PUBLIC_API_BASE: ""
+    NEXT_PUBLIC_SUPABASE_URL: ""
+    NEXT_PUBLIC_SUPABASE_ANON_KEY: ""
+    NEXT_PUBLIC_BUILD: ""
+
+- name: Confirm app/out/index.html exists
+  ansible.builtin.stat:
+    path: "/app/out/index.html"
+  register: out_index
+  failed_when: not out_index.stat.exists
+
+
+  <footer>
+    Source: Ending Pandemics Academy &middot; University of Arizona Mel &amp;
+    Enid Zuckerman College of Public Health &middot; Global Health Institute.
+  </footer>
+</body>
+</html>

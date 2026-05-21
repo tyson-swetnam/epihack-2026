@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Application plan — AZ One Health Sentinel</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      max-width: 1100px;
+      margin: 2rem auto;
+      padding: 0 1.25rem;
+      color: #1a1a1a;
+      line-height: 1.55;
+    }
+    nav.crumbs { font-size: .9rem; color: #555; margin-bottom: 1rem; }
+    nav.crumbs a { color: #1F3A93; text-decoration: none; }
+    h1 { border-bottom: 3px solid #1F3A93; padding-bottom: .35rem; }
+    h2 { margin-top: 2.25rem; color: #1F3A93; }
+    h3 { margin-top: 1.25rem; }
+    table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: .95rem; }
+    th, td { border: 1px solid #ddd; padding: .5rem .75rem; text-align: left; vertical-align: top; }
+    th { background: #f0f3f8; }
+    blockquote {
+      border-left: 4px solid #1F3A93;
+      background: #f4f6fb;
+      margin: 1rem 0;
+      padding: .75rem 1rem;
+    }
+    code { background: #f1f3f7; padding: 1px 5px; border-radius: 3px; font-size: .9em; }
+    pre code { display: block; padding: .75rem 1rem; overflow-x: auto; }
+    footer { margin-top: 4rem; padding-top: 1rem; border-top: 1px solid #ddd; color: #666; font-size: .85rem; }
+    a { color: #1F3A93; }
+  </style>
+</head>
+<body>
+  <nav class="crumbs">
+    <a href="/epihack-2026/">EpiHack AZ 2026</a>
+  </nav>
+
+  <h1 id="plan--az-one-health-sentinel">Plan — AZ One Health Sentinel</h1>
+
+<p>A working name for the application this plan describes: a mobile-first
+participatory-surveillance + early-warning app for Arizona that operates
+across two flagship verticals — <strong>Vector-Borne Disease (VBD)</strong> and
+<strong>Heat</strong> — backed by the existing
+<a href="../schema/">DuckLake knowledge graph</a> and driven by an agentic
+architecture that consumes real-time data via MCP servers.</p>
+
+<h2 id="what-youre-reading">What you’re reading</h2>
+
+<ol>
+  <li><a href="./01-parameter-mapping.html"><code class="language-plaintext highlighter-rouge">01-parameter-mapping.md</code></a> — the
+Figure 2 <em>Minimum Set of Key Data Parameters</em> mapped to each
+vertical: which parameters apply, which are additions, which are
+suppressed, and how each parameter lands in DuckLake.</li>
+  <li><a href="./02-mcp-integration.html"><code class="language-plaintext highlighter-rouge">02-mcp-integration.md</code></a> — the MCP
+server inventory (one built, eight to build) with a parameter-by-
+parameter table showing which API feeds which Minimum-Dataset slot.</li>
+  <li><a href="./03-agentic-architecture.html"><code class="language-plaintext highlighter-rouge">03-agentic-architecture.md</code></a> —
+the eight-agent topology that turns a community report into a
+triaged, enriched, validated observation in the knowledge graph and
+a personalized response back to the user.</li>
+  <li><a href="./04-data-flows.html"><code class="language-plaintext highlighter-rouge">04-data-flows.md</code></a> — four worked
+end-to-end scenarios (tick mailed in, sick mosquito-bitten patient,
+unsheltered heat-distress check-in, agency-side cluster detection).</li>
+  <li><a href="./05-roadmap.html"><code class="language-plaintext highlighter-rouge">05-roadmap.md</code></a> — phased delivery: hackathon
+MVP → 6-month pilot → 12-month evaluation against the
+<a href="../figures/03-outbreak-timeliness-metrics.html">Figure 3 timeliness milestones</a>.</li>
+  <li><a href="./06-mobile-app.html"><code class="language-plaintext highlighter-rouge">06-mobile-app.md</code></a> — anonymous-first
+Human / Animal / Environmental reporting app: low-text UI,
+EXIF-stripped photos, ZIP/km coarsening, “never diagnose” risk
+boundary, DuckLake snapshots backed by GitHub LFS, web pilot
+→ iOS + Android.</li>
+  <li><a href="./07-auth.html"><code class="language-plaintext highlighter-rouge">07-auth.md</code></a> — optional account system
+(email/password, magic-link, OAuth via Google / Facebook /
+Apple) layered on top of anonymous reporting. Supabase Auth
+backend; right to erasure detaches but does not delete attached
+observations.</li>
+</ol>
+
+<h2 id="the-thesis-in-one-paragraph">The thesis in one paragraph</h2>
+
+<p>The
+<a href="../figures/02-minimum-key-data-parameters.html">Minimum Dataset (Figure 2)</a>
+is the <strong>shared data contract</strong> that lets one app serve both
+verticals: the <em>General</em> class is identical for VBD and Heat, the
+<em>Human</em> class diverges into infectious symptoms vs. heat-illness
+symptoms, the <em>Exposure</em> and <em>Environmental</em> classes pick up
+domain-specific sub-fields, and the <em>Livestock / Wildlife</em> classes
+matter for VBD but are silent for Heat. Treating the dataset as a
+contract — rather than building two apps — means one knowledge graph,
+one set of MCP integrations, one agentic pipeline, and two thin
+domain-specific UIs on top.</p>
+
+<h2 id="the-architecture-in-one-diagram">The architecture in one diagram</h2>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>   ┌──────────────────────────────────────────────────────────────────┐
+   │                       Community user (mobile)                   │
+   │      VBD UI · Heat UI · SMS fallback · Voice (transcribed)      │
+   └─────────────────────────────────┬───────────────────────────────┘
+                                     │  free-text / photo / geo / form
+                                     ▼
+   ┌──────────────────────────────────────────────────────────────────┐
+   │                           Agentic layer                          │
+   │  Intake → Geo-Enrichment → Validation → Triage → Enrichment      │
+   │                            ↓                                     │
+   │       Notification ← Cluster Detection ← Knowledge Update        │
+   └─────────────┬──────────────────────────┬─────────────────────────┘
+                 │                          │
+                 ▼                          ▼
+   ┌──────────────────────┐     ┌───────────────────────────────────┐
+   │  DuckLake knowledge  │     │           MCP servers              │
+   │  graph (this repo)   │ ←→  │  vectorsurv-mcp ✅                 │
+   │                      │     │  nws-heatrisk-mcp ⏳               │
+   │  observations,       │     │  mag-hrn-mcp ⏳                    │
+   │  pathogens,          │     │  adhs-mcp ⏳                       │
+   │  outbreaks,          │     │  great-az-tick-check-mcp ⏳        │
+   │  resources, regions, │     │  whispers-mcp ⏳                   │
+   │  tribes, ICD-10, …   │     │  inaturalist-mcp ⏳                │
+   │                      │     │  211-az-mcp ⏳                     │
+   └──────────────────────┘     │  knowledge-graph-mcp ⏳            │
+                                └───────────────────────────────────┘
+                 ▲
+                 │
+   ┌──────────────────────────────────────────────────────────────────┐
+   │  Agency analyst / CHW / decision-maker dashboards (web)          │
+   │  Backed by the same knowledge graph; recursive-CTE path queries  │
+   └──────────────────────────────────────────────────────────────────┘
+</code></pre></div></div>
+
+<h2 id="why-this-approach">Why this approach</h2>
+
+<ul>
+  <li><strong>The knowledge graph is the integration substrate.</strong> Every
+observation, MCP-fetched record, and dashboard view goes through
+<code class="language-plaintext highlighter-rouge">kg.node</code> / <code class="language-plaintext highlighter-rouge">kg.edge</code> / <code class="language-plaintext highlighter-rouge">kg.property</code>. New data sources land as
+schema seeds; they don’t fork the data model.</li>
+  <li><strong>Agents do the messy work, the graph is the source of truth.</strong>
+LLM agents extract structured Minimum-Dataset rows from free-text
+/ voice / photo reports, enrich them with MCP-fetched context, and
+flag anomalies — but the persistent record is always typed and
+queryable in plain SQL.</li>
+  <li><strong>MCP is the live-data bus.</strong> Each upstream agency exposes one MCP
+server; the agents speak MCP, not bespoke clients. New agencies
+join the system by shipping a server, not by negotiating bilateral
+integrations.</li>
+  <li><strong>One app, two verticals, shared contract.</strong> The Figure 2 dataset
+forces both verticals into the same primitives so cross-domain
+analysis (e.g. <em>do heat days correlate with WNV pool positivity
+three weeks later?</em>) is a SQL query, not a multi-week ETL project.</li>
+  <li><strong>The Figure 3 timeliness milestones are the success metric.</strong>
+Detect → Notify → Verify → Lab → Respond intervals are computed
+directly from the observation timestamps and the linked outbreak
+record. Every design decision is judged by how much it shortens
+those intervals.</li>
+</ul>
+
+<h2 id="status-snapshot">Status snapshot</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>Component</th>
+      <th>Status</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Knowledge-graph schema (core + deep seeds)</td>
+      <td>✅ shipped</td>
+    </tr>
+    <tr>
+      <td>MapLibre + Cytoscape viewers</td>
+      <td>✅ shipped</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">vectorsurv-mcp</code> (spec-aligned to v1.0.44)</td>
+      <td>✅ shipped</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">nws-heatrisk-mcp</code></td>
+      <td>⏳ planned</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">mag-hrn-mcp</code></td>
+      <td>⏳ planned</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">adhs-mcp</code></td>
+      <td>⏳ planned</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">great-az-tick-check-mcp</code></td>
+      <td>⏳ planned</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">whispers-mcp</code>, <code class="language-plaintext highlighter-rouge">inaturalist-mcp</code>, <code class="language-plaintext highlighter-rouge">211-az-mcp</code>, <code class="language-plaintext highlighter-rouge">knowledge-graph-mcp</code></td>
+      <td>⏳ planned</td>
+    </tr>
+    <tr>
+      <td>Intake / Triage / Enrichment / Notification agents</td>
+      <td>⏳ planned</td>
+    </tr>
+    <tr>
+      <td>Mobile UI (VBD + Heat)</td>
+      <td>⏳ planned</td>
+    </tr>
+    <tr>
+      <td>Agency dashboard</td>
+      <td>⏳ planned</td>
+    </tr>
+  </tbody>
+</table>
+
+
+  <footer>
+    Source: Ending Pandemics Academy &middot; University of Arizona Mel &amp;
+    Enid Zuckerman College of Public Health &middot; Global Health Institute.
+  </footer>
+</body>
+</html>

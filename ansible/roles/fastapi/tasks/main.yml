@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>EpiHack Arizona 2026</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      max-width: 1100px;
+      margin: 2rem auto;
+      padding: 0 1.25rem;
+      color: #1a1a1a;
+      line-height: 1.55;
+    }
+    nav.crumbs { font-size: .9rem; color: #555; margin-bottom: 1rem; }
+    nav.crumbs a { color: #1F3A93; text-decoration: none; }
+    h1 { border-bottom: 3px solid #1F3A93; padding-bottom: .35rem; }
+    h2 { margin-top: 2.25rem; color: #1F3A93; }
+    h3 { margin-top: 1.25rem; }
+    table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: .95rem; }
+    th, td { border: 1px solid #ddd; padding: .5rem .75rem; text-align: left; vertical-align: top; }
+    th { background: #f0f3f8; }
+    blockquote {
+      border-left: 4px solid #1F3A93;
+      background: #f4f6fb;
+      margin: 1rem 0;
+      padding: .75rem 1rem;
+    }
+    code { background: #f1f3f7; padding: 1px 5px; border-radius: 3px; font-size: .9em; }
+    pre code { display: block; padding: .75rem 1rem; overflow-x: auto; }
+    footer { margin-top: 4rem; padding-top: 1rem; border-top: 1px solid #ddd; color: #666; font-size: .85rem; }
+    a { color: #1F3A93; }
+  </style>
+</head>
+<body>
+  <nav class="crumbs">
+    <a href="/epihack-2026/">EpiHack AZ 2026</a>
+  </nav>
+
+  ---
+# FastAPI backend (agents/src/onehealth_agents/api/) under uvicorn,
+# managed by systemd. Reads Supabase JWT config + Postgres DSN from
+# the unit's environment file.
+
+- name: uv sync the agents package
+  become_user: ""
+  ansible.builtin.command:
+    cmd: uv sync
+    chdir: "/agents"
+  # No `creates:` guard — uv sync is idempotent and fast, and we must pick up
+  # dependency changes (e.g. duckdb for the DuckLake write-path) on re-deploy.
+  register: agents_uv_sync
+  changed_when: "'Installed' in agents_uv_sync.stderr or 'Prepared' in agents_uv_sync.stderr"
+  notify: Restart fastapi
+  environment:
+    PATH: "/usr/local/bin:/usr/bin:/bin"
+
+- name: Create the DuckDB extension home for the API service
+  ansible.builtin.file:
+    path: ""
+    state: directory
+    owner: ""
+    group: ""
+    mode: "0750"
+
+# Pre-install the ducklake + postgres extensions for the agents venv's exact
+# duckdb version, so the running service never needs network at request time.
+- name: Pre-install DuckDB extensions for the API's duckdb
+  become_user: ""
+  ansible.builtin.command:
+    cmd: >
+      /agents/.venv/bin/python -c
+      "import duckdb; c=duckdb.connect();
+      c.execute('INSTALL ducklake'); c.execute('INSTALL postgres');
+      c.execute('LOAD ducklake'); c.execute('LOAD postgres')"
+  environment:
+    HOME: ""
+  register: ext_install
+  changed_when: false
+
+- name: Write the FastAPI env file
+  ansible.builtin.template:
+    src: onehealth-api.env.j2
+    dest: /etc/onehealth-api.env
+    owner: root
+    group: ""
+    mode: "0640"
+  notify: Restart fastapi
+  no_log: true
+
+- name: Install the systemd unit
+  ansible.builtin.template:
+    src: onehealth-api.service.j2
+    dest: /etc/systemd/system/onehealth-api.service
+    mode: "0644"
+  notify: Restart fastapi
+
+- name: Enable + start onehealth-api
+  ansible.builtin.systemd:
+    name: onehealth-api
+    daemon_reload: true
+    enabled: true
+    state: started
+
+- name: Wait for the API to answer /v1/healthz
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:/v1/healthz"
+    status_code: 200
+  register: api_health
+  retries: 12
+  delay: 2
+  until: api_health.status == 200
+
+# --- Mongo -> DuckLake sync (plan/09 Phase C) --------------------------------
+- name: Install the Mongo->DuckLake sync service + timer
+  ansible.builtin.template:
+    src: "onehealth-mongo-sync..j2"
+    dest: "/etc/systemd/system/onehealth-mongo-sync."
+    mode: "0644"
+  loop:
+    - service
+    - timer
+
+- name: Enable + start the Mongo->DuckLake sync timer
+  ansible.builtin.systemd:
+    name: onehealth-mongo-sync.timer
+    daemon_reload: true
+    enabled: true
+    state: started
+
+
+  <footer>
+    Source: Ending Pandemics Academy &middot; University of Arizona Mel &amp;
+    Enid Zuckerman College of Public Health &middot; Global Health Institute.
+  </footer>
+</body>
+</html>

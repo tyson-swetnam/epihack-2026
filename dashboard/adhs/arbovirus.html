@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>ADHS — WNV + SLEV drill-down</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="theme-color" content="#1F3A93" />
+<link rel="stylesheet" href="../shared/style.css" />
+</head>
+<body data-agency="adhs" data-mock-base="../mock">
+
+<header class="dash-header">
+  <div>
+    <div class="crumbs">
+      <a href="../../index.html">EpiHack AZ 2026</a> &middot;
+      <a href="../index.html">agency dashboard</a> &middot;
+      <a href="./index.html">ADHS</a>
+    </div>
+    <h1>WNV + SLEV vector index &amp; human cases <span class="agency-tag">drill-down</span></h1>
+  </div>
+  <div id="auth-stub"></div>
+</header>
+
+<div class="printable-banner">
+  <h1>ADHS — WNV/SLEV drill-down (printable)</h1>
+  <p>Generated <span id="print-date"></span></p>
+</div>
+
+<main class="container">
+
+  <p class="muted small">
+    Per-county Mosquito Infection Rate (MIR per 1,000, bias-corrected MLE)
+    from the
+    <a href="../../mcp/vectorsurv-mcp/README.html">vectorsurv-mcp</a>
+    <code>vectorsurv_calculate_infection_rate</code> tool, joined to
+    weekly human-case counts from the same MCP's
+    <code>vectorsurv_get_case_counts</code> endpoint. Cross-checked
+    against ADHS arbovirus surveillance via
+    <a href="../../mcp/adhs-mcp/README.html">adhs-mcp</a>.
+  </p>
+
+  <h2>WNV — weekly MIR trajectory by county</h2>
+  <div class="analyst-table-wrap">
+    <table class="analyst-table" id="wnv-table">
+      <caption>West Nile virus, 8-week window, sorted by latest MIR</caption>
+      <thead>
+        <tr>
+          <th>County</th>
+          <th class="num">Cases this week</th>
+          <th class="num">Cases YTD</th>
+          <th class="num">MIR week-1</th>
+          <th class="num">MIR latest</th>
+          <th>Trend (8 wk)</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <h2>SLEV — weekly MIR trajectory by county</h2>
+  <div class="analyst-table-wrap">
+    <table class="analyst-table" id="slev-table">
+      <caption>St. Louis encephalitis virus, 8-week window</caption>
+      <thead>
+        <tr>
+          <th>County</th>
+          <th class="num">Cases this week</th>
+          <th class="num">Cases YTD</th>
+          <th class="num">MIR week-1</th>
+          <th class="num">MIR latest</th>
+          <th>Trend (8 wk)</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <h2>Open the underlying observations</h2>
+  <button id="show-sql" class="btn secondary">Show SQL preview</button>
+  <div id="sql-mount"></div>
+
+  <p class="crosslinks">
+    Cross-references:
+    <a href="./index.html">ADHS landing</a>
+    <a href="../../map/index.html">AZ map</a>
+    <a href="../../graph/index.html">pathogen graph</a>
+    <a href="../../mcp/vectorsurv-mcp/README.html">vectorsurv-mcp</a>
+    <a href="../../wildlife/02-zoonotic-surveillance.html">zoonotic surveillance</a>
+  </p>
+</main>
+
+<footer class="dash-footer">
+  Source: VectorSurv &middot; ADHS BIDS arbovirus surveillance.
+</footer>
+
+<script type="module">
+  import { mountAuthStub } from '../shared/auth-stub.js';
+  import { renderSparkline } from '../shared/sparkline.js';
+  import { fetchMock, renderSqlPreview } from '../shared/kg-client.js';
+
+  mountAuthStub(document.getElementById('auth-stub'), 'adhs');
+  document.getElementById('print-date').textContent = new Date().toISOString().slice(0, 10);
+
+  function renderTable(table, counties, pathKey) {
+    const tbody = table.querySelector('tbody');
+    tbody.innerHTML = '';
+    counties
+      .map(c => {
+        const series = c[pathKey];
+        if (!series) return null;
+        const mir = series.weekly_mir || [];
+        const weekly = series.human_cases_weekly || [];
+        return {
+          county: c.county,
+          kg_node_id: c.kg_node_id,
+          cases_week: weekly.length ? weekly[weekly.length - 1].cases : 0,
+          cases_ytd: series.human_cases_ytd || weekly.reduce((s, w) => s + (w.cases || 0), 0),
+          mir_first: mir.length ? mir[0].mir_per_1000 : null,
+          mir_last:  mir.length ? mir[mir.length - 1].mir_per_1000 : null,
+          sparkline_values: mir.map(w => w.mir_per_1000)
+        };
+      })
+      .filter(Boolean)
+      .sort((a, b) => (b.mir_last || 0) - (a.mir_last || 0))
+      .forEach(r => {
+        const tr = document.createElement('tr');
+        tr.dataset.kgNodeId = r.kg_node_id;
+        tr.innerHTML =
+          `<td>${r.county}</td>` +
+          `<td class="num">${r.cases_week}</td>` +
+          `<td class="num">${r.cases_ytd}</td>` +
+          `<td class="num">${r.mir_first != null ? r.mir_first.toFixed(1) : '—'}</td>` +
+          `<td class="num">${r.mir_last  != null ? r.mir_last.toFixed(1)  : '—'}</td>` +
+          `<td class="spark"></td>`;
+        tbody.appendChild(tr);
+        tr.querySelector('td.spark').appendChild(renderSparkline(r.sparkline_values, {
+          title: `${r.county} MIR/1000 trend`
+        }));
+      });
+  }
+
+  fetchMock('arbovirus-feed.json').then(d => {
+    renderTable(document.getElementById('wnv-table'),  d.counties, 'wnv');
+    renderTable(document.getElementById('slev-table'), d.counties, 'slev');
+  });
+
+  document.getElementById('show-sql').addEventListener('click', () => {
+    const sql =
+`-- ADHS arbovirus drill-down: WNV + SLEV pool positivity joined
+-- to human-case counts, 8-week window.
+WITH pools AS (
+  SELECT p_county.value_text   AS county,
+         p_target.value_text   AS target_acronym,
+         p_week.value_text     AS iso_week,
+         CAST(p_mir.value_text AS DOUBLE) AS mir_per_1000
+  FROM   kg.node     n
+  JOIN   kg.property p_county ON p_county.node_id = n.node_id AND p_county.key = 'county'
+  JOIN   kg.property p_target ON p_target.node_id = n.node_id AND p_target.key = 'target_acronym'
+  JOIN   kg.property p_week   ON p_week.node_id   = n.node_id AND p_week.key   = 'iso_week'
+  JOIN   kg.property p_mir    ON p_mir.node_id    = n.node_id AND p_mir.key    = 'mir_per_1000'
+  WHERE  n.node_type = 'vector_index_reading'
+    AND  p_target.value_text IN ('WNV', 'SLEV')
+)
+SELECT * FROM pools
+ORDER BY county, target_acronym, iso_week;`;
+    renderSqlPreview(document.getElementById('sql-mount'), sql,
+      'WNV + SLEV pool positivity (vector_index_reading view)');
+  });
+</script>
+
+</body>
+</html>

@@ -1,0 +1,12 @@
+{
+  "_comment": "Paste the 'whispers' block into your Claude Desktop config under mcpServers. Restart Claude Desktop after editing. The public WHISPers read endpoints require no credentials.",
+  "mcpServers": {
+    "whispers": {
+      "command": "uvx",
+      "args": ["--from", "/absolute/path/to/epihack-2026/mcp/whispers-mcp", "whispers-mcp"],
+      "env": {
+        "WHISPERS_BASE_URL": "https://whispers.usgs.gov/api"
+      }
+    }
+  }
+}

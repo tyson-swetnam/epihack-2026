@@ -1,0 +1,225 @@
+EpiHack Arizona 2026 — Third-party attribution
+==============================================
+
+This repository is licensed under the MIT License (see LICENSE).
+It bundles, links to, or republishes content from the following
+third parties. The list is maintained alongside CHANGELOG.md and
+CONTRIBUTING.md; please open a PR if anything is missing.
+
+
+--------------------------------------------------------------------
+Runtime dependencies (Python — every `mcp/<server>/` and `agents/`)
+--------------------------------------------------------------------
+
+  * Model Context Protocol Python SDK (`mcp`, including the FastMCP
+    server framework)
+      https://github.com/modelcontextprotocol/python-sdk
+      License: MIT
+
+  * pydantic (v2)
+      https://github.com/pydantic/pydantic
+      License: MIT
+
+  * httpx
+      https://github.com/encode/httpx
+      License: BSD-3-Clause
+
+  * anyio
+      https://github.com/agronholm/anyio
+      License: MIT
+
+  * pytest, pytest-asyncio, respx (test-only)
+      https://pytest.org/   — MIT
+      https://github.com/pytest-dev/pytest-asyncio — Apache-2.0
+      https://github.com/lundberg/respx — BSD-3-Clause
+
+
+-----------------------------------------------------
+Runtime dependencies (DuckLake / DuckDB / Postgres)
+-----------------------------------------------------
+
+  * DuckDB and the DuckLake / Postgres extensions
+      https://duckdb.org/
+      https://ducklake.select/
+      License: MIT (DuckDB) and MIT (DuckLake)
+
+  * PostgreSQL is a runtime requirement for the DuckLake catalog but
+    is not redistributed with this repo.
+      https://www.postgresql.org/
+      License: PostgreSQL License (a permissive BSD-style licence)
+
+
+----------------------------------------
+Client-side libraries (no bundler)
+----------------------------------------
+
+These are loaded from public CDNs (unpkg) by the static site and the
+analyst / public dashboards. They are not vendored in this repo; the
+attribution below documents the licences of the upstream projects.
+
+  * MapLibre GL JS (https://maplibre.org/), pinned to v4.7.1
+      Loaded by: map/index.html, dashboard/shared/map-embed.js,
+      today/shared/map-embed.js
+      License: BSD-3-Clause
+      (a fork of the open-source line of Mapbox GL JS v1.x)
+
+  * Cytoscape.js (https://js.cytoscape.org/), pinned to v3.30.2
+      Loaded by: graph/index.html
+      License: MIT
+
+  * OpenFreeMap basemap tiles + styles (Positron style)
+      https://openfreemap.org/
+      Tiles licensed under the OpenStreetMap ODbL; the OpenFreeMap
+      hosting service redistributes them at no cost. The Positron
+      style is derived from work by CARTO (Creative Commons BY 4.0).
+
+  * OpenStreetMap raster tile fallback
+      https://tile.openstreetmap.org/
+      Map data © OpenStreetMap contributors, available under the
+      Open Database License (ODbL).
+      https://www.openstreetmap.org/copyright
+
+
+-----------------------------------------------------
+Data sources surfaced via MCP servers or canned data
+-----------------------------------------------------
+
+Each MCP server's README documents its specific upstream(s); the
+following is the consolidated list. Use of the live APIs is subject
+to each agency's terms of service.
+
+  * VectorSurv (https://vectorsurv.org/) — national mosquito + tick
+    surveillance API. A snapshot of the v1.0.44 OpenAPI spec is
+    redistributed under mcp/vectorsurv/openapi/ for diff-based drift
+    detection. Use of the live API requires Gateway credentials and
+    is subject to VectorSurv's terms.
+
+  * National Weather Service public API (api.weather.gov) and the
+    WPC HeatRisk gridded product (wpc.ncep.noaa.gov/heatrisk/) —
+    public-domain works of the U.S. federal government. Polite
+    User-Agent required.
+
+  * USGS WHISPers (https://whispers.usgs.gov/) — wildlife mortality
+    events. Public-domain U.S. federal data; canned fallback events
+    in mcp/whispers-mcp/src/whispers_mcp/canned.py are
+    historically-grounded synthetic stand-ins (the canned IDs do not
+    resolve to real WHISPers events — by design — see the file
+    docstring).
+
+  * iNaturalist public API (https://api.inaturalist.org/v1/) —
+    observations are licensed by their individual contributors;
+    aggregate use is governed by iNaturalist's terms.
+
+  * MAG Heat Relief Network ArcGIS Feature Service
+    (https://geo.azmag.gov/arcgis/rest/services/maps/Heat_Relief_Network/)
+    — published by the Maricopa Association of Governments for
+    Phoenix-metro cooling-center directory. Canned dataset in
+    mcp/mag-hrn-mcp ships 12 representative sites; live mode is
+    env-overridable.
+
+  * ADHS public reports — heat-mortality annual summaries, arbovirus
+    weekly summaries, reportable-conditions definitions. Canned
+    values in mcp/adhs-mcp/src/adhs_mcp/canned_data.py are sourced
+    from ADHS-published PDFs and ArcGIS Experience dashboards, cited
+    inline in the file docstring (see heat/04-vulnerable-populations.md
+    and schema/heat.sql for the upstream citations).
+
+  * 211 Arizona (https://211arizona.org/) — public heat-relief
+    directory. Mock data in mcp/211-az-mcp/src/az211_mcp/mock_data.py
+    cites the public 211 site in its module docstring; production
+    integration requires a partnership agreement with Solari Crisis
+    & Human Services.
+
+  * Great Arizona Tick Check (UA Cooperative Extension, Walker Lab,
+    UA Tucson Entomology) — no public REST API today. Mock backend
+    in mcp/great-az-tick-check-mcp/ ships with explicit attribution
+    to the program. Production wiring requires a partnership with
+    the Walker Lab.
+
+
+--------------------
+Canned reference data
+--------------------
+
+The canned datasets in the MCP servers are documented and cited
+inline in the relevant Python files:
+
+  * mcp/adhs-mcp/src/adhs_mcp/canned_data.py — cites
+    heat/04-vulnerable-populations.md, schema/heat.sql,
+    schema/deep/standards.sql, wildlife/resources.md, and the ADHS
+    Vector-Borne & Zoonotic Diseases program page.
+
+  * mcp/whispers-mcp/src/whispers_mcp/canned.py — names the 1993
+    Four Corners hantavirus outbreak, 2022+ HPAI H5N1 detections,
+    and 2025 plague activity as the historical events the synthetic
+    stand-ins are modelled on, with explicit "do not present as
+    authoritative" warnings.
+
+  * mcp/211-az-mcp/src/az211_mcp/mock_data.py — cites
+    211arizona.org/crisis/heat-relief/ as the live source of truth
+    that the mock backend approximates.
+
+  * mcp/inaturalist-mcp/src/inaturalist_mcp/canned_data.py — cites
+    the iNaturalist taxa pages and AZ place_id 53 as the authoritative
+    references; every taxon ID is env-overridable.
+
+  * mcp/wearable-mcp/src/wearable_mcp/mock_data.py — names the
+    HealthKit / Health Connect data shapes the mock profiles mirror,
+    with the LOINC metric catalog cited from schema/deep/followups.sql.
+
+  * schema/deep/outbreaks.sql — every historical AZ outbreak row
+    carries inline citations to the ADHS, CDC MMWR, USGS WHISPers,
+    or peer-reviewed source it draws milestone dates from. Spot-check
+    on review: 1993 Four Corners, 2003 AZ WNV emergence, 2014 Yuma
+    dengue, 2021 Maricopa WNV, 2023 + 2024 Maricopa heat, 2025
+    Coconino plague.
+
+
+----------------------
+Federal-government works
+----------------------
+
+Works of the U.S. federal government (NWS, WPC HeatRisk, USGS
+WHISPers, CDC NNDSS code lists, NOAA tile metadata, NEON Domain 14
+boundaries) are in the public domain in the United States per 17
+U.S.C. § 105 and are redistributed here without restriction. See
+schema/deep/datasets_apis.sql for the catalog of dataset rights
+metadata.
+
+
+----------------------
+Upstream spec snapshots
+----------------------
+
+  * mcp/vectorsurv/openapi/ — snapshots of api.vectorsurv.org/openapi
+    (currently v1.0.44). Redistributed under the same terms as the
+    live spec; refresh + diff procedure documented in the directory's
+    README.
+
+
+----------------------
+Copyright + trademark
+----------------------
+
+  * EpiHack® is the registered trademark of Ending Pandemics. The
+    name is used here to denote the EpiHack Arizona 2026 community
+    event. No endorsement by Ending Pandemics of the code in this
+    repository should be inferred beyond what is documented in
+    GOVERNANCE.md.
+
+  * Arizona Department of Health Services, Arizona Game and Fish
+    Department, Inter Tribal Council of Arizona, Maricopa County
+    Environmental Services Department, University of Arizona,
+    Maricopa Association of Governments, the City of Phoenix,
+    and 211 Arizona / Solari Crisis & Human Services are referenced
+    by name throughout the documentation and code. References are
+    informational; no endorsement should be inferred without an
+    explicit MOU as described in GOVERNANCE.md.
+
+  * Anthropic, Claude, and Claude Code are trademarks of Anthropic
+    PBC. Commit messages referencing "Claude Code" describe the
+    authoring tool used to draft the change.
+
+
+Open an issue or a PR if anything in this NOTICE is missing or
+incorrect.

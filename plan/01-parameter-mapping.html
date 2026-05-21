@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Plan 01 — Mapping the Minimum Dataset to VBD and Heat</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      max-width: 1100px;
+      margin: 2rem auto;
+      padding: 0 1.25rem;
+      color: #1a1a1a;
+      line-height: 1.55;
+    }
+    nav.crumbs { font-size: .9rem; color: #555; margin-bottom: 1rem; }
+    nav.crumbs a { color: #1F3A93; text-decoration: none; }
+    h1 { border-bottom: 3px solid #1F3A93; padding-bottom: .35rem; }
+    h2 { margin-top: 2.25rem; color: #1F3A93; }
+    h3 { margin-top: 1.25rem; }
+    table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: .95rem; }
+    th, td { border: 1px solid #ddd; padding: .5rem .75rem; text-align: left; vertical-align: top; }
+    th { background: #f0f3f8; }
+    blockquote {
+      border-left: 4px solid #1F3A93;
+      background: #f4f6fb;
+      margin: 1rem 0;
+      padding: .75rem 1rem;
+    }
+    code { background: #f1f3f7; padding: 1px 5px; border-radius: 3px; font-size: .9em; }
+    pre code { display: block; padding: .75rem 1rem; overflow-x: auto; }
+    footer { margin-top: 4rem; padding-top: 1rem; border-top: 1px solid #ddd; color: #666; font-size: .85rem; }
+    a { color: #1F3A93; }
+  </style>
+</head>
+<body>
+  <nav class="crumbs">
+    <a href="/epihack-2026/">EpiHack AZ 2026</a>
+  </nav>
+
+  <h1 id="01--parameter-mapping">01 — Parameter mapping</h1>
+
+<p>The Minimum Set of Key Data Parameters in
+<a href="../figures/02-minimum-key-data-parameters.html">Figure 2</a> is the
+shared data contract for both verticals. This page enumerates which
+parameters apply, which need vertical-specific extensions, and how
+each lands in the DuckLake knowledge graph as a column or as an
+edge / property on an <code class="language-plaintext highlighter-rouge">observation</code> node.</p>
+
+<h2 id="observation-node-in-one-place">Observation node, in one place</h2>
+
+<p>Every report from a community user, every record pulled from an MCP
+server, and every agency case becomes a row whose canonical type is
+<code class="language-plaintext highlighter-rouge">observation</code> and whose properties are drawn from the eight Figure 2
+parameter classes plus the per-vertical extensions below.</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>observation.&lt;uuid&gt;
+  ├── kind = "report" | "mcp_pull" | "agency_case"
+  ├── vertical = "vbd" | "heat"
+  ├── source = "mobile" | "sms" | "voice" | "vectorsurv" | "nws_heatrisk" | …
+  ├── (General properties — same for both verticals)
+  ├── (Human properties — vertical-specific symptom set)
+  ├── (Exposure properties — vertical-specific risk factors)
+  ├── (Auxiliary properties — photo / digital biomarker / lab)
+  ├── (Environmental properties — vertical-specific)
+  └── edges to: pathogen.*, focus.*, county.*, tribe.*, outbreak.*,
+                resource.*, population.*  (existing kg nodes)
+</code></pre></div></div>
+
+<h2 id="class-by-class-mapping">Class-by-class mapping</h2>
+
+<h3 id="general-class--identical-contract-both-verticals">General class — identical contract, both verticals</h3>
+
+<table>
+  <thead>
+    <tr>
+      <th>Figure 2 param</th>
+      <th>VBD use</th>
+      <th>Heat use</th>
+      <th>DuckLake landing</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Age</td>
+      <td>Risk stratification (children, elderly)</td>
+      <td>Vulnerability score (65+)</td>
+      <td><code class="language-plaintext highlighter-rouge">kg.property(observation.X, "age", value_num)</code></td>
+    </tr>
+    <tr>
+      <td>Sex</td>
+      <td>Demographic</td>
+      <td>Demographic (81% of Maricopa heat deaths are male)</td>
+      <td><code class="language-plaintext highlighter-rouge">…, "sex", value_text</code></td>
+    </tr>
+    <tr>
+      <td>Email</td>
+      <td>Channel for results</td>
+      <td>Optional (anonymous-friendly)</td>
+      <td><code class="language-plaintext highlighter-rouge">…, "contact_email"</code></td>
+    </tr>
+    <tr>
+      <td>Unique ID</td>
+      <td>Stable identifier for follow-up</td>
+      <td>Same</td>
+      <td><code class="language-plaintext highlighter-rouge">kg.node.node_id</code> (uuid)</td>
+    </tr>
+    <tr>
+      <td>Occupation</td>
+      <td>Outdoor work = WNV/tick risk</td>
+      <td>Outdoor work = heat risk (OSHA)</td>
+      <td><code class="language-plaintext highlighter-rouge">…, "occupation"</code></td>
+    </tr>
+    <tr>
+      <td>Date of report</td>
+      <td>Drives Figure 3 milestones</td>
+      <td>Same</td>
+      <td><code class="language-plaintext highlighter-rouge">…, "reported_at", value_text</code> (ISO)</td>
+    </tr>
+    <tr>
+      <td>Postal code</td>
+      <td>County / tribe resolution</td>
+      <td>Cooling-center proximity</td>
+      <td><code class="language-plaintext highlighter-rouge">…, "postal_code"</code></td>
+    </tr>
+    <tr>
+      <td>Phone number</td>
+      <td>SMS fallback</td>
+      <td>211 referral</td>
+      <td><code class="language-plaintext highlighter-rouge">…, "contact_phone"</code></td>
+    </tr>
+    <tr>
+      <td>Household member ID</td>
+      <td>Tick-shared-with-pet detection</td>
+      <td>“Are others in your home at risk?”</td>
+      <td>edge <code class="language-plaintext highlighter-rouge">observation → relatesTo → observation</code></td>
+    </tr>
+    <tr>
+      <td>Geographical coordinates</td>
+      <td>Map / cluster detection</td>
+      <td>Cooling-center routing</td>
+      <td><code class="language-plaintext highlighter-rouge">…, "lat"</code>, <code class="language-plaintext highlighter-rouge">…, "lon"</code> + edge to <code class="language-plaintext highlighter-rouge">county.*</code>, <code class="language-plaintext highlighter-rouge">tribe.*</code></td>
+    </tr>
+  </tbody>
+</table>
+
+<h3 id="human-class--diverges-by-vertical">Human class — diverges by vertical</h3>
+
+<table>
+  <thead>
+    <tr>
+      <th>Figure 2 param</th>
+      <th>VBD</th>
+      <th>Heat</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>No symptoms</td>
+      <td>✓ (asymptomatic check-in)</td>
+      <td>✓ (“just checking in” for unsheltered)</td>
+    </tr>
+    <tr>
+      <td>Symptoms (general)</td>
+      <td>✓</td>
+      <td>✓</td>
+    </tr>
+    <tr>
+      <td>Date of illness</td>
+      <td>✓ — <em>clock starts here for Detect→Notify</em></td>
+      <td>✓</td>
+    </tr>
+    <tr>
+      <td>Cough / congestion</td>
+      <td>✓ (WNV neuro)</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>Nausea / vomiting</td>
+      <td>✓</td>
+      <td>✓ (heat exhaustion)</td>
+    </tr>
+    <tr>
+      <td>Difficulty breathing</td>
+      <td>✓ (hantavirus, severe WNV)</td>
+      <td>✓ (heat stroke)</td>
+    </tr>
+    <tr>
+      <td>Sore throat</td>
+      <td>✓</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>Rash</td>
+      <td>✓ (RMSF, dengue)</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>Fever</td>
+      <td>✓</td>
+      <td>✓ (heat stroke ≥ 104 °F)</td>
+    </tr>
+    <tr>
+      <td>Chills</td>
+      <td>✓</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>Diarrhea</td>
+      <td>✓</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td><strong>Bleeding from body openings</strong> <em>(severity marker)</em></td>
+      <td>✓</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>Red eyes</td>
+      <td>✓ (dengue, leptospirosis)</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>Muscle / body aches</td>
+      <td>✓</td>
+      <td>✓</td>
+    </tr>
+    <tr>
+      <td><strong>Discolored / bloody urine</strong> <em>(severity marker)</em></td>
+      <td>✓ (leptospirosis, severe RMSF)</td>
+      <td>✓ (rhabdomyolysis)</td>
+    </tr>
+    <tr>
+      <td>Loss of smell or taste</td>
+      <td>✓</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td><strong>Yellow skin / yellow eyes</strong> <em>(severity marker)</em></td>
+      <td>✓ (leptospirosis)</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>Absent from work / school</td>
+      <td>✓</td>
+      <td>✓</td>
+    </tr>
+    <tr>
+      <td>Sought health care</td>
+      <td>✓ (drives Notify / Verify)</td>
+      <td>✓</td>
+    </tr>
+    <tr>
+      <td><em>Heat-specific additions:</em></td>
+      <td> </td>
+      <td> </td>
+    </tr>
+    <tr>
+      <td>Confusion / altered mental status</td>
+      <td>—</td>
+      <td>✓ <em>(critical heat-stroke indicator)</em></td>
+    </tr>
+    <tr>
+      <td>Stopped sweating / hot dry skin</td>
+      <td>—</td>
+      <td>✓ <em>(heat stroke)</em></td>
+    </tr>
+    <tr>
+      <td>Heavy sweating</td>
+      <td>—</td>
+      <td>✓ <em>(heat exhaustion)</em></td>
+    </tr>
+    <tr>
+      <td>Headache</td>
+      <td>—</td>
+      <td>✓</td>
+    </tr>
+    <tr>
+      <td>Dizziness / fainting</td>
+      <td>—</td>
+      <td>✓</td>
+    </tr>
+    <tr>
+      <td>Muscle cramps</td>
+      <td>—</td>
+      <td>✓</td>
+    </tr>
+    <tr>
+      <td>Core body temp (if measured)</td>
+      <td>—</td>
+      <td>✓ <em>(numeric)</em></td>
+    </tr>
+  </tbody>
+</table>
+
+<h3 id="exposure-class--both-extend-figure-2-differently">Exposure class — both extend Figure 2 differently</h3>
+
+<table>
+  <thead>
+    <tr>
+      <th>Figure 2 param</th>
+      <th>VBD</th>
+      <th>Heat</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Attending a recent mass gathering</td>
+      <td>✓</td>
+      <td>✓ <em>(also: stadium / outdoor concert in heat)</em></td>
+    </tr>
+    <tr>
+      <td>Tick or insect bite</td>
+      <td>✓ <em>(when, how many, where on body, attached duration)</em></td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>Animal bite</td>
+      <td>✓ <em>(rabies)</em></td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>History of travel</td>
+      <td>✓ <em>(dengue / Zika importation)</em></td>
+      <td>✓ <em>(arrived from cooler climate?)</em></td>
+    </tr>
+    <tr>
+      <td>Contact with live animals</td>
+      <td>✓</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>Contact with dead or sick animals</td>
+      <td>✓ <em>(plague, tularemia, HPAI)</em></td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>Contact with sick individual / confirmed case</td>
+      <td>✓</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td><em>Heat-specific additions:</em></td>
+      <td> </td>
+      <td> </td>
+    </tr>
+    <tr>
+      <td>Time spent outdoors in last 24 h</td>
+      <td>—</td>
+      <td>✓</td>
+    </tr>
+    <tr>
+      <td>Access to working AC at home</td>
+      <td>—</td>
+      <td>✓ <em>(no AC = elevated risk)</em></td>
+    </tr>
+    <tr>
+      <td>Energy / utility security (any disconnect notices?)</td>
+      <td>—</td>
+      <td>✓</td>
+    </tr>
+    <tr>
+      <td>Currently sheltered?</td>
+      <td>—</td>
+      <td>✓ <em>(unsheltered = top risk cohort)</em></td>
+    </tr>
+    <tr>
+      <td>Vehicle access for transport</td>
+      <td>—</td>
+      <td>✓</td>
+    </tr>
+    <tr>
+      <td>Occupational heat exposure today</td>
+      <td>—</td>
+      <td>✓</td>
+    </tr>
+    <tr>
+      <td>On medications affecting thermoregulation</td>
+      <td>—</td>
+      <td>✓ <em>(antipsychotics, diuretics, anticholinergics)</em></td>
+    </tr>
+  </tbody>
+</table>
+
+<h3 id="auxiliary-class--overlapping-but-the-photo-subject-is-different">Auxiliary class — overlapping but the photo subject is different</h3>
+
+<table>
+  <thead>
+    <tr>
+      <th>Figure 2 param</th>
+      <th>VBD</th>
+      <th>Heat</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Digital biomarker signal</td>
+      <td>Pulse, body temp from wearable</td>
+      <td><strong>Critical:</strong> wearable skin-temp, heart-rate variability, sweat rate</td>
+    </tr>
+    <tr>
+      <td>Photo</td>
+      <td>Tick / mosquito / sick animal / rash</td>
+      <td>Optional (e.g. unsafe heat environment)</td>
+    </tr>
+    <tr>
+      <td>Diagnostic / lab confirmation</td>
+      <td>Lab result reference (LOINC)</td>
+      <td>ED diagnosis code (ICD-10 T67.*)</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>The digital-biomarker slot is the single biggest unlock for the
+Heat vertical — wearable data crosses the gap between “checking in”
+and “you need transport to a cooling center now.”</p>
+
+<h3 id="environmental-class--both-heavily-extend">Environmental class — both heavily extend</h3>
+
+<table>
+  <thead>
+    <tr>
+      <th>Figure 2 param</th>
+      <th>VBD</th>
+      <th>Heat</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Date of environmental incident</td>
+      <td>✓</td>
+      <td>✓</td>
+    </tr>
+    <tr>
+      <td>Location of vector spotting</td>
+      <td>✓</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>Unusual presence of vectors</td>
+      <td>✓</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>Density or number of vectors</td>
+      <td>✓</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>Flooding</td>
+      <td>✓ <em>(mosquito habitat)</em></td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>Water contamination</td>
+      <td>✓ <em>(leptospirosis)</em></td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td><em>Heat-specific additions:</em></td>
+      <td> </td>
+      <td> </td>
+    </tr>
+    <tr>
+      <td>Ambient temperature (°F)</td>
+      <td>—</td>
+      <td>✓ <em>(NWS HeatRisk MCP)</em></td>
+    </tr>
+    <tr>
+      <td>Humidity</td>
+      <td>—</td>
+      <td>✓</td>
+    </tr>
+    <tr>
+      <td>Heat index</td>
+      <td>—</td>
+      <td>✓ <em>(computed)</em></td>
+    </tr>
+    <tr>
+      <td>NWS HeatRisk level (Green/Yellow/Orange/Red/Magenta)</td>
+      <td>—</td>
+      <td>✓</td>
+    </tr>
+    <tr>
+      <td>Urban-heat-island intensity at user’s block</td>
+      <td>—</td>
+      <td>✓</td>
+    </tr>
+    <tr>
+      <td>Active extreme-heat watch/warning</td>
+      <td>—</td>
+      <td>✓</td>
+    </tr>
+    <tr>
+      <td><em>VBD-specific additions:</em></td>
+      <td> </td>
+      <td> </td>
+    </tr>
+    <tr>
+      <td>Standing water within X meters</td>
+      <td>✓</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>Recent rainfall (mm, last 7 days)</td>
+      <td>✓</td>
+      <td>—</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3 id="livestock--wildlife-classes--vbd-only">Livestock + Wildlife classes — VBD only</h3>
+
+<p>The Livestock and Wildlife classes from Figure 2 are first-class for
+VBD (sick / dead animal reports drive zoonotic surveillance) and
+silent for Heat. They map to existing edges:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>observation.X --reportsAbout--&gt; reservoir.deer_mouse
+observation.X --reportsAbout--&gt; species.&lt;from kg.deep/pathogens&gt;
+observation.X --reportsAbout--&gt; outbreak.&lt;if matches a known event&gt;
+</code></pre></div></div>
+
+<h2 id="suppression-rules">Suppression rules</h2>
+
+<p>To avoid surveillance creep, the app <strong>does not collect</strong> certain
+Figure 2 parameters in some flows:</p>
+
+<ul>
+  <li><strong>Anonymous heat check-ins</strong> (unsheltered outreach) suppress
+Email, Occupation, Household member ID, and “absent from work /
+school” by default.</li>
+  <li><strong>Tick mail-in</strong> suppresses Human symptom fields unless the
+submitter has been bitten.</li>
+  <li><strong>Wearable-only heat alerts</strong> record only the digital biomarker
+parameter and a coarse geo (ZIP), not name or contact.</li>
+</ul>
+
+<p>Suppression is enforced by the Intake Agent (see
+<a href="./03-agentic-architecture.html">03-agentic-architecture</a>) and
+audited via a <code class="language-plaintext highlighter-rouge">consent_profile</code> property on every observation.</p>
+
+<h2 id="knowledge-graph-deltas-required">Knowledge-graph deltas required</h2>
+
+<p>Adding the application means seeding a small set of new node types
+into <code class="language-plaintext highlighter-rouge">schema/deep/</code>:</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">node_type = "observation"</code> (the per-report record).</li>
+  <li><code class="language-plaintext highlighter-rouge">node_type = "symptom"</code> for the heat-specific symptoms not in
+Figure 2 (confusion, hot-dry-skin, etc.) so they can be mapped to
+SNOMED CT and ICD-10 via the existing <code class="language-plaintext highlighter-rouge">standards.sql</code> crosswalks.</li>
+  <li><code class="language-plaintext highlighter-rouge">node_type = "exposure_factor"</code> for the heat-specific exposures
+(AC access, energy insecurity, sheltered status) and VBD-specific
+ones (bite location on body, attachment duration).</li>
+  <li><code class="language-plaintext highlighter-rouge">node_type = "consent_profile"</code> describing what fields are and
+aren’t collected per flow.</li>
+  <li><code class="language-plaintext highlighter-rouge">node_type = "wearable_metric"</code> for digital-biomarker codes
+(skin_temp_c, hrv_ms, sweat_rate_g_h, etc.).</li>
+</ul>
+
+<p>These additions are documented under
+<a href="./05-roadmap.html"><code class="language-plaintext highlighter-rouge">05-roadmap.md</code> Phase 0</a>.</p>
+
+
+  <footer>
+    Source: Ending Pandemics Academy &middot; University of Arizona Mel &amp;
+    Enid Zuckerman College of Public Health &middot; Global Health Institute.
+  </footer>
+</body>
+</html>

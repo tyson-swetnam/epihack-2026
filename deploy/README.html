@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Deploying AZ One Health Sentinel to a VM</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      max-width: 1100px;
+      margin: 2rem auto;
+      padding: 0 1.25rem;
+      color: #1a1a1a;
+      line-height: 1.55;
+    }
+    nav.crumbs { font-size: .9rem; color: #555; margin-bottom: 1rem; }
+    nav.crumbs a { color: #1F3A93; text-decoration: none; }
+    h1 { border-bottom: 3px solid #1F3A93; padding-bottom: .35rem; }
+    h2 { margin-top: 2.25rem; color: #1F3A93; }
+    h3 { margin-top: 1.25rem; }
+    table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: .95rem; }
+    th, td { border: 1px solid #ddd; padding: .5rem .75rem; text-align: left; vertical-align: top; }
+    th { background: #f0f3f8; }
+    blockquote {
+      border-left: 4px solid #1F3A93;
+      background: #f4f6fb;
+      margin: 1rem 0;
+      padding: .75rem 1rem;
+    }
+    code { background: #f1f3f7; padding: 1px 5px; border-radius: 3px; font-size: .9em; }
+    pre code { display: block; padding: .75rem 1rem; overflow-x: auto; }
+    footer { margin-top: 4rem; padding-top: 1rem; border-top: 1px solid #ddd; color: #666; font-size: .85rem; }
+    a { color: #1F3A93; }
+  </style>
+</head>
+<body>
+  <nav class="crumbs">
+    <a href="/epihack-2026/">EpiHack AZ 2026</a>
+  </nav>
+
+  <h1 id="deploy--vm-deployment-for-az-one-health-sentinel"><code class="language-plaintext highlighter-rouge">deploy/</code> — VM deployment for AZ One Health Sentinel</h1>
+
+<p>This document covers everything that’s needed to take a fresh
+Ubuntu 24.04 VM from <code class="language-plaintext highlighter-rouge">apt update</code> to a running deployment of:</p>
+
+<ul>
+  <li><strong>Claude Code CLI</strong> (with all MCP servers registered)</li>
+  <li><strong>All eleven MCP servers</strong> under <a href="../mcp/"><code class="language-plaintext highlighter-rouge">mcp/</code></a> (vectorsurv-mcp,
+knowledge-graph-mcp, great-az-tick-check-mcp, nws-heatrisk-mcp,
+mag-hrn-mcp, adhs-mcp, 211-az-mcp, whispers-mcp, inaturalist-mcp,
+sms-entry-mcp, wearable-mcp)</li>
+  <li><strong>FastAPI backend</strong> at <code class="language-plaintext highlighter-rouge">agents/src/onehealth_agents/api/</code> running
+under uvicorn as a <code class="language-plaintext highlighter-rouge">systemd</code> unit</li>
+  <li><strong>Next.js reporting app</strong> at <a href="../app/"><code class="language-plaintext highlighter-rouge">app/</code></a>, statically exported
+and served by <strong>nginx</strong> with optional Let’s Encrypt TLS</li>
+  <li><strong>PostgreSQL</strong> for the DuckLake catalog
+(<a href="../schema/"><code class="language-plaintext highlighter-rouge">schema/</code></a>)</li>
+</ul>
+
+<p>The provisioning is fully automated via the Ansible playbook in
+<a href="../ansible/"><code class="language-plaintext highlighter-rouge">../ansible/</code></a> — run one command, get a working host.</p>
+
+<h2 id="vm-sizing">VM sizing</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>Profile</th>
+      <th>Use case</th>
+      <th>vCPU</th>
+      <th>RAM</th>
+      <th>Disk</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Dev / demo</strong></td>
+      <td>One person clicking through the app</td>
+      <td>2</td>
+      <td>4 GB</td>
+      <td>40 GB</td>
+    </tr>
+    <tr>
+      <td><strong>Pilot</strong></td>
+      <td>One county + 10 CHWs</td>
+      <td>4</td>
+      <td>8 GB</td>
+      <td>100 GB</td>
+    </tr>
+    <tr>
+      <td><strong>Phase 3</strong></td>
+      <td>Maricopa + Coconino + agency dashboards</td>
+      <td>8</td>
+      <td>16 GB</td>
+      <td>250 GB</td>
+    </tr>
+    <tr>
+      <td><strong>Statewide</strong></td>
+      <td>Phase 4 — 15 counties</td>
+      <td>16</td>
+      <td>32 GB</td>
+      <td>500 GB + S3</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>Notes:</p>
+<ul>
+  <li>Postgres needs the disk to be fast (NVMe). The Parquet data files
+for DuckLake can live on cheaper storage (e.g. S3 / R2).</li>
+  <li>Memory pressure is dominated by Postgres + uvicorn workers + the
+MCP server processes. Each MCP server is ~30 MB resident; 11
+servers ≈ 350 MB before the agent chain runs.</li>
+  <li>The Next.js static export is tiny (single-digit MB).</li>
+</ul>
+
+<h2 id="supported-os">Supported OS</h2>
+
+<ul>
+  <li><strong>Ubuntu 24.04 LTS</strong> (default; tested)</li>
+  <li><strong>Ubuntu 22.04 LTS</strong> (works; Node and Python paths differ slightly)</li>
+  <li><strong>Debian 12</strong> (untested; should work — same Ansible roles)</li>
+</ul>
+
+<p>Other distributions are not supported by the playbook; the manual
+steps below should translate.</p>
+
+<h2 id="prerequisites">Prerequisites</h2>
+
+<p>On your <strong>workstation</strong> (not the VM):</p>
+
+<ul>
+  <li>Ansible 2.16+</li>
+  <li><code class="language-plaintext highlighter-rouge">ssh</code> access to the VM as a user with <code class="language-plaintext highlighter-rouge">sudo</code></li>
+  <li>(Optional) Cloud provider CLI if you want to spin up the VM
+from this repo — see <a href="#cloud-provider-templates">Cloud provider templates</a>.</li>
+</ul>
+
+<p>On the <strong>VM</strong>:</p>
+
+<ul>
+  <li>A fresh Ubuntu 24.04 install</li>
+  <li>A non-root user that can <code class="language-plaintext highlighter-rouge">sudo</code></li>
+  <li>SSH-key authentication (password auth disabled is a hard requirement
+for any non-dev deployment)</li>
+</ul>
+
+<h2 id="quick-start-ansible">Quick start (Ansible)</h2>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># 1. From your workstation, clone the repo</span>
+git clone https://github.com/tyson-swetnam/epihack-2026.git
+<span class="nb">cd </span>epihack-2026/ansible
+
+<span class="c"># 2. Copy the example inventory and edit it</span>
+<span class="nb">cp </span>inventory.example.yml inventory.yml
+<span class="nv">$EDITOR</span> inventory.yml          <span class="c"># set ansible_host + ansible_user</span>
+
+<span class="c"># 3. Copy the example vars and fill in secrets</span>
+<span class="nb">cp </span>group_vars/all.yml          group_vars/all.local.yml
+<span class="nb">cp </span>group_vars/all.vault.example.yml  group_vars/all.vault.yml
+<span class="nv">$EDITOR</span> group_vars/all.vault.yml
+ansible-vault encrypt group_vars/all.vault.yml
+
+<span class="c"># 4. Install required Ansible Galaxy collections</span>
+ansible-galaxy <span class="nb">install</span> <span class="nt">-r</span> requirements.yml
+
+<span class="c"># 5. Run the playbook end-to-end</span>
+ansible-playbook <span class="nt">-i</span> inventory.yml playbook.yml <span class="nt">--ask-vault-pass</span>
+</code></pre></div></div>
+
+<p>About 10–15 minutes later, the VM has:</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">claude</code> on the deploy user’s <code class="language-plaintext highlighter-rouge">$PATH</code>, with all eleven MCP servers
+registered (<code class="language-plaintext highlighter-rouge">claude mcp list</code> shows them).</li>
+  <li><code class="language-plaintext highlighter-rouge">https://&lt;your-domain&gt;/</code> serving the Next.js app.</li>
+  <li><code class="language-plaintext highlighter-rouge">https://&lt;your-domain&gt;/api/v1/healthz</code> returning <code class="language-plaintext highlighter-rouge">{"status":"ok"}</code>.</li>
+  <li><code class="language-plaintext highlighter-rouge">psql -U onehealth epihack</code> working.</li>
+  <li>All four <code class="language-plaintext highlighter-rouge">systemd</code> units enabled: <code class="language-plaintext highlighter-rouge">onehealth-api</code>, <code class="language-plaintext highlighter-rouge">nginx</code>,
+<code class="language-plaintext highlighter-rouge">postgresql</code>, <code class="language-plaintext highlighter-rouge">onehealth-mcp@&lt;name&gt;</code> (one per MCP server, if
+long-lived streamable-http transport is enabled).</li>
+</ul>
+
+<h2 id="what-the-playbook-does-role-by-role">What the playbook does, role by role</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>Role</th>
+      <th>What</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">common</code></td>
+      <td>Base packages (git, curl, ca-certs, jq, …), the <code class="language-plaintext highlighter-rouge">onehealth</code> deploy user + SSH key, UFW firewall (22, 80, 443), fail2ban on SSH, swap if missing, timezone.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">node</code></td>
+      <td>Node.js 20 LTS via NodeSource, npm global prefix at <code class="language-plaintext highlighter-rouge">~/.npm-global</code> so the deploy user can install packages without sudo.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">python</code></td>
+      <td>Python 3.11+ (Ubuntu 24.04 ships 3.12), the <code class="language-plaintext highlighter-rouge">uv</code> package manager.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">postgres</code></td>
+      <td>PostgreSQL 16, a <code class="language-plaintext highlighter-rouge">onehealth</code> database + role, pg_hba.conf for local trust + scram-sha-256 from app.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">repo</code></td>
+      <td>Clone the EpiHack repo to <code class="language-plaintext highlighter-rouge">/srv/onehealth/epihack-2026</code>. Idempotent — re-runs pull.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">claude_code</code></td>
+      <td><code class="language-plaintext highlighter-rouge">npm install -g @anthropic-ai/claude-code</code> for the deploy user. Writes <code class="language-plaintext highlighter-rouge">~/.claude/settings.json</code> with project-default model + ANTHROPIC_API_KEY from the vault.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">mcp_servers</code></td>
+      <td><code class="language-plaintext highlighter-rouge">uv sync</code> each <code class="language-plaintext highlighter-rouge">mcp/&lt;name&gt;-mcp/</code>. Writes a <code class="language-plaintext highlighter-rouge">~/.claude.json</code> snippet registering each server via stdio. Optional: <code class="language-plaintext highlighter-rouge">systemd</code> units for streamable-http mode.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">fastapi</code></td>
+      <td>uvicorn <code class="language-plaintext highlighter-rouge">systemd</code> unit running <code class="language-plaintext highlighter-rouge">onehealth_agents.api:app</code> on <code class="language-plaintext highlighter-rouge">127.0.0.1:8000</code>. Reads <code class="language-plaintext highlighter-rouge">SUPABASE_URL</code> / JWT-validation config from the vault.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">app</code></td>
+      <td><code class="language-plaintext highlighter-rouge">npm ci &amp;&amp; npm run gen:api &amp;&amp; npm run build</code> in <code class="language-plaintext highlighter-rouge">app/</code>. Static export lands in <code class="language-plaintext highlighter-rouge">app/out/</code>.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">nginx</code></td>
+      <td>nginx reverse-proxies <code class="language-plaintext highlighter-rouge">/api/</code> → <code class="language-plaintext highlighter-rouge">127.0.0.1:8000</code>, serves <code class="language-plaintext highlighter-rouge">/</code> from the static export. Lets-Encrypt-ready via <code class="language-plaintext highlighter-rouge">certbot --nginx</code>.</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2 id="dns--tls">DNS + TLS</h2>
+
+<p>Point an A record at the VM’s public IP before running the playbook
+(or run the playbook first and add the record afterwards). Once DNS
+resolves, the <code class="language-plaintext highlighter-rouge">nginx</code> role can issue a Let’s Encrypt cert:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>ssh onehealth@your-host
+<span class="nb">sudo </span>certbot <span class="nt">--nginx</span> <span class="nt">-d</span> sentinel.example.org
+</code></pre></div></div>
+
+<p>The playbook can also do this automatically when <code class="language-plaintext highlighter-rouge">tls_email</code> is set
+in the vault and <code class="language-plaintext highlighter-rouge">tls_enabled: true</code> in <code class="language-plaintext highlighter-rouge">group_vars/all.yml</code>.</p>
+
+<h2 id="cloud-provider-templates">Cloud provider templates</h2>
+
+<p>The playbook is provider-agnostic — any VM with SSH + sudo works.
+For convenience, <a href="./providers/"><code class="language-plaintext highlighter-rouge">deploy/providers/</code></a> holds minimal
+templates for the cloud the user happens to have:</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Provider</th>
+      <th>Template</th>
+      <th>Status</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>AWS EC2 (Ubuntu 24.04, t3.medium)</td>
+      <td><code class="language-plaintext highlighter-rouge">providers/aws-ec2.md</code></td>
+      <td>TODO</td>
+    </tr>
+    <tr>
+      <td>DigitalOcean Droplet</td>
+      <td><code class="language-plaintext highlighter-rouge">providers/digitalocean.md</code></td>
+      <td>TODO</td>
+    </tr>
+    <tr>
+      <td>Linode</td>
+      <td><code class="language-plaintext highlighter-rouge">providers/linode.md</code></td>
+      <td>TODO</td>
+    </tr>
+    <tr>
+      <td>OCI Always Free</td>
+      <td><code class="language-plaintext highlighter-rouge">providers/oracle-cloud.md</code></td>
+      <td>TODO</td>
+    </tr>
+    <tr>
+      <td>Self-host (bare metal / Proxmox)</td>
+      <td><code class="language-plaintext highlighter-rouge">providers/self-host.md</code></td>
+      <td>TODO</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>Adding a provider template is a 5-minute job — feel free to drop
+one as a PR.</p>
+
+<h2 id="manual-install-no-ansible">Manual install (no Ansible)</h2>
+
+<p>If you’d rather provision by hand, every step in the playbook is a
+documented Ansible task. Read <a href="../ansible/"><code class="language-plaintext highlighter-rouge">../ansible/roles/&lt;name&gt;/tasks/main.yml</code></a>
+in order: <code class="language-plaintext highlighter-rouge">common → node → python → postgres → repo → claude_code →
+mcp_servers → fastapi → app → nginx</code>. Each task corresponds to one
+shell command on the VM.</p>
+
+<h2 id="operations">Operations</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>Task</th>
+      <th>How</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Re-deploy after a <code class="language-plaintext highlighter-rouge">git pull</code> on main</strong></td>
+      <td><code class="language-plaintext highlighter-rouge">ansible-playbook -i inventory.yml playbook.yml --tags repo,fastapi,app</code></td>
+    </tr>
+    <tr>
+      <td><strong>Rotate the Anthropic API key</strong></td>
+      <td>Update the value in <code class="language-plaintext highlighter-rouge">group_vars/all.vault.yml</code>, then <code class="language-plaintext highlighter-rouge">ansible-playbook ... --tags claude_code</code></td>
+    </tr>
+    <tr>
+      <td><strong>Restart the FastAPI backend</strong></td>
+      <td><code class="language-plaintext highlighter-rouge">systemctl restart onehealth-api</code></td>
+    </tr>
+    <tr>
+      <td><strong>Tail logs</strong></td>
+      <td><code class="language-plaintext highlighter-rouge">journalctl -u onehealth-api -f</code></td>
+    </tr>
+    <tr>
+      <td><strong>Re-issue TLS cert</strong></td>
+      <td><code class="language-plaintext highlighter-rouge">certbot renew</code> (cron-managed by default)</td>
+    </tr>
+    <tr>
+      <td><strong>Back up Postgres</strong></td>
+      <td><code class="language-plaintext highlighter-rouge">pg_dump -U onehealth epihack \| gzip &gt; backup-$(date +%F).sql.gz</code>. Snapshot the DuckLake Parquet object store separately.</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2 id="cross-links">Cross-links</h2>
+
+<ul>
+  <li><a href="../ansible/"><code class="language-plaintext highlighter-rouge">../ansible/</code></a> — the Ansible playbook.</li>
+  <li><a href="/epihack-2026/plan/06-mobile-app.html"><code class="language-plaintext highlighter-rouge">../plan/06-mobile-app.md</code></a> — the
+privacy contract the app enforces.</li>
+  <li><a href="/epihack-2026/plan/07-auth.html"><code class="language-plaintext highlighter-rouge">../plan/07-auth.md</code></a> — Supabase Auth
+integration; the VM holds the JWT-validation config, not the
+Supabase project itself.</li>
+  <li><a href="../api/openapi.yaml"><code class="language-plaintext highlighter-rouge">../api/openapi.yaml</code></a> — the HTTP contract
+the FastAPI backend serves.</li>
+</ul>
+
+
+  <footer>
+    Source: Ending Pandemics Academy &middot; University of Arizona Mel &amp;
+    Enid Zuckerman College of Public Health &middot; Global Health Institute.
+  </footer>
+</body>
+</html>

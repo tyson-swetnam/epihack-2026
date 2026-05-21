@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Phase 0 execution status</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      max-width: 1100px;
+      margin: 2rem auto;
+      padding: 0 1.25rem;
+      color: #1a1a1a;
+      line-height: 1.55;
+    }
+    nav.crumbs { font-size: .9rem; color: #555; margin-bottom: 1rem; }
+    nav.crumbs a { color: #1F3A93; text-decoration: none; }
+    h1 { border-bottom: 3px solid #1F3A93; padding-bottom: .35rem; }
+    h2 { margin-top: 2.25rem; color: #1F3A93; }
+    h3 { margin-top: 1.25rem; }
+    table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: .95rem; }
+    th, td { border: 1px solid #ddd; padding: .5rem .75rem; text-align: left; vertical-align: top; }
+    th { background: #f0f3f8; }
+    blockquote {
+      border-left: 4px solid #1F3A93;
+      background: #f4f6fb;
+      margin: 1rem 0;
+      padding: .75rem 1rem;
+    }
+    code { background: #f1f3f7; padding: 1px 5px; border-radius: 3px; font-size: .9em; }
+    pre code { display: block; padding: .75rem 1rem; overflow-x: auto; }
+    footer { margin-top: 4rem; padding-top: 1rem; border-top: 1px solid #ddd; color: #666; font-size: .85rem; }
+    a { color: #1F3A93; }
+  </style>
+</head>
+<body>
+  <nav class="crumbs">
+    <a href="/epihack-2026/">EpiHack AZ 2026</a>
+  </nav>
+
+  <h1 id="phase-0--execution-status">Phase 0 — execution status</h1>
+
+<p>Snapshot of the Phase-0 deliverables from
+<a href="./05-roadmap.html"><code class="language-plaintext highlighter-rouge">plan/05-roadmap.md</code></a>. All six in-flight
+sub-agents have reported back; the deliverables below are merged on
+this branch and ready for review.</p>
+
+<h2 id="shipped">Shipped</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>Component</th>
+      <th>Path</th>
+      <th>Verification</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Application schema seed</td>
+      <td><a href="/epihack-2026/schema/deep/application.sql"><code class="language-plaintext highlighter-rouge">schema/deep/application.sql</code></a></td>
+      <td>40 nodes, 75 edges, 73 properties; loads + re-loads idempotently in DuckDB 1.5.2; <code class="language-plaintext highlighter-rouge">kg.v_observation_summary</code> view returns the expected wide row</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">knowledge-graph-mcp</code> (read-only kg query MCP)</td>
+      <td><a href="../mcp/knowledge-graph-mcp/README.html"><code class="language-plaintext highlighter-rouge">mcp/knowledge-graph-mcp/</code></a></td>
+      <td>12 MCP tools + 3 resources; 22/22 unit tests pass; smoke-tested against the live schema (572 nodes, 791 edges, 1027 properties loaded)</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">great-az-tick-check-mcp</code> (mock submission tracking)</td>
+      <td><a href="../mcp/great-az-tick-check-mcp/README.html"><code class="language-plaintext highlighter-rouge">mcp/great-az-tick-check-mcp/</code></a></td>
+      <td>5 tools + 2 resources; 10/10 tests; mock backend with a clean override path for the real Walker-lab API</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">nws-heatrisk-mcp</code> (NWS HeatRisk + heat-index)</td>
+      <td><a href="../mcp/nws-heatrisk-mcp/README.html"><code class="language-plaintext highlighter-rouge">mcp/nws-heatrisk-mcp/</code></a></td>
+      <td>7 tools + 2 resources; 17/17 heat-index tests against the canonical NWS table values; HeatRisk feed URL env-overridable</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">agents/</code> — 8-agent pipeline</td>
+      <td><a href="../agents/"><code class="language-plaintext highlighter-rouge">agents/</code></a></td>
+      <td>9 agent modules + orchestrator; 29 unit tests; both Scenario A (tick mail-in) and Scenario C (CHW heat check-in) run end-to-end through the stub agents and assert the expected <code class="language-plaintext highlighter-rouge">TriageDecision</code> + <code class="language-plaintext highlighter-rouge">Notification</code>; failing-agent degradation test passes</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">app/</code> — Phase-0 UI prototype</td>
+      <td><a href="../app/"><code class="language-plaintext highlighter-rouge">app/</code></a></td>
+      <td>10 static files (vanilla HTML+JS+CSS, no build); the full 6-step tick mail-in flow renders cleanly; mock backend short-circuits to a canned response so the success card always renders</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2 id="sub-agent-mcp-tool-inventory-cross-check">Sub-agent MCP tool inventory (cross-check)</h2>
+
+<p>Each <code class="language-plaintext highlighter-rouge">agents/</code> module makes the following MCP calls — the
+corresponding <code class="language-plaintext highlighter-rouge">mcp/&lt;name&gt;-mcp/</code> server should expose each:</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Server</th>
+      <th>Tool</th>
+      <th>Caller</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">knowledge-graph-mcp</code> ✅</td>
+      <td><code class="language-plaintext highlighter-rouge">regions_at_point</code></td>
+      <td><code class="language-plaintext highlighter-rouge">GeoEnrichmentAgent</code></td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">knowledge-graph-mcp</code> ✅</td>
+      <td><code class="language-plaintext highlighter-rouge">outbreak_check</code></td>
+      <td><code class="language-plaintext highlighter-rouge">EnrichmentAgent</code> (VBD), <code class="language-plaintext highlighter-rouge">KnowledgeUpdateAgent</code></td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">vectorsurv-mcp</code> ✅</td>
+      <td><code class="language-plaintext highlighter-rouge">agency_region_intersect</code></td>
+      <td><code class="language-plaintext highlighter-rouge">GeoEnrichmentAgent</code></td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">vectorsurv-mcp</code> ✅</td>
+      <td><code class="language-plaintext highlighter-rouge">get_pools</code></td>
+      <td><code class="language-plaintext highlighter-rouge">EnrichmentAgent</code> (VBD), <code class="language-plaintext highlighter-rouge">KnowledgeUpdateAgent</code></td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">great-az-tick-check-mcp</code> ✅</td>
+      <td><code class="language-plaintext highlighter-rouge">create_submission</code></td>
+      <td><code class="language-plaintext highlighter-rouge">EnrichmentAgent</code> (mail-to-walker-lab branch)</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">nws-heatrisk-mcp</code> ✅</td>
+      <td><code class="language-plaintext highlighter-rouge">heatrisk</code></td>
+      <td><code class="language-plaintext highlighter-rouge">EnrichmentAgent</code> (Heat), <code class="language-plaintext highlighter-rouge">KnowledgeUpdateAgent</code></td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">mag-hrn-mcp</code> ⏳</td>
+      <td><code class="language-plaintext highlighter-rouge">search_centers</code></td>
+      <td><code class="language-plaintext highlighter-rouge">EnrichmentAgent</code> (cooling center)</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">211-az-mcp</code> ⏳</td>
+      <td><code class="language-plaintext highlighter-rouge">transport_to_cooling_center</code></td>
+      <td><code class="language-plaintext highlighter-rouge">EnrichmentAgent</code> (dispatch)</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>The two ⏳ servers fall through the orchestrator’s failure-isolation
+boundary today (observation still lands, with a <code class="language-plaintext highlighter-rouge">failed_tools</code>
+record). They’re queued for Phase 1.</p>
+
+<h2 id="follow-ups-flagged-by-the-sub-agents">Follow-ups flagged by the sub-agents</h2>
+
+<p>These are real but small; bundling them into the next PR rather than
+holding Phase 0:</p>
+
+<ol>
+  <li><strong><code class="language-plaintext highlighter-rouge">schema/deep/outbreaks.sql</code></strong> references <code class="language-plaintext highlighter-rouge">pathogen.y_pestis</code> but
+<code class="language-plaintext highlighter-rouge">pathogens.sql</code> defines <code class="language-plaintext highlighter-rouge">pathogen.yersinia_pestis</code>. Pick one slug
+and update the other.</li>
+  <li><strong><code class="language-plaintext highlighter-rouge">schema/deep/application.sql</code></strong> references
+<code class="language-plaintext highlighter-rouge">code.snomed.heatstroke</code> which isn’t defined in <code class="language-plaintext highlighter-rouge">standards.sql</code>.
+Add the SNOMED catalog row.</li>
+  <li><strong><code class="language-plaintext highlighter-rouge">schema/deep/counties.sql</code></strong> and <strong><code class="language-plaintext highlighter-rouge">tribes.sql</code></strong> lack
+<code class="language-plaintext highlighter-rouge">lat</code> / <code class="language-plaintext highlighter-rouge">lon</code> numeric properties, so
+<code class="language-plaintext highlighter-rouge">knowledge-graph-mcp.kg_regions_at_point</code> returns empty.
+Add a property-only follow-up seed (the tool already accepts
+<code class="language-plaintext highlighter-rouge">lat</code> / <code class="language-plaintext highlighter-rouge">latitude</code> / <code class="language-plaintext highlighter-rouge">centroid_lat</code> aliases).</li>
+  <li><strong>SNOMED catalog</strong> in <code class="language-plaintext highlighter-rouge">standards.sql</code> is heatstroke-only; the
+application schema would benefit from <code class="language-plaintext highlighter-rouge">84362002</code> (heat exhaustion),
+<code class="language-plaintext highlighter-rouge">52613005</code> (heat cramp), <code class="language-plaintext highlighter-rouge">24079001</code> (heat syncope) so the heat
+symptoms in <code class="language-plaintext highlighter-rouge">application.sql</code> chain through SNOMED via the
+existing <code class="language-plaintext highlighter-rouge">crossReferences</code> edges.</li>
+  <li><strong>LOINC code nodes</strong> for wearable observations
+(<code class="language-plaintext highlighter-rouge">code.loinc.heart_rate_8867_4</code>, etc.) so <code class="language-plaintext highlighter-rouge">wearable_metric.*</code> →
+<code class="language-plaintext highlighter-rouge">mappedTo</code> → LOINC works without storing the code as a string.</li>
+</ol>
+
+<h2 id="plan-document-gaps-the-sub-agents-flagged">Plan-document gaps the sub-agents flagged</h2>
+
+<p>While building, the agents found six places where the plan was
+under-specified:</p>
+
+<ol>
+  <li><strong>Triage class list never enumerated</strong> in <code class="language-plaintext highlighter-rouge">plan/03</code>. Should
+reference <code class="language-plaintext highlighter-rouge">schema/deep/application.sql</code> or list the ten <code class="language-plaintext highlighter-rouge">tc.*</code>
+classes inline.</li>
+  <li><strong>Heat vulnerability score lacks a full factor table.</strong> Scenario
+C in <code class="language-plaintext highlighter-rouge">plan/03</code> showed five line items; a full <code class="language-plaintext highlighter-rouge">HEAT_SCORE_TABLE</code>
+covering age 65+, thermo-meds, energy insecurity, and Red /
+Orange HeatRisk levels should be pinned in <code class="language-plaintext highlighter-rouge">plan/01</code> or <code class="language-plaintext highlighter-rouge">plan/03</code>.</li>
+  <li><strong><code class="language-plaintext highlighter-rouge">consent.tick_mailin</code></strong> suppression trigger (“unless the
+submitter has been bitten”) isn’t formal. The agent treats
+“any Human field already populated → keep them, else zero out.”</li>
+  <li><strong><code class="language-plaintext highlighter-rouge">AgentRun</code> audit-log schema</strong> mentions input, output, model id,
+latency, cost but cost / token counts aren’t on the model yet.</li>
+  <li><strong>Notification-ordering “life-threatening” set</strong> isn’t enumerated.
+<code class="language-plaintext highlighter-rouge">tc.call_911</code> is the only entry today; should <code class="language-plaintext highlighter-rouge">tc.urgent_care</code>
+join it?</li>
+  <li><strong>Phase-1 MCP slugs</strong> (<code class="language-plaintext highlighter-rouge">mag-hrn-mcp</code>, <code class="language-plaintext highlighter-rouge">adhs-mcp</code>, <code class="language-plaintext highlighter-rouge">whispers-mcp</code>,
+<code class="language-plaintext highlighter-rouge">inaturalist-mcp</code>, <code class="language-plaintext highlighter-rouge">211-az-mcp</code>) are referenced by string by the
+orchestrator but don’t have folders yet. They’ll wire on first
+creation.</li>
+</ol>
+
+<h2 id="whats-next">What’s next</h2>
+
+<p>Phase 0 is functionally complete. Phase 1 (per
+<a href="./05-roadmap.html"><code class="language-plaintext highlighter-rouge">05-roadmap.md</code></a>) adds the Heat vertical’s
+mobile flows, the Cluster Detection Agent, and three more MCP
+servers (<code class="language-plaintext highlighter-rouge">mag-hrn-mcp</code>, <code class="language-plaintext highlighter-rouge">adhs-mcp</code>, <code class="language-plaintext highlighter-rouge">211-az-mcp</code>).</p>
+
+
+  <footer>
+    Source: Ending Pandemics Academy &middot; University of Arizona Mel &amp;
+    Enid Zuckerman College of Public Health &middot; Global Health Institute.
+  </footer>
+</body>
+</html>

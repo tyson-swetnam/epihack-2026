@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Plan 09 — Dual datastore: MongoDB for mobile, DuckLake for web + analytics</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      max-width: 1100px;
+      margin: 2rem auto;
+      padding: 0 1.25rem;
+      color: #1a1a1a;
+      line-height: 1.55;
+    }
+    nav.crumbs { font-size: .9rem; color: #555; margin-bottom: 1rem; }
+    nav.crumbs a { color: #1F3A93; text-decoration: none; }
+    h1 { border-bottom: 3px solid #1F3A93; padding-bottom: .35rem; }
+    h2 { margin-top: 2.25rem; color: #1F3A93; }
+    h3 { margin-top: 1.25rem; }
+    table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: .95rem; }
+    th, td { border: 1px solid #ddd; padding: .5rem .75rem; text-align: left; vertical-align: top; }
+    th { background: #f0f3f8; }
+    blockquote {
+      border-left: 4px solid #1F3A93;
+      background: #f4f6fb;
+      margin: 1rem 0;
+      padding: .75rem 1rem;
+    }
+    code { background: #f1f3f7; padding: 1px 5px; border-radius: 3px; font-size: .9em; }
+    pre code { display: block; padding: .75rem 1rem; overflow-x: auto; }
+    footer { margin-top: 4rem; padding-top: 1rem; border-top: 1px solid #ddd; color: #666; font-size: .85rem; }
+    a { color: #1F3A93; }
+  </style>
+</head>
+<body>
+  <nav class="crumbs">
+    <a href="/epihack-2026/">EpiHack AZ 2026</a>
+  </nav>
+
+  <h1 id="09--dual-datastore-mongodb-for-mobile-ducklake-for-webanalytics">09 — Dual datastore (MongoDB for mobile, DuckLake for web/analytics)</h1>
+
+<p>Decision (2026-05-20): the <strong>mobile app persists reports to MongoDB</strong>; the
+<strong>hosted website and the analytics/knowledge-graph backend stay on DuckLake</strong>.
+Both write paths go <strong>through FastAPI</strong> (chosen over direct device→Realm), so
+the privacy contract stays enforced in one place. Mobile reports are then
+<strong>synced into DuckLake</strong> so the agents, MCP servers, and cluster detection see
+a unified dataset.</p>
+
+<p>This plan slots into <code class="language-plaintext highlighter-rouge">plan/08-mobile-ux-revamp.md</code> <strong>Phase 3</strong> (backend wiring):
+the polished UI keeps calling <code class="language-plaintext highlighter-rouge">createReport()</code> → <code class="language-plaintext highlighter-rouge">POST /v1/reports</code>; only the
+server-side sink changes by channel.</p>
+
+<h2 id="architecture">Architecture</h2>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>            ┌─────────── same api/openapi.yaml contract ───────────┐
+ Web build  │  POST /v1/reports                                     │
+ (static) ──┤      X-Client-Channel: web    → FastAPI → DuckLake ───┼─► knowledge graph
+            │                                   │  (kg_writer)      │   (agents, MCP,
+ Mobile     │      X-Client-Channel: mobile  → FastAPI → MongoDB ───┤    cluster scan)
+ (Capacitor)│                                   │  (mongo_writer)   │        ▲
+            └───────────────────────────────────┼───────────────────┘        │
+                       privacy enforcement       │                            │
+                       (validate/coarsen/EXIF/   └── mongo→ducklake sync ──────┘
+                        triage-guard) runs BEFORE     (idempotent on observation_id)
+                        the sink, for BOTH channels
+</code></pre></div></div>
+
+<ul>
+  <li><strong>One contract, one enforcement point.</strong> Both channels run
+<code class="language-plaintext highlighter-rouge">validation.py</code> coarsening + the EXIF/<code class="language-plaintext highlighter-rouge">photo_exif_gps_present</code> check + the
+triage output-guard <em>before</em> the sink is chosen. The sink is the only
+difference.</li>
+  <li><strong>Channel selection.</strong> The web and mobile builds ship the same bundle
+(plan/06 Capacitor), so the channel is a build-time flag baked into the
+client and sent as a header: <code class="language-plaintext highlighter-rouge">X-Client-Channel: mobile|web</code> (default <code class="language-plaintext highlighter-rouge">web</code>).
+Add it to <code class="language-plaintext highlighter-rouge">api/openapi.yaml</code> as an optional header param (spec-first).</li>
+  <li><strong>Mobile offline.</strong> Since the write path is server-mediated (not Realm),
+offline = a local cache + retry queue in the app keyed by <code class="language-plaintext highlighter-rouge">claim_token</code>
+(no Atlas Device Sync). Documented as such so expectations are clear.</li>
+</ul>
+
+<h2 id="why-mongo-for-mobile-given-it-still-goes-through-fastapi">Why Mongo for mobile (given it still goes through FastAPI)</h2>
+
+<p>Operational separation: a flexible document store for an evolving mobile
+payload and a separate high-write ingest path, decoupled from the analytical
+lakehouse. Analytics unification is preserved by the sync. (If true
+offline-first ever becomes the priority, the alternative is direct
+device→Atlas Device Sync — but that moves privacy enforcement off the server
+and is explicitly <strong>not</strong> this plan.)</p>
+
+<h2 id="hosting--sync--recommendation-youll-confirm">Hosting + sync — recommendation (you’ll confirm)</h2>
+
+<p><strong>Recommended: self-hosted MongoDB Community on the VM</strong> (new <code class="language-plaintext highlighter-rouge">mongodb</code>
+Ansible role), bound to <code class="language-plaintext highlighter-rouge">127.0.0.1</code>, alongside Postgres. Rationale: the stack
+is already self-hosted (one-command VM deploy), data stays on the box (privacy),
+and — because we chose server-mediated writes — we don’t need Atlas Device
+Sync. <strong>Atlas (managed)</strong> stays the alternative if you later want managed ops
+or Device Sync.</p>
+
+<p><strong>Sync: a scheduled <code class="language-plaintext highlighter-rouge">mongo_to_ducklake</code> job</strong> (systemd timer, every N minutes)
+that reads new Mongo report docs past a stored watermark (<code class="language-plaintext highlighter-rouge">created_at</code>/<code class="language-plaintext highlighter-rouge">_id</code>)
+and writes each into DuckLake via the existing <code class="language-plaintext highlighter-rouge">kg_writer.persist_observation</code>
+(idempotent on <code class="language-plaintext highlighter-rouge">observation_id</code>, so re-runs are safe). A change-stream consumer
+is the lower-latency upgrade path later.</p>
+
+<h2 id="components-to-build">Components to build</h2>
+
+<h3 id="fastapi--agents">FastAPI / agents</h3>
+<ul>
+  <li><strong><code class="language-plaintext highlighter-rouge">agents/src/onehealth_agents/mongo_writer.py</code></strong> — <code class="language-plaintext highlighter-rouge">MongoWriter</code> mirroring
+<code class="language-plaintext highlighter-rouge">kg_writer</code>’s <code class="language-plaintext highlighter-rouge">persist_observation()</code>: writes one report document
+(structured fields verbatim; <code class="language-plaintext highlighter-rouge">notes</code>/<code class="language-plaintext highlighter-rouge">claim_token</code> as SHA-256 digests, same
+privacy posture) to the <code class="language-plaintext highlighter-rouge">reports</code> collection; returns <code class="language-plaintext highlighter-rouge">(observation_id,
+claim_token)</code>. Reads <code class="language-plaintext highlighter-rouge">MONGODB_URI</code>. In-memory/<code class="language-plaintext highlighter-rouge">mongomock</code> fallback when unset
+so tests stay offline (CLAUDE.md rule).</li>
+  <li><strong><code class="language-plaintext highlighter-rouge">api/routes/reports.py</code></strong> — after the shared privacy/validation step,
+select sink by <code class="language-plaintext highlighter-rouge">X-Client-Channel</code>: <code class="language-plaintext highlighter-rouge">mobile</code> → <code class="language-plaintext highlighter-rouge">MongoWriter</code>, else
+<code class="language-plaintext highlighter-rouge">kg_writer</code>. Status read-back (<code class="language-plaintext highlighter-rouge">GET /v1/reports/{id}</code>) checks Mongo first
+then DuckLake (or routes by channel recorded at write time).</li>
+  <li><strong><code class="language-plaintext highlighter-rouge">agents/pyproject.toml</code></strong> — add <code class="language-plaintext highlighter-rouge">pymongo&gt;=4.8</code> (+ <code class="language-plaintext highlighter-rouge">mongomock</code> as a test
+extra).</li>
+</ul>
+
+<h3 id="mongo--ducklake-sync">Mongo → DuckLake sync</h3>
+<ul>
+  <li><strong><code class="language-plaintext highlighter-rouge">agents/.../sync/mongo_to_ducklake.py</code></strong> — watermarked, idempotent ETL;
+CLI entrypoint runnable by a timer. Writes via <code class="language-plaintext highlighter-rouge">kg_writer</code> so synced rows
+land as <code class="language-plaintext highlighter-rouge">kg.node('observation')</code> + <code class="language-plaintext highlighter-rouge">kg.agent_run</code> + a DuckLake snapshot.</li>
+</ul>
+
+<h3 id="ansible">Ansible</h3>
+<ul>
+  <li><strong><code class="language-plaintext highlighter-rouge">roles/mongodb/</code></strong> (if self-hosted) — install MongoDB CE, bind
+<code class="language-plaintext highlighter-rouge">127.0.0.1</code>, create the app DB + user; or, for Atlas, just consume
+<code class="language-plaintext highlighter-rouge">vault_mongodb_uri</code>.</li>
+  <li><strong><code class="language-plaintext highlighter-rouge">roles/fastapi</code></strong> — add <code class="language-plaintext highlighter-rouge">MONGODB_URI</code> to the API env; install a
+<code class="language-plaintext highlighter-rouge">onehealth-mongo-sync.timer</code> + service unit for the ETL.</li>
+  <li><strong><code class="language-plaintext highlighter-rouge">group_vars/all.yml</code></strong> — <code class="language-plaintext highlighter-rouge">mongodb_*</code> settings; <strong>vault</strong> — <code class="language-plaintext highlighter-rouge">vault_mongodb_uri</code>/password.</li>
+  <li><strong><code class="language-plaintext highlighter-rouge">playbook.yml</code></strong> — add <code class="language-plaintext highlighter-rouge">mongodb</code> role before <code class="language-plaintext highlighter-rouge">fastapi</code> (so the URI/health
+exist before the API + sync start).</li>
+</ul>
+
+<h3 id="app">App</h3>
+<ul>
+  <li><strong><code class="language-plaintext highlighter-rouge">app/src/lib/api-client.ts</code></strong> — send <code class="language-plaintext highlighter-rouge">X-Client-Channel</code> from
+<code class="language-plaintext highlighter-rouge">NEXT_PUBLIC_CLIENT_CHANNEL</code> (default <code class="language-plaintext highlighter-rouge">web</code>; the Capacitor build sets
+<code class="language-plaintext highlighter-rouge">mobile</code>). Add a local retry queue keyed by <code class="language-plaintext highlighter-rouge">claim_token</code> for offline.</li>
+  <li><strong><code class="language-plaintext highlighter-rouge">api/openapi.yaml</code></strong> — document the <code class="language-plaintext highlighter-rouge">X-Client-Channel</code> header.</li>
+</ul>
+
+<h2 id="phases">Phases</h2>
+
+<ul>
+  <li><strong>A — App-layer routing (no infra):</strong> add the channel header + <code class="language-plaintext highlighter-rouge">MongoWriter</code>
+with <code class="language-plaintext highlighter-rouge">mongomock</code> fallback; reports route selects the sink; tests offline.</li>
+  <li><strong>B — Mongo provisioning:</strong> <code class="language-plaintext highlighter-rouge">mongodb</code> role (self-hosted) <strong>or</strong> Atlas URI in
+vault; wire <code class="language-plaintext highlighter-rouge">MONGODB_URI</code>. <em>(Gated on your hosting choice.)</em></li>
+  <li><strong>C — Sync:</strong> <code class="language-plaintext highlighter-rouge">mongo_to_ducklake</code> ETL + systemd timer; verify a mobile-channel
+report appears in DuckLake with a new snapshot.</li>
+  <li><strong>D — App offline queue + e2e:</strong> retry queue; end-to-end test
+(mobile POST → Mongo doc → sync → DuckLake <code class="language-plaintext highlighter-rouge">AT (VERSION)</code> shows it).</li>
+</ul>
+
+<h2 id="guardrails-unchanged-from-the-contract">Guardrails (unchanged from the contract)</h2>
+
+<ul>
+  <li>Privacy enforcement runs before <em>both</em> sinks; no raw lat/lon, EXIF stripped,
+no diagnosis/score, audit/digest rules apply to the Mongo doc too.</li>
+  <li><code class="language-plaintext highlighter-rouge">api/openapi.yaml</code> stays the source of truth; regenerate <code class="language-plaintext highlighter-rouge">api-types.ts</code>.</li>
+  <li>Tests must not hit the network — <code class="language-plaintext highlighter-rouge">mongomock</code> / skip when <code class="language-plaintext highlighter-rouge">MONGODB_URI</code> unset.</li>
+</ul>
+
+<h2 id="open-decision-please-confirm">Open decision (please confirm)</h2>
+
+<p><strong>Hosting:</strong> self-hosted MongoDB CE on the VM <em>(recommended)</em> vs MongoDB Atlas.
+Everything else above is independent of this choice; Phase B is the only part
+that branches on it.</p>
+
+
+  <footer>
+    Source: Ending Pandemics Academy &middot; University of Arizona Mel &amp;
+    Enid Zuckerman College of Public Health &middot; Global Health Institute.
+  </footer>
+</body>
+</html>

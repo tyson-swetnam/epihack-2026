@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>NWS HeatRisk MCP server</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      max-width: 1100px;
+      margin: 2rem auto;
+      padding: 0 1.25rem;
+      color: #1a1a1a;
+      line-height: 1.55;
+    }
+    nav.crumbs { font-size: .9rem; color: #555; margin-bottom: 1rem; }
+    nav.crumbs a { color: #1F3A93; text-decoration: none; }
+    h1 { border-bottom: 3px solid #1F3A93; padding-bottom: .35rem; }
+    h2 { margin-top: 2.25rem; color: #1F3A93; }
+    h3 { margin-top: 1.25rem; }
+    table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: .95rem; }
+    th, td { border: 1px solid #ddd; padding: .5rem .75rem; text-align: left; vertical-align: top; }
+    th { background: #f0f3f8; }
+    blockquote {
+      border-left: 4px solid #1F3A93;
+      background: #f4f6fb;
+      margin: 1rem 0;
+      padding: .75rem 1rem;
+    }
+    code { background: #f1f3f7; padding: 1px 5px; border-radius: 3px; font-size: .9em; }
+    pre code { display: block; padding: .75rem 1rem; overflow-x: auto; }
+    footer { margin-top: 4rem; padding-top: 1rem; border-top: 1px solid #ddd; color: #666; font-size: .85rem; }
+    a { color: #1F3A93; }
+  </style>
+</head>
+<body>
+  <nav class="crumbs">
+    <a href="/epihack-2026/">EpiHack AZ 2026</a>
+  </nav>
+
+  <h1 id="nws-heatrisk-mcp--model-context-protocol-server-for-the-nws-public-api-and-the-wpc-heatrisk-product"><code class="language-plaintext highlighter-rouge">nws-heatrisk-mcp</code> — Model Context Protocol server for the NWS public API and the WPC HeatRisk product</h1>
+
+<p>A <a href="https://modelcontextprotocol.io/">Model Context Protocol</a> server that
+exposes the U.S. <a href="https://www.weather.gov/documentation/services-web-api">National Weather Service public
+API</a>
+(<code class="language-plaintext highlighter-rouge">api.weather.gov</code>) and the <a href="https://www.wpc.ncep.noaa.gov/heatrisk/">WPC HeatRisk gridded
+product</a> as a set of tools an
+LLM (Claude Desktop, Claude Code, Claude API agents, or any other MCP
+client) can call.</p>
+
+<p>Built for the EpiHack Arizona 2026 <a href="../../heat/index.html">Heat focus
+group</a>. Powers the Heat-vertical scenarios in
+<a href="../../plan/04-data-flows.html">plan 04</a>, in particular Scenario C
+(unsheltered heat check-in on a Magenta-HeatRisk day).</p>
+
+<h2 id="what-it-does">What it does</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>MCP tool</th>
+      <th>Backed by</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">nws_heatrisk</code></td>
+      <td>WPC HeatRisk daily gridded product</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">nws_heatrisk_week</code></td>
+      <td>WPC HeatRisk (7-day outlook)</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">nws_forecast</code></td>
+      <td><code class="language-plaintext highlighter-rouge">GET /points/{lat},{lon}</code> then the returned <code class="language-plaintext highlighter-rouge">forecast</code> / <code class="language-plaintext highlighter-rouge">forecastHourly</code> URL</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">nws_current_conditions</code></td>
+      <td><code class="language-plaintext highlighter-rouge">GET /points/{lat},{lon}/stations</code> then <code class="language-plaintext highlighter-rouge">GET /stations/{id}/observations/latest</code></td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">nws_heat_index</code></td>
+      <td>client-side: NWS Rothfusz regression with humidity adjustments</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">nws_active_heat_alerts</code></td>
+      <td><code class="language-plaintext highlighter-rouge">GET /alerts/active?area=...&amp;event=...</code> for each heat event name</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">nws_alert_zones_for_point</code></td>
+      <td><code class="language-plaintext highlighter-rouge">GET /points/{lat},{lon}</code> (extracts the zone IDs)</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>Plus two MCP <strong>resources</strong>: <code class="language-plaintext highlighter-rouge">nws://heatrisk-categories</code> (Green / Yellow
+/ Orange / Red / Magenta with HHS-aligned heat-health descriptions) and
+<code class="language-plaintext highlighter-rouge">nws://api-base-url</code> (the active <code class="language-plaintext highlighter-rouge">NWS_BASE_URL</code> and <code class="language-plaintext highlighter-rouge">User-Agent</code>).</p>
+
+<h2 id="why-this-matters-for-epihack">Why this matters for EpiHack</h2>
+
+<p>The NWS public API is the authoritative live source for U.S. weather
+data, and HeatRisk is the only nationally-published forecast that
+combines forecast temperature, anomaly from local climatology, and
+health-impact thresholds into a single 0-4 category an LLM (or a
+clinician) can act on. Exposing both as an MCP server lets an agent:</p>
+
+<ul>
+  <li>Answer “is today dangerous heat for this person?” with a single
+call (<code class="language-plaintext highlighter-rouge">nws_heatrisk(lat, lon)</code>).</li>
+  <li>Cross-check the WPC forecast against any open NWS warnings for the
+exact zone the user is standing in.</li>
+  <li>Compute the heat index live from the nearest observation station
+without leaving the conversation.</li>
+  <li>Drop the result into the <a href="../../schema/">DuckLake knowledge
+graph</a> as the <code class="language-plaintext highlighter-rouge">Environmental</code> block of an
+observation, with full provenance.</li>
+</ul>
+
+<h2 id="authentication">Authentication</h2>
+
+<p><strong>None.</strong> The NWS public API has no token. It <em>does</em> require a
+descriptive <code class="language-plaintext highlighter-rouge">User-Agent</code> header that identifies the application and
+provides a contact (email or URL). Requests without one are rejected.
+The server refuses to start without <code class="language-plaintext highlighter-rouge">NWS_USER_AGENT</code> set, with a
+clear error.</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Pattern: "&lt;app-name&gt; (&lt;contact email or URL&gt;)"</span>
+<span class="nb">export </span><span class="nv">NWS_USER_AGENT</span><span class="o">=</span><span class="s2">"epihack-az-2026-sentinel (contact@example.org)"</span>
+</code></pre></div></div>
+
+<p>A <code class="language-plaintext highlighter-rouge">.env.example</code> template is included; copy to <code class="language-plaintext highlighter-rouge">.env</code> and source it.</p>
+
+<h2 id="heatrisk-url-drift-caveat">HeatRisk URL drift caveat</h2>
+
+<p>NWS HeatRisk is an <strong>experimental</strong> product whose machine-readable
+endpoint has moved more than once as the WPC has iterated on its
+hosting. The client ships with the best-known URL at build time, but
+makes it env-overridable:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Override if the default 404s or returns HTML rather than JSON.</span>
+<span class="nb">export </span><span class="nv">NWS_HEATRISK_URL</span><span class="o">=</span>https://www.wpc.ncep.noaa.gov/heatrisk/data/heatrisk.json
+</code></pre></div></div>
+
+<p>The HeatRisk feed parser accepts a few common shapes (flat list of
+daily dicts, GeoJSON FeatureCollection, NWS-style
+<code class="language-plaintext highlighter-rouge">properties.values</code>). If your deployment encounters a new shape,
+extend <code class="language-plaintext highlighter-rouge">_iter_records</code> / <code class="language-plaintext highlighter-rouge">extract_daily</code> in
+<a href="/epihack-2026/mcp/nws-heatrisk-mcp/src/nws_heatrisk_mcp/heatrisk.py"><code class="language-plaintext highlighter-rouge">heatrisk.py</code></a> — those are the
+only places that need to know the wire format.</p>
+
+<h2 id="endpoint-overrides">Endpoint overrides</h2>
+
+<p>Every <code class="language-plaintext highlighter-rouge">api.weather.gov</code> path is overridable via env, so the deployed
+server can be corrected without a code release if NWS reorganizes:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>NWS_PATH_POINTS                 (default /points/{lat},{lon})
+NWS_PATH_ALERTS_ACTIVE          (default /alerts/active)
+NWS_PATH_STATIONS_FOR_POINT     (default /points/{lat},{lon}/stations)
+NWS_PATH_STATION_OBSERVATIONS   (default /stations/{station_id}/observations/latest)
+NWS_PATH_ZONE                   (default /zones/{zone_type}/{zone_id})
+</code></pre></div></div>
+
+<p>Plus <code class="language-plaintext highlighter-rouge">NWS_BASE_URL</code> and <code class="language-plaintext highlighter-rouge">NWS_HEATRISK_URL</code> as above.</p>
+
+<h2 id="heat-index">Heat index</h2>
+
+<p><code class="language-plaintext highlighter-rouge">nws_heat_index(temp_f, rh_percent)</code> is pure computation, no network.
+Implements the standard NWS <a href="https://www.wpc.ncep.noaa.gov/html/heatindex_equation.shtml">Rothfusz regression
+equation</a>
+with the documented low-humidity (RH &lt; 13%, 80 &lt; T &lt; 112) and
+high-humidity (RH &gt; 85%, 80 &lt; T &lt; 87) adjustments. Returns the heat
+index in °F plus the NWS caution band (<code class="language-plaintext highlighter-rouge">Caution</code> / <code class="language-plaintext highlighter-rouge">Extreme Caution</code>
+/ <code class="language-plaintext highlighter-rouge">Danger</code> / <code class="language-plaintext highlighter-rouge">Extreme Danger</code>).</p>
+
+<p>Unit tests in <a href="/epihack-2026/mcp/nws-heatrisk-mcp/tests/test_heat_index.py"><code class="language-plaintext highlighter-rouge">tests/test_heat_index.py</code></a>
+verify the canonical table values:</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>T (°F)</th>
+      <th>RH (%)</th>
+      <th>NWS table HI</th>
+      <th>computed</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>80</td>
+      <td>40</td>
+      <td>80</td>
+      <td>~80</td>
+    </tr>
+    <tr>
+      <td>90</td>
+      <td>70</td>
+      <td>106</td>
+      <td>~106</td>
+    </tr>
+    <tr>
+      <td>100</td>
+      <td>50</td>
+      <td>119</td>
+      <td>~119</td>
+    </tr>
+    <tr>
+      <td>110</td>
+      <td>40</td>
+      <td>136</td>
+      <td>~136</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2 id="install--run">Install &amp; run</h2>
+
+<h3 id="as-a-claude-desktop-mcp-server">As a Claude Desktop MCP server</h3>
+
+<ol>
+  <li>Install <a href="https://docs.astral.sh/uv/"><code class="language-plaintext highlighter-rouge">uv</code></a> if you don’t have it.</li>
+  <li>Drop the snippet in
+<a href="/epihack-2026/mcp/nws-heatrisk-mcp/examples/claude_desktop_config.json"><code class="language-plaintext highlighter-rouge">examples/claude_desktop_config.json</code></a>
+into your Claude Desktop config
+(<code class="language-plaintext highlighter-rouge">~/Library/Application Support/Claude/claude_desktop_config.json</code>
+on macOS, <code class="language-plaintext highlighter-rouge">%APPDATA%\Claude\claude_desktop_config.json</code> on
+Windows).</li>
+  <li>Replace the path with the absolute path to this directory.</li>
+  <li>Set <code class="language-plaintext highlighter-rouge">NWS_USER_AGENT</code> to a real value (your app + a real contact).</li>
+  <li>Restart Claude Desktop.</li>
+</ol>
+
+<h3 id="standalone">Standalone</h3>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">cd </span>mcp/nws-heatrisk-mcp
+uv <span class="nb">sync
+</span><span class="nv">NWS_USER_AGENT</span><span class="o">=</span><span class="s2">"epihack-az-2026-sentinel (you@example.org)"</span> <span class="se">\</span>
+    uv run nws-heatrisk-mcp                          <span class="c"># stdio (default)</span>
+<span class="nv">MCP_TRANSPORT</span><span class="o">=</span>streamable-http uv run nws-heatrisk-mcp  <span class="c"># HTTP</span>
+</code></pre></div></div>
+
+<h3 id="tests">Tests</h3>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">cd </span>mcp/nws-heatrisk-mcp
+uv run pytest
+</code></pre></div></div>
+
+<p>The unit tests verify the heat-index regression against the canonical
+NWS table values and check that the client’s env-driven configuration
+(User-Agent requirement, base URL and path overrides) behaves as
+documented. No live NWS connection is required.</p>
+
+<h2 id="retry-behaviour">Retry behaviour</h2>
+
+<p><code class="language-plaintext highlighter-rouge">api.weather.gov</code> returns HTTP 503 under load. The client retries 5xx
+responses up to 3 times with exponential backoff (0.5s, 1s, 2s) before
+raising. 4xx responses are surfaced immediately — they almost always
+indicate a malformed request or a missing User-Agent.</p>
+
+<h2 id="license">License</h2>
+
+<p>MIT, alongside the rest of <code class="language-plaintext highlighter-rouge">epihack-2026</code>.</p>
+
+
+  <footer>
+    Source: Ending Pandemics Academy &middot; University of Arizona Mel &amp;
+    Enid Zuckerman College of Public Health &middot; Global Health Institute.
+  </footer>
+</body>
+</html>

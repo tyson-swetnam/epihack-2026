@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>EpiHack Arizona 2026</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    max-width: 1100px;
+    margin: 2rem auto;
+    padding: 0 1.25rem;
+    color: #1a1a1a;
+    line-height: 1.55;
+  }
+  .hero {
+    background: linear-gradient(135deg, #1F3A93 0%, #C0392B 100%);
+    color: #fff;
+    padding: 2rem;
+    border-radius: 10px;
+    margin: 1rem 0 2rem;
+  }
+  .hero h1 { color: #fff; border: none; margin: 0 0 .5rem 0; font-size: 2rem; }
+  .hero p { margin: 0; opacity: .95; font-size: 1.05rem; }
+  h2 { margin-top: 2.25rem; color: #1F3A93; border-bottom: 2px solid #e3e8ef; padding-bottom: .25rem; }
+  .section-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem;
+    margin: 1rem 0 2rem;
+  }
+  .card {
+    border: 1px solid #d0d7e2;
+    border-left: 6px solid var(--c, #1F3A93);
+    border-radius: 6px;
+    padding: 1rem 1.1rem;
+    background: #fff;
+    text-decoration: none;
+    color: inherit;
+  }
+  .card:hover { background: #f6f8fc; }
+  .card h3 { margin: 0 0 .3rem 0; font-size: 1.05rem; }
+  .card p { margin: 0; color: #555; font-size: .9rem; }
+  .badges { margin-top: .6rem; }
+  .badge {
+    display: inline-block;
+    background: #e3e8ef;
+    color: #333;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: .72rem;
+    margin-right: .25rem;
+  }
+  footer { margin-top: 4rem; padding-top: 1rem; border-top: 1px solid #ddd; color: #666; font-size: .85rem; }
+  code { background: #f1f3f7; padding: 1px 5px; border-radius: 3px; font-size: .9em; }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <h1>EpiHack Arizona 2026</h1>
+  <p>A working knowledge framework for the
+     <a href="https://endingpandemicsacademy.arizona.edu/trainings-events/epihack-arizona"
+        style="color:#fff;text-decoration:underline">EpiHack Arizona</a>
+     event &mdash; a mobile-first reporting app, an eight-agent FastAPI
+     backend, eleven MCP servers, and a dual MongoDB + DuckLake datastore
+     over a DuckDB / Postgres knowledge graph.</p>
+</div>
+
+<h2>Reference frameworks</h2>
+<div class="section-grid">
+  <a class="card" href="figures/index.html#fig-01" style="--c: #1F3A93">
+    <h3>Figure 1 &mdash; Purpose</h3>
+    <p>The mission statement of a One Health participatory system.</p>
+  </a>
+  <a class="card" href="figures/index.html#fig-02" style="--c: #E84A7A">
+    <h3>Figure 2 &mdash; Minimum Dataset</h3>
+    <p>53 key data parameters across 8 color-coded classes.</p>
+  </a>
+  <a class="card" href="figures/index.html#fig-03" style="--c: #C0392B">
+    <h3>Figure 3 &mdash; Timeliness Metrics</h3>
+    <p>11 outbreak milestones (Predict &rarr; After Action Review).</p>
+  </a>
+  <a class="card" href="figures/index.html#fig-04" style="--c: #E6A038">
+    <h3>Figure 4 &mdash; Design Lifecycle</h3>
+    <p>12-step design &amp; launch process for participatory surveillance.</p>
+  </a>
+  <a class="card" href="figures/index.html#fig-05" style="--c: #555">
+    <h3>Figure 5 &mdash; Design Worksheet</h3>
+    <p>The 10-prompt breakout-session template.</p>
+  </a>
+</div>
+
+<h2>Focus groups</h2>
+<div class="section-grid">
+  <a class="card" href="wildlife/index.html" style="--c: #2C5F2D">
+    <h3>Wildlife &amp; Vector-Borne Diseases</h3>
+    <p>Four questions plus 30+ anchor resources across state, county,
+       tribal, federal, academic, and citizen-science jurisdictions.</p>
+    <div class="badges">
+      <span class="badge">wildlife</span>
+      <span class="badge">vectors</span>
+      <span class="badge">zoonotic</span>
+    </div>
+  </a>
+  <a class="card" href="heat/index.html" style="--c: #E84A2B">
+    <h3>Heat</h3>
+    <p>Cooling-center awareness, real-time coordination, education, and
+       the populations most at risk in the hottest large U.S. metro.</p>
+    <div class="badges">
+      <span class="badge">extreme-heat</span>
+      <span class="badge">cooling-centers</span>
+      <span class="badge">equity</span>
+    </div>
+  </a>
+</div>
+
+<h2>Application plan</h2>
+<div class="section-grid">
+  <a class="card" href="plan/index.html" style="--c: #1F3A93">
+    <h3>AZ One Health Sentinel — plan</h3>
+    <p>Nine-part plan (01&ndash;09) for a mobile-first
+       participatory-surveillance app spanning Vector-Borne Disease and
+       Heat: parameter mapping, MCP integration, agentic architecture,
+       end-to-end data flows, auth, the mobile UX revamp, the dual
+       MongoDB / DuckLake datastore, and a phased roadmap.</p>
+    <div class="badges">
+      <span class="badge">plan</span>
+      <span class="badge">agentic</span>
+      <span class="badge">mcp</span>
+    </div>
+  </a>
+</div>
+
+<h2>Public dashboard (Phase 3)</h2>
+<div class="section-grid">
+  <a class="card" href="today/index.html" style="--c: #962FBF">
+    <h3>AZ One Health Today</h3>
+    <p>Citizen-facing aggregated view: today's HeatRisk, WNV pool positivity, recent wildlife signals, and a five-number statewide snapshot &mdash; auto-detects your county, no login, no PII.</p>
+    <div class="badges">
+      <span class="badge">public</span>
+      <span class="badge">aggregated</span>
+      <span class="badge">phase-3</span>
+    </div>
+  </a>
+  <a class="card" href="dashboard/index.html" style="--c: #1F3A93">
+    <h3>Agency dashboard (ADHS / MCDPH / AZGFD / Coconino)</h3>
+    <p>Four-audience read-only analyst workspace. Status cards, Cluster Detection Agent feed, MapLibre embed, sparkline case-count tables, and a SQL preview that round-trips to <code>knowledge-graph-mcp</code>. Implements Scenario D from <code>plan/04-data-flows</code>.</p>
+    <div class="badges">
+      <span class="badge">analyst</span>
+      <span class="badge">read-only</span>
+      <span class="badge">phase-3</span>
+    </div>
+  </a>
+</div>
+
+<h2>Reporting app (Phase 0 + 1)</h2>
+<div class="section-grid">
+  <a class="card" href="app/index.html" style="--c: #1F3A93">
+    <h3>AZ One Health Sentinel &mdash; reporting app</h3>
+    <p>Next.js&nbsp;16 + React&nbsp;19 + TypeScript + Tailwind, typed against the
+       <a href="api/openapi.yaml">OpenAPI spec</a>. Anonymous-first
+       Human / Animal / Environmental reporting, EXIF-stripped photos,
+       ZIP / 1&nbsp;km coarsening, never-diagnose triage, an offline retry
+       queue, and an <code>X-Client-Channel</code> header routing mobile
+       writes to MongoDB and web writes to DuckLake. See
+       <a href="plan/06-mobile-app.html">plan&nbsp;06</a> +
+       <a href="plan/09-mobile-datastore.html">plan&nbsp;09</a>.</p>
+    <div class="badges">
+      <span class="badge">vbd</span>
+      <span class="badge">heat</span>
+      <span class="badge">env</span>
+      <span class="badge">react</span>
+      <span class="badge">offline</span>
+      <span class="badge">mongo</span>
+    </div>
+  </a>
+  <a class="card" href="app/legacy/index.html" style="--c: #C0392B">
+    <h3>Phase&nbsp;0/1 vanilla flows &mdash; archive</h3>
+    <p>The original vanilla-HTML prototype: tick mail-in (VBD) plus
+       three heat flows (CHW check-in, anonymous self-report, "where
+       can I cool off?"). Read-only archive while each flow is ported
+       into the React app.</p>
+    <div class="badges">
+      <span class="badge">vbd</span>
+      <span class="badge">heat</span>
+      <span class="badge">legacy</span>
+    </div>
+  </a>
+</div>
+
+<h2>MCP servers (LLM tooling)</h2>
+<div class="section-grid">
+  <a class="card" href="mcp/vectorsurv-mcp/README.html" style="--c: #2C5F2D">
+    <h3>vectorsurv-mcp</h3>
+    <p>Wraps the VectorSurv mosquito and tick surveillance API
+       (sites, collections, pools, abundance, infection rate, vector
+       index) &mdash; 13 tools, spec-aligned to v1.0.44.</p>
+    <div class="badges"><span class="badge">vbd</span><span class="badge">shipped</span></div>
+  </a>
+  <a class="card" href="mcp/knowledge-graph-mcp/README.html" style="--c: #1F3A93">
+    <h3>knowledge-graph-mcp</h3>
+    <p>Read-only DuckDB query MCP over the EpiHack knowledge graph
+       (572 nodes / 791 edges / 1027 properties). 12 tools incl.
+       <code>kg_node_lookup</code>, <code>kg_path</code>,
+       <code>kg_pathogens_by_vector</code>, plus a SELECT-only SQL
+       escape-hatch.</p>
+    <div class="badges"><span class="badge">both</span><span class="badge">shipped</span></div>
+  </a>
+  <a class="card" href="mcp/great-az-tick-check-mcp/README.html" style="--c: #6A1B9A">
+    <h3>great-az-tick-check-mcp</h3>
+    <p>Mock submission tracking for the Great Arizona Tick Check
+       (UA Cooperative Extension / Walker lab). 5 tools incl.
+       mailing-label generation.</p>
+    <div class="badges"><span class="badge">vbd</span><span class="badge">shipped</span></div>
+  </a>
+  <a class="card" href="mcp/nws-heatrisk-mcp/README.html" style="--c: #E84A2B">
+    <h3>nws-heatrisk-mcp</h3>
+    <p>NWS HeatRisk + active heat alerts + Rothfusz heat-index
+       calculator. 7 tools.</p>
+    <div class="badges"><span class="badge">heat</span><span class="badge">shipped</span></div>
+  </a>
+  <a class="card" href="mcp/mag-hrn-mcp/README.html" style="--c: #E84A2B">
+    <h3>mag-hrn-mcp</h3>
+    <p>MAG Heat Relief Network &mdash; cooling-center search,
+       open-now / pets-ok filters, supply-status stub. 5 tools, 12
+       canned Phoenix-metro centers, ArcGIS Feature Service
+       env-overridable.</p>
+    <div class="badges"><span class="badge">heat</span><span class="badge">shipped</span></div>
+  </a>
+  <a class="card" href="mcp/adhs-mcp/README.html" style="--c: #C0392B">
+    <h3>adhs-mcp</h3>
+    <p>ADHS public surveillance summaries: heat mortality,
+       arbovirus, recent cases by pathogen, reportable conditions
+       with ICD-10 / SNOMED. 6 tools, mock-by-default with a clean
+       swap-in path.</p>
+    <div class="badges"><span class="badge">both</span><span class="badge">shipped</span></div>
+  </a>
+  <a class="card" href="mcp/211-az-mcp/README.html" style="--c: #4CAF50">
+    <h3>211-az-mcp</h3>
+    <p>211 Arizona referrals: transport to cooling center, utility
+       assistance, crisis lines. 6 tools, in-memory dispatch
+       tracking, English + Spanish + indigenous-language pathways.</p>
+    <div class="badges"><span class="badge">heat</span><span class="badge">shipped</span></div>
+  </a>
+  <a class="card" href="mcp/whispers-mcp/README.html" style="--c: #2C3E50">
+    <h3>whispers-mcp</h3>
+    <p>USGS WHISPers wildlife mortality / morbidity events &mdash;
+       AZ event listings, bbox queries, species / diagnosis filters.
+       6 tools, 15 tests, 10 canned events including Four Corners
+       hantavirus and the 2025 Coconino plague.</p>
+    <div class="badges"><span class="badge">vbd</span><span class="badge">shipped</span></div>
+  </a>
+  <a class="card" href="mcp/inaturalist-mcp/README.html" style="--c: #4CAF50">
+    <h3>inaturalist-mcp</h3>
+    <p>iNaturalist citizen-science observations &mdash; tick
+       observations, vector + rodent records, taxonomy resolution.
+       6 tools, 21 canned AZ observations, place_id=53.</p>
+    <div class="badges"><span class="badge">vbd</span><span class="badge">shipped</span></div>
+  </a>
+  <a class="card" href="mcp/sms-entry-mcp/README.html" style="--c: #00897B">
+    <h3>sms-entry-mcp</h3>
+    <p>SMS-only intake adapter for feature-phone reporting &mdash; Twilio
+       HMAC-SHA1 signature verification, message normalisation, and
+       intent parsing. 6 tools, mock-by-default.</p>
+    <div class="badges"><span class="badge">both</span><span class="badge">shipped</span></div>
+  </a>
+  <a class="card" href="mcp/wearable-mcp/README.html" style="--c: #E6A038">
+    <h3>wearable-mcp</h3>
+    <p>HealthKit / Health Connect readings (skin temp, HRV, sweat rate,
+       heart rate) for heat-strain signals. On-device-only privacy
+       posture; 4 tools, mock-by-default.</p>
+    <div class="badges"><span class="badge">heat</span><span class="badge">shipped</span></div>
+  </a>
+</div>
+
+<h2>Interactive visualizations</h2>
+<div class="section-grid">
+  <a class="card" href="map/index.html" style="--c: #1F6FB0">
+    <h3>Arizona map <span style="font-weight:400;font-size:.85em;color:#888">(MapLibre GL)</span></h3>
+    <p>All 15 counties, 22 tribal nations, NEON sites, agency HQs,
+       federal-land units, and historical-outbreak locations from the
+       knowledge graph &mdash; each pin links back to its
+       <code>kg_node_id</code>.</p>
+    <div class="badges">
+      <span class="badge">geospatial</span>
+      <span class="badge">maplibre</span>
+    </div>
+  </a>
+  <a class="card" href="graph/index.html" style="--c: #C0392B">
+    <h3>Pathogen knowledge graph <span style="font-weight:400;font-size:.85em;color:#888">(Cytoscape)</span></h3>
+    <p>16 pathogens with their vectors, reservoirs, surveilling agencies,
+       and focus areas as an interactive node-edge graph. Filter by
+       pathogen class; switch layouts; click a node to see its
+       neighborhood.</p>
+    <div class="badges">
+      <span class="badge">knowledge-graph</span>
+      <span class="badge">cytoscape</span>
+    </div>
+  </a>
+  <a class="card" href="query/index.html" style="--c: #FBBF24">
+    <h3>DuckDB query console <span style="font-weight:400;font-size:.85em;color:#888">(DuckDB-WASM)</span></h3>
+    <p>Run SQL against the public reference knowledge graph
+       (<code>kg.node</code> / <code>kg.edge</code> / <code>kg.property</code>)
+       entirely in your browser &mdash; the same property graph the
+       <code>knowledge-graph-mcp</code> serves. Sixteen pre-written queries
+       (notifiable pathogens, pathogen&nbsp;&rarr;&nbsp;vector, outbreaks,
+       counties, datasets/APIs, standards crosswalk) plus a SELECT-only
+       editor and CSV export. No server round-trip.</p>
+    <div class="badges">
+      <span class="badge">duckdb-wasm</span>
+      <span class="badge">sql</span>
+    </div>
+  </a>
+</div>
+
+<h2>Design worksheets (completed)</h2>
+<div class="section-grid">
+  <a class="card" href="worksheets/01-animal-health-events.html" style="--c: #C2185B">
+    <h3>Unusual Animal Health Events as Early Warning Signal</h3>
+    <p>Animal owners and caretakers reporting unusual events as a human-health early-warning signal.</p>
+  </a>
+  <a class="card" href="worksheets/02-desert-wildlife-interface.html" style="--c: #6A1B9A">
+    <h3>Desert Urban Wildlife &amp; Hobby-Farm Interface</h3>
+    <p>Hobby farmers and observers at the desert urban-wildlife interface.</p>
+  </a>
+</div>
+
+<h2>World Café &mdash; Q4: Successful direct public engagement</h2>
+<div class="section-grid">
+  <a class="card" href="notes/world-cafe/q4-heat.html" style="--c: #E84A7A">
+    <h3>Heat (pink card)</h3>
+    <p>Community events, train-the-trainer (Region 9), media syndication, CHW heat-risk assessments.</p>
+  </a>
+  <a class="card" href="notes/world-cafe/q4-unhoused.html" style="--c: #5BA3D0">
+    <h3>Unhoused (blue card)</h3>
+    <p>Healthy Companions Program, Heat Surveillance, Shelter App.</p>
+  </a>
+  <a class="card" href="notes/world-cafe/q4-information-flow.html" style="--c: #E6C36A">
+    <h3>Information Flow (yellow card)</h3>
+    <p>Face-to-face, SMS, geo-alerts, Epic/TMC EMR, dating apps &harr; STI.</p>
+  </a>
+</div>
+
+<h2>Knowledge graph</h2>
+<p>The structured content above is mirrored in SQL seeds for a property
+graph encoded in <strong>DuckLake</strong> (with <strong>Postgres</strong> as
+the catalog) and queried via <strong>DuckDB</strong>. DuckLake is the
+<strong>web + analytics store</strong>; the mobile app writes to
+<strong>MongoDB</strong>, synced back into DuckLake so the agents, MCP
+servers, and cluster detection see one dataset
+(<a href="plan/09-mobile-datastore.html">plan&nbsp;09</a>):</p>
+<ul>
+  <li><a href="schema/knowledge_graph.sql"><code>schema/knowledge_graph.sql</code></a> &mdash; core nodes, edges, properties from Figures 1&ndash;4.</li>
+  <li><a href="schema/system_designs.sql"><code>schema/system_designs.sql</code></a> &mdash; worksheet template, focus areas, completed designs.</li>
+  <li><a href="schema/world_cafe.sql"><code>schema/world_cafe.sql</code></a> &mdash; World Café Q4 engagement examples and tactics.</li>
+  <li><a href="schema/wildlife_vectors.sql"><code>schema/wildlife_vectors.sql</code></a> &mdash; wildlife / vector-borne focus group, four questions, and 30+ anchor resources across state, county, tribal, federal, academic, and citizen-science jurisdictions.</li>
+  <li><a href="schema/heat.sql"><code>schema/heat.sql</code></a> &mdash; Heat focus group, four questions, vulnerable populations, and 30+ heat-specific resources (ADHS BRACE, MAG HRN, Phoenix OHRM, NWS HeatRisk, UA Heat Resilience Initiative, CLIMAS, 211 Arizona).</li>
+  <li><a href="schema/deep/"><code>schema/deep/</code></a> &mdash; deep-research seeds: all 15 AZ counties, all 22 tribes, pathogens, historical outbreaks, datasets &amp; APIs, interop standards, MCP servers.</li>
+</ul>
+<p>See the <a href="schema/index.html">schema landing page</a> for the
+   full file index, bootstrap commands, and example queries, or the
+   <a href="README.html">README</a> for the project-wide walk-through.</p>
+
+<footer>
+  Source: Ending Pandemics Academy &middot; University of Arizona Mel &amp;
+  Enid Zuckerman College of Public Health &middot; Global Health Institute.
+</footer>
+
+</body>
+</html>

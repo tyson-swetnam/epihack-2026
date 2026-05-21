@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Ansible deployment — changelog</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      max-width: 1100px;
+      margin: 2rem auto;
+      padding: 0 1.25rem;
+      color: #1a1a1a;
+      line-height: 1.55;
+    }
+    nav.crumbs { font-size: .9rem; color: #555; margin-bottom: 1rem; }
+    nav.crumbs a { color: #1F3A93; text-decoration: none; }
+    h1 { border-bottom: 3px solid #1F3A93; padding-bottom: .35rem; }
+    h2 { margin-top: 2.25rem; color: #1F3A93; }
+    h3 { margin-top: 1.25rem; }
+    table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: .95rem; }
+    th, td { border: 1px solid #ddd; padding: .5rem .75rem; text-align: left; vertical-align: top; }
+    th { background: #f0f3f8; }
+    blockquote {
+      border-left: 4px solid #1F3A93;
+      background: #f4f6fb;
+      margin: 1rem 0;
+      padding: .75rem 1rem;
+    }
+    code { background: #f1f3f7; padding: 1px 5px; border-radius: 3px; font-size: .9em; }
+    pre code { display: block; padding: .75rem 1rem; overflow-x: auto; }
+    footer { margin-top: 4rem; padding-top: 1rem; border-top: 1px solid #ddd; color: #666; font-size: .85rem; }
+    a { color: #1F3A93; }
+  </style>
+</head>
+<body>
+  <nav class="crumbs">
+    <a href="/epihack-2026/">EpiHack AZ 2026</a>
+  </nav>
+
+  <h1 id="ansible-deployment-changelog">Ansible deployment changelog</h1>
+
+<p>Changes made to get the full stack deploying cleanly onto a single
+Ubuntu 24.04 box (localhost, <code class="language-plaintext highlighter-rouge">ansible_connection: local</code>) and to wire the
+DuckDB/DuckLake knowledge-graph backend end-to-end. A run now completes with
+<code class="language-plaintext highlighter-rouge">failed=0</code> across all eleven roles; a live <code class="language-plaintext highlighter-rouge">POST /v1/reports</code> persists into
+DuckLake with time-travel versioning, and all eleven MCP servers respond to an
+MCP <code class="language-plaintext highlighter-rouge">initialize</code> handshake.</p>
+
+<h2 id="new-components">New components</h2>
+
+<ul>
+  <li><strong><code class="language-plaintext highlighter-rouge">roles/ducklake/</code></strong> — new role (runs after <code class="language-plaintext highlighter-rouge">mcp_servers</code>, before
+<code class="language-plaintext highlighter-rouge">fastapi</code>). Creates the Parquet data dir and seeds the DuckLake catalog from
+<code class="language-plaintext highlighter-rouge">schema/</code> via <code class="language-plaintext highlighter-rouge">files/bootstrap_ducklake.py</code>. Idempotent (skips if
+<code class="language-plaintext highlighter-rouge">kg.node</code> is already populated). See the DuckLake section in <code class="language-plaintext highlighter-rouge">README.md</code>.</li>
+  <li><strong><code class="language-plaintext highlighter-rouge">agents/src/onehealth_agents/kg_writer.py</code></strong> — the Phase-06.2 intake
+write-path. Each report submitted to <code class="language-plaintext highlighter-rouge">POST /v1/reports</code> is persisted as a
+<code class="language-plaintext highlighter-rouge">kg.node('observation')</code> + <code class="language-plaintext highlighter-rouge">kg.property</code> rows + a <code class="language-plaintext highlighter-rouge">kg.agent_run</code> intake row
+in DuckLake. Privacy-preserving: free-text <code class="language-plaintext highlighter-rouge">notes</code> and the <code class="language-plaintext highlighter-rouge">claim_token</code> are
+stored only as SHA-256 digests; coarse location is stored as-is. Also serves
+the <code class="language-plaintext highlighter-rouge">GET /v1/reports/{id}</code> status read-back with claim-token verification.</li>
+  <li><strong><code class="language-plaintext highlighter-rouge">plan/08-mobile-ux-revamp.md</code></strong> — plan to port the Elbaraaa/OneHealth
+mobile UX onto <code class="language-plaintext highlighter-rouge">app/</code> while keeping this backend.</li>
+</ul>
+
+<h2 id="ansible-role-fixes">Ansible role fixes</h2>
+
+<ul>
+  <li><strong><code class="language-plaintext highlighter-rouge">roles/python</code></strong> — uv was installed into <code class="language-plaintext highlighter-rouge">/root/.local/bin</code> and symlinked
+into <code class="language-plaintext highlighter-rouge">/usr/local/bin</code>; the unprivileged <code class="language-plaintext highlighter-rouge">onehealth</code> user got <code class="language-plaintext highlighter-rouge">EACCES</code>
+executing it (root home is <code class="language-plaintext highlighter-rouge">0700</code>). Now installs the real binary into
+<code class="language-plaintext highlighter-rouge">/usr/local/bin</code> via <code class="language-plaintext highlighter-rouge">UV_INSTALL_DIR</code>. Added <code class="language-plaintext highlighter-rouge">executable: /bin/bash</code> so
+<code class="language-plaintext highlighter-rouge">set -euo pipefail</code> works (the <code class="language-plaintext highlighter-rouge">shell</code> module defaults to dash).</li>
+  <li><strong><code class="language-plaintext highlighter-rouge">roles/claude_code</code>, <code class="language-plaintext highlighter-rouge">roles/mcp_servers</code></strong> — same <code class="language-plaintext highlighter-rouge">pipefail</code>-under-dash
+fix: <code class="language-plaintext highlighter-rouge">executable: /bin/bash</code> on the <code class="language-plaintext highlighter-rouge">set -euo pipefail</code> shell tasks. Also
+fixed a YAML parse error in the mcp_servers smoke task (free-form → dict
+<code class="language-plaintext highlighter-rouge">cmd:</code> form).</li>
+  <li><strong><code class="language-plaintext highlighter-rouge">roles/repo</code></strong> — added a <strong>local working-copy mode</strong>: when
+<code class="language-plaintext highlighter-rouge">onehealth_repo_url</code> is a local path (<code class="language-plaintext highlighter-rouge">/...</code> or <code class="language-plaintext highlighter-rouge">file://</code>), rsync the tree
+into <code class="language-plaintext highlighter-rouge">/srv/onehealth/epihack-2026</code> (excluding <code class="language-plaintext highlighter-rouge">.git</code>, <code class="language-plaintext highlighter-rouge">node_modules</code>,
+<code class="language-plaintext highlighter-rouge">.venv</code>, <code class="language-plaintext highlighter-rouge">out/</code>, etc.) instead of <code class="language-plaintext highlighter-rouge">git clone</code>; remote URLs still clone.
+<code class="language-plaintext highlighter-rouge">git</code> mode now uses <code class="language-plaintext highlighter-rouge">force: true</code> (build steps regenerate tracked lockfiles,
+dirtying the tree). Both modes <code class="language-plaintext highlighter-rouge">notify: Restart fastapi</code> so new source
+reaches the running API.</li>
+  <li><strong><code class="language-plaintext highlighter-rouge">roles/app</code></strong> — <code class="language-plaintext highlighter-rouge">npm ci</code> requires a committed lockfile, which the repo
+doesn’t ship, so it failed on every fresh clone. Now detects the lockfile
+and falls back to <code class="language-plaintext highlighter-rouge">npm install</code> when absent.</li>
+  <li><strong><code class="language-plaintext highlighter-rouge">roles/fastapi</code></strong> —
+    <ul>
+      <li>dropped the <code class="language-plaintext highlighter-rouge">creates:</code> guard on <code class="language-plaintext highlighter-rouge">uv sync</code> so dependency changes (e.g. the
+new <code class="language-plaintext highlighter-rouge">duckdb</code>) are picked up on re-deploy; it now notifies <code class="language-plaintext highlighter-rouge">Restart fastapi</code>;</li>
+      <li>creates the DuckDB extension home (<code class="language-plaintext highlighter-rouge">ducklake_duckdb_home</code>) and
+pre-installs the <code class="language-plaintext highlighter-rouge">ducklake</code>+<code class="language-plaintext highlighter-rouge">postgres</code> extensions for the API’s exact
+duckdb version (no network needed at request time);</li>
+      <li>the systemd unit now sets <code class="language-plaintext highlighter-rouge">Environment=HOME=</code>
+(DuckDB needs a writable <code class="language-plaintext highlighter-rouge">$HOME/.duckdb</code>; <code class="language-plaintext highlighter-rouge">ProtectHome=true</code> hides <code class="language-plaintext highlighter-rouge">/home</code>)
+and widens <code class="language-plaintext highlighter-rouge">ReadWritePaths</code> to the repo + the DuckLake data dir + the
+DuckDB home.</li>
+    </ul>
+  </li>
+  <li><strong><code class="language-plaintext highlighter-rouge">roles/mcp_servers</code> (<code class="language-plaintext highlighter-rouge">claude.json.j2</code>)</strong> —
+    <ul>
+      <li><code class="language-plaintext highlighter-rouge">knowledge-graph-mcp</code> now gets <code class="language-plaintext highlighter-rouge">KG_DUCKLAKE_URI</code>, <code class="language-plaintext highlighter-rouge">KG_DUCKLAKE_DATA_PATH</code>,
+<code class="language-plaintext highlighter-rouge">KG_SCHEMA_PATH</code> (the old <code class="language-plaintext highlighter-rouge">KG_DUCKDB_PATH</code> was never read by the loader);</li>
+      <li><strong>module-name override map</strong> (<code class="language-plaintext highlighter-rouge">mcp_modules</code>) so <code class="language-plaintext highlighter-rouge">211-az-mcp</code> launches as
+<code class="language-plaintext highlighter-rouge">python -m az211_mcp</code> (a module name can’t start with a digit);</li>
+      <li><strong><code class="language-plaintext highlighter-rouge">INAT_USER_AGENT</code></strong> set for <code class="language-plaintext highlighter-rouge">inaturalist-mcp</code>, which refuses to start
+without it.</li>
+    </ul>
+  </li>
+  <li><strong><code class="language-plaintext highlighter-rouge">playbook.yml</code></strong> — removed <code class="language-plaintext highlighter-rouge">group_vars/all.yml</code> from <code class="language-plaintext highlighter-rouge">vars_files</code> (it is
+auto-loaded; listing it under <code class="language-plaintext highlighter-rouge">vars_files</code> outranks inventory host vars and
+silently clobbered the localhost overrides). Only <code class="language-plaintext highlighter-rouge">all.vault.yml</code> is loaded
+via <code class="language-plaintext highlighter-rouge">vars_files</code> now. Added the <code class="language-plaintext highlighter-rouge">ducklake</code> role to the run order.</li>
+  <li><strong><code class="language-plaintext highlighter-rouge">group_vars/all.yml</code></strong> — added <code class="language-plaintext highlighter-rouge">ducklake_data_path</code>, <code class="language-plaintext highlighter-rouge">ducklake_uri</code>,
+<code class="language-plaintext highlighter-rouge">ducklake_duckdb_home</code>, <code class="language-plaintext highlighter-rouge">kg_mcp_venv_python</code>, <code class="language-plaintext highlighter-rouge">mcp_modules</code>,
+<code class="language-plaintext highlighter-rouge">inat_user_agent</code>.</li>
+  <li><strong><code class="language-plaintext highlighter-rouge">inventory.yml</code></strong> — localhost host-level overrides (incl. a local
+<code class="language-plaintext highlighter-rouge">onehealth_repo_url</code>), with a note explaining the host-vs-group precedence.</li>
+</ul>
+
+<h2 id="application--source-fixes-required-for-the-deploy-to-build--run">Application / source fixes (required for the deploy to build &amp; run)</h2>
+
+<ul>
+  <li><strong><code class="language-plaintext highlighter-rouge">api/openapi.yaml</code></strong> — fixed a YAML typo (<code class="language-plaintext highlighter-rouge">coarse_location:{</code> → a space
+before the flow map) that broke <code class="language-plaintext highlighter-rouge">npm run gen:api</code>. The spec is the source of
+truth, so this is fixed upstream rather than worked around.</li>
+  <li><strong><code class="language-plaintext highlighter-rouge">app/package.json</code></strong> — pinned <code class="language-plaintext highlighter-rouge">eslint</code> to <code class="language-plaintext highlighter-rouge">^8.57.0</code>; <code class="language-plaintext highlighter-rouge">^9</code> conflicts with
+<code class="language-plaintext highlighter-rouge">eslint-config-next@14</code>’s peer range and broke <code class="language-plaintext highlighter-rouge">npm install</code>.</li>
+  <li><strong><code class="language-plaintext highlighter-rouge">agents/pyproject.toml</code></strong> — added <code class="language-plaintext highlighter-rouge">duckdb&gt;=1.5</code> (the DuckLake write-path
+and audit sink need it; it was only present in the kg-mcp venv before).</li>
+  <li><strong><code class="language-plaintext highlighter-rouge">agents/src/onehealth_agents/audit.py</code></strong> — <code class="language-plaintext highlighter-rouge">DuckLakeAuditSink</code> now opens
+in-memory DuckDB and <code class="language-plaintext highlighter-rouge">ATTACH</code>es the DuckLake catalog instead of calling
+<code class="language-plaintext highlighter-rouge">duckdb.connect(uri)</code> (which treated the <code class="language-plaintext highlighter-rouge">ducklake:</code> URI as a file path).</li>
+  <li><strong><code class="language-plaintext highlighter-rouge">agents/src/onehealth_agents/kg_writer.py</code></strong> — no <code class="language-plaintext highlighter-rouge">ON CONFLICT</code> clauses
+(DuckLake tables carry no PK/UNIQUE constraint; UUID PKs make conflicts moot).</li>
+  <li><strong><code class="language-plaintext highlighter-rouge">agents/src/onehealth_agents/api/routes/reports.py</code></strong> — <code class="language-plaintext highlighter-rouge">_run_agent_chain</code>
+now persists via <code class="language-plaintext highlighter-rouge">kg_writer</code> (was a synthetic-ack stub); <code class="language-plaintext highlighter-rouge">GET</code> verifies the
+claim token against the stored digest.</li>
+</ul>
+
+<h2 id="verification-post-deploy">Verification (post-deploy)</h2>
+
+<ul>
+  <li>Playbook: <code class="language-plaintext highlighter-rouge">failed=0</code>, all eleven roles.</li>
+  <li>Services: <code class="language-plaintext highlighter-rouge">onehealth-api</code>, <code class="language-plaintext highlighter-rouge">nginx</code>, <code class="language-plaintext highlighter-rouge">postgresql</code> active; <code class="language-plaintext highlighter-rouge">GET /v1/healthz</code>
+200; nginx serves the app; <code class="language-plaintext highlighter-rouge">/api</code> proxies to the backend.</li>
+  <li>DuckLake: a live report POST increments <code class="language-plaintext highlighter-rouge">kg.node('observation')</code> and
+<code class="language-plaintext highlighter-rouge">kg.agent_run</code>, advances <code class="language-plaintext highlighter-rouge">ducklake_snapshots</code>, and
+<code class="language-plaintext highlighter-rouge">... AT (VERSION =&gt; N)</code> returns the prior state (time-travel).</li>
+  <li>MCP: 11/11 servers respond to MCP <code class="language-plaintext highlighter-rouge">initialize</code> over stdio.</li>
+</ul>
+
+
+  <footer>
+    Source: Ending Pandemics Academy &middot; University of Arizona Mel &amp;
+    Enid Zuckerman College of Public Health &middot; Global Health Institute.
+  </footer>
+</body>
+</html>

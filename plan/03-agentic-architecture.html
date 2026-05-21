@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Plan 03 — Agentic architecture</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      max-width: 1100px;
+      margin: 2rem auto;
+      padding: 0 1.25rem;
+      color: #1a1a1a;
+      line-height: 1.55;
+    }
+    nav.crumbs { font-size: .9rem; color: #555; margin-bottom: 1rem; }
+    nav.crumbs a { color: #1F3A93; text-decoration: none; }
+    h1 { border-bottom: 3px solid #1F3A93; padding-bottom: .35rem; }
+    h2 { margin-top: 2.25rem; color: #1F3A93; }
+    h3 { margin-top: 1.25rem; }
+    table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: .95rem; }
+    th, td { border: 1px solid #ddd; padding: .5rem .75rem; text-align: left; vertical-align: top; }
+    th { background: #f0f3f8; }
+    blockquote {
+      border-left: 4px solid #1F3A93;
+      background: #f4f6fb;
+      margin: 1rem 0;
+      padding: .75rem 1rem;
+    }
+    code { background: #f1f3f7; padding: 1px 5px; border-radius: 3px; font-size: .9em; }
+    pre code { display: block; padding: .75rem 1rem; overflow-x: auto; }
+    footer { margin-top: 4rem; padding-top: 1rem; border-top: 1px solid #ddd; color: #666; font-size: .85rem; }
+    a { color: #1F3A93; }
+  </style>
+</head>
+<body>
+  <nav class="crumbs">
+    <a href="/epihack-2026/">EpiHack AZ 2026</a>
+  </nav>
+
+  <h1 id="03--agentic-architecture">03 — Agentic architecture</h1>
+
+<p>The application is a pipeline of specialized LLM-driven agents that
+turn a community report into a typed observation in the knowledge
+graph, an enriched response back to the user, and an alert to the
+right agency if needed. Each agent has a narrow contract, no shared
+state, and a single MCP-or-graph dependency.</p>
+
+<h2 id="agent-topology">Agent topology</h2>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>                          ┌─────────────────────────┐
+                          │     Intake Agent        │
+                          │ free-text/voice/photo   │
+                          │ → Minimum Dataset draft │
+                          └──────────┬──────────────┘
+                                     │
+                          ┌──────────▼──────────────┐
+                          │  Geo-Enrichment Agent   │
+                          │ GPS → county/tribe/region│
+                          │  knowledge-graph-mcp    │
+                          └──────────┬──────────────┘
+                                     │
+                          ┌──────────▼──────────────┐
+                          │   Validation Agent      │
+                          │ dedupe, anomaly, photo  │
+                          │   quality, consent      │
+                          └──────────┬──────────────┘
+                                     │
+                          ┌──────────▼──────────────┐
+                          │     Triage Agent        │
+                          │ vertical-specific rule  │
+                          │ + LLM judgement         │
+                          └──────────┬──────────────┘
+                                     │
+                          ┌──────────▼──────────────┐
+                          │   Enrichment Agent      │
+                          │ pulls live MCP data,    │
+                          │ attaches to observation │
+                          └──────────┬──────────────┘
+                                     │
+              ┌──────────────────────┴──────────────────────┐
+              │                                             │
+              ▼                                             ▼
+   ┌────────────────────┐                       ┌──────────────────────┐
+   │ Notification Agent │                       │ Persistence (DuckLake)│
+   │ user, CHW, agency  │                       │ observation + edges  │
+   └────────────────────┘                       └──────────┬───────────┘
+                                                           │
+              ┌────────────────────────────────────────────┘
+              │
+              ▼
+   ┌─────────────────────────────┐         ┌───────────────────────────┐
+   │ Cluster Detection Agent     │ ◀──nightly──│  Knowledge Update Agent  │
+   │ space-time anomalies        │         │  refresh kg from upstream │
+   │ over recent observations    │         │  MCP servers              │
+   └─────────────────────────────┘         └───────────────────────────┘
+</code></pre></div></div>
+
+<h2 id="agent-contracts">Agent contracts</h2>
+
+<h3 id="1-intake-agent">1. Intake Agent</h3>
+
+<table>
+  <thead>
+    <tr>
+      <th> </th>
+      <th> </th>
+      <th> </th>
+      <th> </th>
+      <th> </th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Input</strong></td>
+      <td>Free text, voice transcript, photo, or structured form</td>
+      <td> </td>
+      <td> </td>
+      <td> </td>
+    </tr>
+    <tr>
+      <td><strong>Output</strong></td>
+      <td>Minimum-Dataset draft: <code class="language-plaintext highlighter-rouge">{general, human, exposure, auxiliary, environmental, livestock?, wildlife?}</code></td>
+      <td> </td>
+      <td> </td>
+      <td> </td>
+    </tr>
+    <tr>
+      <td><strong>Model</strong></td>
+      <td>Claude Haiku (fast, cheap) with structured-output schema constrained to Figure 2 fields</td>
+      <td> </td>
+      <td> </td>
+      <td> </td>
+    </tr>
+    <tr>
+      <td><strong>MCP</strong></td>
+      <td>None directly; reads the kg schema for the field list</td>
+      <td> </td>
+      <td> </td>
+      <td> </td>
+    </tr>
+    <tr>
+      <td><strong>Decisions</strong></td>
+      <td>Vertical classification (vbd</td>
+      <td>heat</td>
+      <td>both</td>
+      <td>neither); consent-profile selection</td>
+    </tr>
+    <tr>
+      <td><strong>Failure mode</strong></td>
+      <td>“I couldn’t parse this” → falls back to a structured form</td>
+      <td> </td>
+      <td> </td>
+      <td> </td>
+    </tr>
+  </tbody>
+</table>
+
+<h3 id="2-geo-enrichment-agent">2. Geo-Enrichment Agent</h3>
+
+<table>
+  <thead>
+    <tr>
+      <th> </th>
+      <th> </th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Input</strong></td>
+      <td>Coordinates or ZIP from the intake draft</td>
+    </tr>
+    <tr>
+      <td><strong>Output</strong></td>
+      <td>Edges to <code class="language-plaintext highlighter-rouge">county.&lt;slug&gt;</code>, <code class="language-plaintext highlighter-rouge">tribe.&lt;slug&gt;</code> (if reservation match), <code class="language-plaintext highlighter-rouge">region.&lt;id&gt;</code></td>
+    </tr>
+    <tr>
+      <td><strong>Model</strong></td>
+      <td>Deterministic SQL — no LLM unless the address is free-text</td>
+    </tr>
+    <tr>
+      <td><strong>MCP</strong></td>
+      <td><code class="language-plaintext highlighter-rouge">knowledge-graph-mcp.regions_at_point(lat, lon)</code></td>
+    </tr>
+    <tr>
+      <td><strong>Failure mode</strong></td>
+      <td>No exact match → “approximate” coordinate-precision flag (per Figure 2 General class)</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3 id="3-validation-agent">3. Validation Agent</h3>
+
+<table>
+  <thead>
+    <tr>
+      <th> </th>
+      <th> </th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Input</strong></td>
+      <td>Enriched draft</td>
+    </tr>
+    <tr>
+      <td><strong>Output</strong></td>
+      <td>One of <code class="language-plaintext highlighter-rouge">{accept, flag-for-review, reject}</code> + reasons</td>
+    </tr>
+    <tr>
+      <td><strong>Checks</strong></td>
+      <td>Dedupe (same uuid + 5-min window); spatial anomaly (report ≥ 50 mi from any known user activity); photo quality + species-range sanity (kg.taxonomy + photo-vision); consent-profile enforcement (suppress fields per the flow); tribal-data MOU check</td>
+    </tr>
+    <tr>
+      <td><strong>Model</strong></td>
+      <td>Claude Haiku for fuzzy checks; Python rules for the deterministic ones</td>
+    </tr>
+    <tr>
+      <td><strong>MCP</strong></td>
+      <td><code class="language-plaintext highlighter-rouge">knowledge-graph-mcp</code> for taxonomy; vision LLM for photo</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3 id="4-triage-agent">4. Triage Agent</h3>
+
+<p>The vertical-specific brain.</p>
+
+<p><strong>Enumerated triage classes</strong> (canonical source:
+<code class="language-plaintext highlighter-rouge">schema/deep/application.sql</code> <code class="language-plaintext highlighter-rouge">tc.*</code> nodes — the LLM step is gated to
+choose only from this enumeration):</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Class</th>
+      <th>Vertical</th>
+      <th>Meaning</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">tc.self_care</code></td>
+      <td>VBD</td>
+      <td>Symptoms benign; self-monitor.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">tc.see_clinician</code></td>
+      <td>VBD</td>
+      <td>Symptoms warrant a routine clinical visit.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">tc.urgent_care</code></td>
+      <td>VBD</td>
+      <td>Symptoms + local signal warrant same-day care.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">tc.call_911</code></td>
+      <td>Both</td>
+      <td>Life-threatening — call emergency services.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">tc.report_to_azgfd</code></td>
+      <td>VBD</td>
+      <td>Wildlife mortality / unusual animal observation.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">tc.mail_to_walker_lab</code></td>
+      <td>VBD</td>
+      <td>Tick submission for UA Cooperative Extension identification.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">tc.check_in_only</code></td>
+      <td>Heat</td>
+      <td>Person is fine; outreach logs the contact and moves on.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">tc.drink_water_advisory</code></td>
+      <td>Heat</td>
+      <td>Mild risk — advisory message + offer cooling-center info.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">tc.go_to_cooling_center</code></td>
+      <td>Heat</td>
+      <td>Get the person to the nearest open cooling center.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">tc.dispatch_chw</code></td>
+      <td>Heat</td>
+      <td>Send a Community Health Worker (or, with <code class="language-plaintext highlighter-rouge">tc.go_to_cooling_center</code>, dispatch transport).</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><strong>VBD branch:</strong></p>
+<ul>
+  <li>Match observed symptoms to <code class="language-plaintext highlighter-rouge">pathogen.*</code> nodes via the
+<code class="language-plaintext highlighter-rouge">causes</code> and <code class="language-plaintext highlighter-rouge">transmittedBy</code> edges seeded in
+<code class="language-plaintext highlighter-rouge">schema/deep/pathogens.sql</code>.</li>
+  <li>For each candidate pathogen, fetch nearby pool positivity
+(<code class="language-plaintext highlighter-rouge">vectorsurv-mcp</code>), recent wildlife mortality
+(<code class="language-plaintext highlighter-rouge">whispers-mcp</code>), and any active outbreak record.</li>
+  <li>Emit one (or more) of the VBD / Both triage classes above.</li>
+</ul>
+
+<p><strong>Heat branch:</strong></p>
+<ul>
+  <li>Compute an individualized <strong>heat-vulnerability score</strong> from the
+observation’s General + Exposure + Auxiliary fields against the
+vulnerable-population nodes from <code class="language-plaintext highlighter-rouge">schema/heat.sql</code> (<code class="language-plaintext highlighter-rouge">pop.unsheltered</code>,
+<code class="language-plaintext highlighter-rouge">pop.older_adults</code>, <code class="language-plaintext highlighter-rouge">pop.outdoor_workers</code>, etc.).</li>
+  <li>Pull current NWS HeatRisk for the user’s location via
+<code class="language-plaintext highlighter-rouge">nws-heatrisk-mcp</code>.</li>
+  <li>Emit one (or more) of the Heat / Both triage classes above.</li>
+</ul>
+
+<p><strong>Heat vulnerability-score factor table</strong> (the canonical
+<code class="language-plaintext highlighter-rouge">HEAT_SCORE_TABLE</code> lives in
+<code class="language-plaintext highlighter-rouge">agents/src/onehealth_agents/triage.py</code>; pin the point values here):</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Factor</th>
+      <th>Points</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Currently unsheltered</td>
+      <td>+3</td>
+    </tr>
+    <tr>
+      <td>Age 65+</td>
+      <td>+2</td>
+    </tr>
+    <tr>
+      <td>NWS HeatRisk <strong>Magenta</strong> today</td>
+      <td>+3</td>
+    </tr>
+    <tr>
+      <td>NWS HeatRisk <strong>Red</strong> today</td>
+      <td>+2</td>
+    </tr>
+    <tr>
+      <td>NWS HeatRisk <strong>Orange</strong> today</td>
+      <td>+1</td>
+    </tr>
+    <tr>
+      <td>No working AC at home</td>
+      <td>+2</td>
+    </tr>
+    <tr>
+      <td>Outdoor occupational exposure today (≥ 4 h)</td>
+      <td>+2</td>
+    </tr>
+    <tr>
+      <td>Energy / utility insecurity</td>
+      <td>+1</td>
+    </tr>
+    <tr>
+      <td>On thermoregulation-affecting medications</td>
+      <td>+1</td>
+    </tr>
+    <tr>
+      <td>Chronic cardiovascular / renal disease</td>
+      <td>+1</td>
+    </tr>
+    <tr>
+      <td>Symptomatic — heat-exhaustion features</td>
+      <td>+2</td>
+    </tr>
+    <tr>
+      <td>Symptomatic — heat-stroke features (confusion, hot-dry skin)</td>
+      <td>+4</td>
+    </tr>
+    <tr>
+      <td>No transport / no phone</td>
+      <td>+1</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><strong>Triage-class thresholds</strong> (Heat branch, summed score):</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Score</th>
+      <th>Class</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>0 – 2</td>
+      <td><code class="language-plaintext highlighter-rouge">tc.check_in_only</code></td>
+    </tr>
+    <tr>
+      <td>3 – 5</td>
+      <td><code class="language-plaintext highlighter-rouge">tc.drink_water_advisory</code></td>
+    </tr>
+    <tr>
+      <td>6 – 9</td>
+      <td><code class="language-plaintext highlighter-rouge">tc.go_to_cooling_center</code></td>
+    </tr>
+    <tr>
+      <td>10 – 12</td>
+      <td><code class="language-plaintext highlighter-rouge">tc.go_to_cooling_center</code> + <code class="language-plaintext highlighter-rouge">tc.dispatch_chw</code> (transport)</td>
+    </tr>
+    <tr>
+      <td>≥ 13, or any heat-stroke feature</td>
+      <td><code class="language-plaintext highlighter-rouge">tc.call_911</code></td>
+    </tr>
+  </tbody>
+</table>
+
+<p><strong>Notification-priority set.</strong> The “user-before-agency” rule has
+exactly two exceptions where the agency channel fires first:
+<code class="language-plaintext highlighter-rouge">tc.call_911</code> and any VBD case where the linked outbreak record is
+lab-confirmed-positive (LCP). All other triage classes notify the user
+first, then the agency dashboard pin (no PII).</p>
+
+<p><strong>Consent-suppression triggers.</strong></p>
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">consent.anonymous_heat</code> (default for CHW / outreach flows) —
+suppresses <code class="language-plaintext highlighter-rouge">param.email</code>, <code class="language-plaintext highlighter-rouge">param.phone_number</code>,
+<code class="language-plaintext highlighter-rouge">param.household_member_id</code>, <code class="language-plaintext highlighter-rouge">param.occupation</code>,
+<code class="language-plaintext highlighter-rouge">param.absent_work</code>, <code class="language-plaintext highlighter-rouge">param.absent_school</code>.</li>
+  <li><code class="language-plaintext highlighter-rouge">consent.tick_mailin</code> — keeps Exposure + Auxiliary; suppresses
+Human symptom fields <strong>unless</strong> any symptom field is already
+non-null at intake time (i.e., the submitter has been bitten
+with symptoms).</li>
+  <li><code class="language-plaintext highlighter-rouge">consent.wearable_only</code> — records only <code class="language-plaintext highlighter-rouge">auxiliary.digital_biomarker</code>
+    <ul>
+      <li>coarse postal-code geo; everything else suppressed.</li>
+    </ul>
+  </li>
+  <li><code class="language-plaintext highlighter-rouge">consent.full_followup</code> — no suppression; explicit opt-in for the
+observation to be retrievable by the user later.</li>
+</ul>
+
+<h3 id="5-enrichment-agent">5. Enrichment Agent</h3>
+
+<table>
+  <thead>
+    <tr>
+      <th> </th>
+      <th> </th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Input</strong></td>
+      <td>Triaged observation</td>
+    </tr>
+    <tr>
+      <td><strong>Output</strong></td>
+      <td>Same observation with edges to live-data records (pool, alert, cooling-center, outbreak)</td>
+    </tr>
+    <tr>
+      <td><strong>Model</strong></td>
+      <td>LLM-orchestrated MCP tool calls</td>
+    </tr>
+    <tr>
+      <td><strong>MCP</strong></td>
+      <td>All of them — calls the right tools based on vertical + triage class</td>
+    </tr>
+    <tr>
+      <td><strong>Idempotent</strong></td>
+      <td>Repeated runs hydrate the same edges, don’t duplicate</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3 id="6-notification-agent">6. Notification Agent</h3>
+
+<table>
+  <thead>
+    <tr>
+      <th> </th>
+      <th> </th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Input</strong></td>
+      <td>Triaged + enriched observation</td>
+    </tr>
+    <tr>
+      <td><strong>Output</strong></td>
+      <td>Notifications to user, CHW, agency analyst, or 211 line</td>
+    </tr>
+    <tr>
+      <td><strong>Channels</strong></td>
+      <td>App push, SMS, voice callback, agency dashboard pin</td>
+    </tr>
+    <tr>
+      <td><strong>Prioritization</strong></td>
+      <td>User notification before agency notification <em>except</em> for life-threatening triage classes (call-911, lab-confirmed-positive outbreak)</td>
+    </tr>
+    <tr>
+      <td><strong>Localization</strong></td>
+      <td>English / Spanish / Diné Bizaad / Tohono O’odham — falls back to image-rich card if literacy is a barrier</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3 id="7-cluster-detection-agent">7. Cluster Detection Agent</h3>
+
+<table>
+  <thead>
+    <tr>
+      <th> </th>
+      <th> </th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Input</strong></td>
+      <td>Rolling window of <code class="language-plaintext highlighter-rouge">observation</code> nodes</td>
+    </tr>
+    <tr>
+      <td><strong>Output</strong></td>
+      <td>New <code class="language-plaintext highlighter-rouge">outbreak.&lt;slug&gt;</code> nodes when a space-time anomaly crosses threshold</td>
+    </tr>
+    <tr>
+      <td><strong>Algorithm</strong></td>
+      <td>SaTScan-style scan statistic on observations per ZCTA per week, vertical-scoped (don’t merge VBD + Heat clusters)</td>
+    </tr>
+    <tr>
+      <td><strong>Cadence</strong></td>
+      <td>Hourly during heat season, daily otherwise</td>
+    </tr>
+    <tr>
+      <td><strong>MCP</strong></td>
+      <td>Writes back via <code class="language-plaintext highlighter-rouge">knowledge-graph-mcp</code></td>
+    </tr>
+    <tr>
+      <td><strong>Backstop</strong></td>
+      <td>Always defers final outbreak declaration to human review at ADHS / AZGFD (per Figure 3 <em>Verify</em> milestone)</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3 id="8-knowledge-update-agent">8. Knowledge Update Agent</h3>
+
+<table>
+  <thead>
+    <tr>
+      <th> </th>
+      <th> </th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>When</strong></td>
+      <td>Nightly + on-demand</td>
+    </tr>
+    <tr>
+      <td><strong>What</strong></td>
+      <td>Pulls recent records from every MCP (vectorsurv pools, whispers events, ADHS reports) and adds them as <code class="language-plaintext highlighter-rouge">observation</code> nodes with <code class="language-plaintext highlighter-rouge">source = "mcp_pull"</code></td>
+    </tr>
+    <tr>
+      <td><strong>Why</strong></td>
+      <td>Keeps the kg current so community reports can be evaluated against fresh agency context. This is <em>the</em> property that makes the database “living.”</td>
+    </tr>
+    <tr>
+      <td><strong>MCP</strong></td>
+      <td>Every MCP server with a list/query endpoint</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2 id="why-agents-and-not-a-monolith">Why agents and not a monolith</h2>
+
+<ul>
+  <li>
+    <p><strong>Auditability.</strong> Every agent’s decision is a row in an
+<code class="language-plaintext highlighter-rouge">agent_run</code> table with the schema:</p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Column</th>
+          <th>Type</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code class="language-plaintext highlighter-rouge">run_id</code></td>
+          <td>uuid</td>
+        </tr>
+        <tr>
+          <td><code class="language-plaintext highlighter-rouge">agent_name</code></td>
+          <td>text</td>
+        </tr>
+        <tr>
+          <td><code class="language-plaintext highlighter-rouge">observation_id</code></td>
+          <td>uuid (FK → <code class="language-plaintext highlighter-rouge">observation.*</code>)</td>
+        </tr>
+        <tr>
+          <td><code class="language-plaintext highlighter-rouge">started_at</code> / <code class="language-plaintext highlighter-rouge">ended_at</code></td>
+          <td>timestamp</td>
+        </tr>
+        <tr>
+          <td><code class="language-plaintext highlighter-rouge">model_id</code></td>
+          <td>text (e.g. <code class="language-plaintext highlighter-rouge">claude-haiku-4-5</code>, <code class="language-plaintext highlighter-rouge">claude-sonnet-4-6</code>)</td>
+        </tr>
+        <tr>
+          <td><code class="language-plaintext highlighter-rouge">prompt_tokens</code> / <code class="language-plaintext highlighter-rouge">completion_tokens</code> / <code class="language-plaintext highlighter-rouge">cache_read_tokens</code> / <code class="language-plaintext highlighter-rouge">cache_creation_tokens</code></td>
+          <td>int</td>
+        </tr>
+        <tr>
+          <td><code class="language-plaintext highlighter-rouge">cost_usd</code></td>
+          <td>numeric</td>
+        </tr>
+        <tr>
+          <td><code class="language-plaintext highlighter-rouge">latency_ms</code></td>
+          <td>int</td>
+        </tr>
+        <tr>
+          <td><code class="language-plaintext highlighter-rouge">outcome</code></td>
+          <td>text (<code class="language-plaintext highlighter-rouge">success</code> / <code class="language-plaintext highlighter-rouge">degraded</code> / <code class="language-plaintext highlighter-rouge">error</code>)</td>
+        </tr>
+        <tr>
+          <td><code class="language-plaintext highlighter-rouge">input_digest</code> / <code class="language-plaintext highlighter-rouge">output_digest</code></td>
+          <td>text (sha256 of canonical JSON)</td>
+        </tr>
+        <tr>
+          <td><code class="language-plaintext highlighter-rouge">error_message</code></td>
+          <td>text (nullable)</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p>Figure 3 timeliness milestones become joins against this table.</p>
+  </li>
+  <li><strong>Failure isolation.</strong> If <code class="language-plaintext highlighter-rouge">whispers-mcp</code> is down, the Enrichment
+Agent drops that edge but the observation still lands. A
+monolithic prompt would refuse the whole report.</li>
+  <li><strong>Replaceability.</strong> Each agent has a narrow contract; the Triage
+Agent can be swapped for a domain expert’s rule engine without
+touching Intake or Notification.</li>
+  <li><strong>Cost shaping.</strong> Cheap models (Haiku) on high-volume agents
+(Intake), expensive models (Opus) only on the Triage and Cluster
+Detection agents where the stakes are highest.</li>
+</ul>
+
+<h2 id="where-claude-code-itself-fits">Where Claude Code itself fits</h2>
+
+<p>The agents above run in production. <strong>Claude Code</strong> runs in this
+repository — drafting the schema seeds, adding new MCP servers,
+keeping the docs in sync. Production agents and Claude Code share
+the same MCP surface, so a fix prototyped in the IDE (e.g. “add a
+new test_target to the knowledge graph and re-deploy”) is one PR
+away from production.</p>
+
+
+  <footer>
+    Source: Ending Pandemics Academy &middot; University of Arizona Mel &amp;
+    Enid Zuckerman College of Public Health &middot; Global Health Institute.
+  </footer>
+</body>
+</html>

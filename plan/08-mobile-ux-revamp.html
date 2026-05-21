@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Plan 08 — Mobile UX revamp (port the Elbaraaa/OneHealth design)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      max-width: 1100px;
+      margin: 2rem auto;
+      padding: 0 1.25rem;
+      color: #1a1a1a;
+      line-height: 1.55;
+    }
+    nav.crumbs { font-size: .9rem; color: #555; margin-bottom: 1rem; }
+    nav.crumbs a { color: #1F3A93; text-decoration: none; }
+    h1 { border-bottom: 3px solid #1F3A93; padding-bottom: .35rem; }
+    h2 { margin-top: 2.25rem; color: #1F3A93; }
+    h3 { margin-top: 1.25rem; }
+    table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: .95rem; }
+    th, td { border: 1px solid #ddd; padding: .5rem .75rem; text-align: left; vertical-align: top; }
+    th { background: #f0f3f8; }
+    blockquote {
+      border-left: 4px solid #1F3A93;
+      background: #f4f6fb;
+      margin: 1rem 0;
+      padding: .75rem 1rem;
+    }
+    code { background: #f1f3f7; padding: 1px 5px; border-radius: 3px; font-size: .9em; }
+    pre code { display: block; padding: .75rem 1rem; overflow-x: auto; }
+    footer { margin-top: 4rem; padding-top: 1rem; border-top: 1px solid #ddd; color: #666; font-size: .85rem; }
+    a { color: #1F3A93; }
+  </style>
+</head>
+<body>
+  <nav class="crumbs">
+    <a href="/epihack-2026/">EpiHack AZ 2026</a>
+  </nav>
+
+  <h1 id="08--mobile-ux-revamp">08 — Mobile UX revamp</h1>
+
+<p>Adopt the polished mobile UX from the reference app
+<a href="https://github.com/Elbaraaa/OneHealth"><code class="language-plaintext highlighter-rouge">Elbaraaa/OneHealth</code></a> as the new
+look-and-feel + screen flow for <code class="language-plaintext highlighter-rouge">app/</code>, <strong>without changing the backend</strong>:
+the DuckDB/DuckLake knowledge graph, the eight-agent orchestrator, the
+eleven MCP servers, the <code class="language-plaintext highlighter-rouge">api/openapi.yaml</code> contract, the privacy contract,
+and Supabase auth all stay exactly as they are. Only the Next.js front end
+changes.</p>
+
+<h2 id="decisions-locked">Decisions (locked)</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>Fork</th>
+      <th>Decision</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Visual design</td>
+      <td><strong>Adopt Tailwind</strong> 3.4 + the reference’s teal design tokens, <code class="language-plaintext highlighter-rouge">AppShell</code>, and utility classes.</td>
+    </tr>
+    <tr>
+      <td>Framework baseline</td>
+      <td><strong>Upgrade <code class="language-plaintext highlighter-rouge">app/</code> to Next.js 16 / React 19</strong> (matches the reference). Static export + <code class="language-plaintext highlighter-rouge">basePath</code> must be preserved — this is a gated step (Phase 0).</td>
+    </tr>
+    <tr>
+      <td>Result screen</td>
+      <td><strong>Reuse the polished result-card layout, but bind it to the server’s <code class="language-plaintext highlighter-rouge">TriageOutcome.next_action</code></strong> routing. No client-side risk scoring (the reference’s <code class="language-plaintext highlighter-rouge">riskScoring.ts</code> is rejected — see Guardrails).</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2 id="guardrails--what-must-not-change">Guardrails — what must NOT change</h2>
+
+<ol>
+  <li><strong><code class="language-plaintext highlighter-rouge">api/openapi.yaml</code> stays the source of truth.</strong> Any new field the
+polished forms collect (e.g. <code class="language-plaintext highlighter-rouge">symptomStartDate</code>, <code class="language-plaintext highlighter-rouge">recentTravel</code>,
+<code class="language-plaintext highlighter-rouge">ongoingConcern</code>) is added to the spec first, then <code class="language-plaintext highlighter-rouge">npm run gen:api</code>
+regenerates <code class="language-plaintext highlighter-rouge">api-types.ts</code>, then <code class="language-plaintext highlighter-rouge">agents/.../api/models.py</code> is
+re-validated. Never hand-edit <code class="language-plaintext highlighter-rouge">api-types.ts</code>.</li>
+  <li><strong>The submit path stays <code class="language-plaintext highlighter-rouge">POST /v1/reports</code> → FastAPI → DuckLake.</strong> The
+UI keeps calling <code class="language-plaintext highlighter-rouge">createReport()</code> (<code class="language-plaintext highlighter-rouge">app/src/lib/api-client.ts</code>). The
+intake write-path (<code class="language-plaintext highlighter-rouge">agents/.../kg_writer.py</code>) and MCP-backed agents are
+untouched.</li>
+  <li><strong>Privacy contract is load-bearing</strong> (CONTRIBUTING.md checklist):
+    <ul>
+      <li>Location stays coarse — keep <code class="language-plaintext highlighter-rouge">coarse-geo.ts</code> (1 km grid / ZIP). Do
+<strong>not</strong> adopt the reference’s raw-ZIP-only handling without the
+coarsen step; keep our GPS→1 km path too.</li>
+      <li>Keep <code class="language-plaintext highlighter-rouge">exif-stripper.ts</code> on photo upload (the reference only sets a
+<code class="language-plaintext highlighter-rouge">photoAttached</code> flag and never strips/uploads).</li>
+      <li><strong>Triage is routing, not diagnosis.</strong> The reference computes a 0–100
+“risk score” + “High/Elevated” group client-side — that is a verdict
+and is forbidden. The result screen renders only <code class="language-plaintext highlighter-rouge">next_action</code>
+(+ optional <code class="language-plaintext highlighter-rouge">copy</code> / cited <code class="language-plaintext highlighter-rouge">sources</code>) returned by the server. The
+server’s regex output-guard already rejects <code class="language-plaintext highlighter-rouge">you have…</code>/<code class="language-plaintext highlighter-rouge">diagnos*</code>.</li>
+      <li>Cluster/dashboard views use ZCTA-week aggregations from <code class="language-plaintext highlighter-rouge">/v1/context</code>,
+never individual observations.</li>
+    </ul>
+  </li>
+  <li><strong>Static export + <code class="language-plaintext highlighter-rouge">basePath: '/epihack-2026/app'</code></strong> must keep working
+(gh-pages <code class="language-plaintext highlighter-rouge">deploy-app.yml</code>, the VM nginx vhost, and the Ansible <code class="language-plaintext highlighter-rouge">app</code>
+role all build <code class="language-plaintext highlighter-rouge">out/</code>). This is the upgrade’s main risk.</li>
+  <li><strong>Anonymous-first.</strong> Auth stays optional (<code class="language-plaintext highlighter-rouge">isAuthConfigured()</code>); the
+whole report flow works signed-out.</li>
+</ol>
+
+<h2 id="reference-inventory--adopt--adapt--reject">Reference inventory → adopt / adapt / reject</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>Reference asset</th>
+      <th>Disposition</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">tailwind.config.ts</code> tokens (ink, public-teal, public-blue, soft-mint/sky, <code class="language-plaintext highlighter-rouge">soft</code> shadow)</td>
+      <td><strong>Adopt</strong> — becomes our design system.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">app/globals.css</code> utilities (<code class="language-plaintext highlighter-rouge">.app-button</code>, <code class="language-plaintext highlighter-rouge">.choice-row</code>, <code class="language-plaintext highlighter-rouge">.phone-page/.phone-screen</code>, <code class="language-plaintext highlighter-rouge">.progress-track</code>, <code class="language-plaintext highlighter-rouge">.focus-ring</code>)</td>
+      <td><strong>Adopt</strong> (merge into our <code class="language-plaintext highlighter-rouge">globals.css</code>).</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">components/AppShell.tsx</code> + <code class="language-plaintext highlighter-rouge">AppTopBar</code> (390 px phone frame, back/title/user)</td>
+      <td><strong>Adopt</strong> — replaces our ad-hoc <code class="language-plaintext highlighter-rouge">header</code>/<code class="language-plaintext highlighter-rouge">main</code> shell. Add our <code class="language-plaintext highlighter-rouge">AuthBadge</code> into the top bar.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">components/DomainSelection.tsx</code> (feeling good/sick + domain toggles)</td>
+      <td><strong>Adapt</strong> — map to our <code class="language-plaintext highlighter-rouge">report_type</code> (human/animal/environmental); keep our anonymity defaults.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">components/ReportForm.tsx</code> (per-domain fields, progress bar, photo)</td>
+      <td><strong>Adapt heavily</strong> — keep the layout/progress UX, swap field sets to our <code class="language-plaintext highlighter-rouge">event_class</code> taxonomy + <code class="language-plaintext highlighter-rouge">coarse-geo</code>/<code class="language-plaintext highlighter-rouge">exif</code> steps; submit via <code class="language-plaintext highlighter-rouge">createReport()</code> not localStorage.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">components/ProfileForm.tsx</code></td>
+      <td><strong>Adapt</strong> — keep UI, wire to <code class="language-plaintext highlighter-rouge">attachProfile()</code> PATCH <code class="language-plaintext highlighter-rouge">/v1/reports/{id}/profile</code>.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">components/RiskResultCard.tsx</code> + <code class="language-plaintext highlighter-rouge">MitigationDetails.tsx</code> (gauge + advice)</td>
+      <td><strong>Adapt</strong> — reuse layout; bind gauge to <code class="language-plaintext highlighter-rouge">next_action</code>/<code class="language-plaintext highlighter-rouge">urgency</code>, render <code class="language-plaintext highlighter-rouge">copy</code> + <code class="language-plaintext highlighter-rouge">sources</code>. <strong>Drop the score.</strong></td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">components/DashboardSummary.tsx</code>, <code class="language-plaintext highlighter-rouge">RecentReportsTable.tsx</code></td>
+      <td><strong>Adapt (Phase 6, optional)</strong> — feed from <code class="language-plaintext highlighter-rouge">/v1/context</code> ZCTA aggregations, not raw reports.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">components/QuestionRenderer.tsx</code> (generic input mapper)</td>
+      <td><strong>Adopt</strong> — useful to drive forms from an event-class schema.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">lib/riskScoring.ts</code>, <code class="language-plaintext highlighter-rouge">lib/mockData.ts</code> localStorage scoring</td>
+      <td><strong>Reject</strong> — replaced by server triage + our mock fixtures.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">lib/types.ts</code> report shapes</td>
+      <td><strong>Reject as-is</strong> — our <code class="language-plaintext highlighter-rouge">ReportPayload</code>/<code class="language-plaintext highlighter-rouge">api-types.ts</code> is the contract; map onto it.</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2 id="data-model-mapping-reference--our-contract">Data-model mapping (reference → our contract)</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>Reference field</th>
+      <th>Our <code class="language-plaintext highlighter-rouge">ReportPayload</code> / handling</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">domain</code> human/animal/environment</td>
+      <td><code class="language-plaintext highlighter-rouge">report_type</code> human/animal/<strong>environmental</strong></td>
+    </tr>
+    <tr>
+      <td>human <code class="language-plaintext highlighter-rouge">symptoms[]</code></td>
+      <td><code class="language-plaintext highlighter-rouge">symptoms: SymptomCategory[]</code> + choose <code class="language-plaintext highlighter-rouge">event_class</code> (e.g. <code class="language-plaintext highlighter-rouge">human.fever_chills</code>)</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">symptomStartDate</code></td>
+      <td><code class="language-plaintext highlighter-rouge">event_date</code> (or new spec field — add to openapi first)</td>
+    </tr>
+    <tr>
+      <td>animal <code class="language-plaintext highlighter-rouge">animalType</code>, <code class="language-plaintext highlighter-rouge">symptomsBehavior[]</code></td>
+      <td><code class="language-plaintext highlighter-rouge">event_class</code> (<code class="language-plaintext highlighter-rouge">animal.*</code>) + <code class="language-plaintext highlighter-rouge">species</code> + <code class="language-plaintext highlighter-rouge">symptoms</code>/<code class="language-plaintext highlighter-rouge">notes</code></td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">animalCount</code> / <code class="language-plaintext highlighter-rouge">multipleAnimalsAffected</code></td>
+      <td><code class="language-plaintext highlighter-rouge">count</code></td>
+    </tr>
+    <tr>
+      <td>environment <code class="language-plaintext highlighter-rouge">concernTypes[]</code></td>
+      <td><code class="language-plaintext highlighter-rouge">event_class</code> (<code class="language-plaintext highlighter-rouge">env.*</code>)</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">ongoingConcern</code>, <code class="language-plaintext highlighter-rouge">recentTravel</code>, <code class="language-plaintext highlighter-rouge">recentAnimalContact</code></td>
+      <td><strong>new optional spec fields</strong> (add to openapi, regen, validate) or fold into <code class="language-plaintext highlighter-rouge">notes</code> for v1</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">zipCode</code> (raw)</td>
+      <td><code class="language-plaintext highlighter-rouge">coarse_location.zip</code> via <code class="language-plaintext highlighter-rouge">normaliseZip()</code>; keep GPS→<code class="language-plaintext highlighter-rouge">grid_id</code> path</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">photoAttached</code> (flag only)</td>
+      <td>real photo → <code class="language-plaintext highlighter-rouge">stripExif()</code> → multipart <code class="language-plaintext highlighter-rouge">photo</code> blob</td>
+    </tr>
+    <tr>
+      <td>client <code class="language-plaintext highlighter-rouge">riskScore</code>/<code class="language-plaintext highlighter-rouge">group</code></td>
+      <td><strong>server</strong> <code class="language-plaintext highlighter-rouge">TriageOutcome.next_action</code> (+ <code class="language-plaintext highlighter-rouge">urgency</code>, <code class="language-plaintext highlighter-rouge">copy</code>, <code class="language-plaintext highlighter-rouge">sources</code>)</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2 id="phased-work-plan">Phased work plan</h2>
+
+<h3 id="phase-0--framework-upgrade--tailwind-gated">Phase 0 — Framework upgrade + Tailwind (gated)</h3>
+<ul>
+  <li>Bump <code class="language-plaintext highlighter-rouge">app/package.json</code>: <code class="language-plaintext highlighter-rouge">next@^16</code>, <code class="language-plaintext highlighter-rouge">react@^19</code>, <code class="language-plaintext highlighter-rouge">react-dom@^19</code>,
+<code class="language-plaintext highlighter-rouge">eslint-config-next@^16</code> (and re-pin <code class="language-plaintext highlighter-rouge">eslint</code> to whatever 16 needs).
+Add <code class="language-plaintext highlighter-rouge">tailwindcss@^3.4</code>, <code class="language-plaintext highlighter-rouge">postcss</code>, <code class="language-plaintext highlighter-rouge">autoprefixer</code>, <code class="language-plaintext highlighter-rouge">lucide-react</code>,
+Inter via <code class="language-plaintext highlighter-rouge">next/font</code>.</li>
+  <li>Add <code class="language-plaintext highlighter-rouge">tailwind.config.ts</code> (port tokens) + <code class="language-plaintext highlighter-rouge">postcss.config.mjs</code>; add the
+Tailwind directives to <code class="language-plaintext highlighter-rouge">globals.css</code> while keeping existing CSS vars
+during migration.</li>
+  <li><strong>Verify static export survives</strong> before touching screens:
+<code class="language-plaintext highlighter-rouge">NEXT_PUBLIC_API_BASE=mock npm run build</code> must still emit <code class="language-plaintext highlighter-rouge">out/</code> with
+<code class="language-plaintext highlighter-rouge">basePath</code> intact; <code class="language-plaintext highlighter-rouge">npm run typecheck</code> clean. Confirm <code class="language-plaintext highlighter-rouge">next.config</code>
+<code class="language-plaintext highlighter-rouge">output:'export'</code>, <code class="language-plaintext highlighter-rouge">trailingSlash</code>, <code class="language-plaintext highlighter-rouge">images.unoptimized</code> still honored
+on 16. <strong>Gate: do not proceed until <code class="language-plaintext highlighter-rouge">out/</code> builds.</strong></li>
+  <li>Update <code class="language-plaintext highlighter-rouge">app/src/lib/supabase</code> + <code class="language-plaintext highlighter-rouge">openapi-fetch</code>/<code class="language-plaintext highlighter-rouge">openapi-typescript</code>
+versions for React 19 compatibility; smoke <code class="language-plaintext highlighter-rouge">npm run gen:api</code>.</li>
+</ul>
+
+<h3 id="phase-1--design-system">Phase 1 — Design system</h3>
+<ul>
+  <li>Land <code class="language-plaintext highlighter-rouge">tailwind.config.ts</code> tokens, merge reference <code class="language-plaintext highlighter-rouge">globals.css</code>
+utilities, wire Inter font, add lucide icons.</li>
+  <li>Port <code class="language-plaintext highlighter-rouge">AppShell</code> + <code class="language-plaintext highlighter-rouge">AppTopBar</code> as our new <code class="language-plaintext highlighter-rouge">layout.tsx</code> shell; mount
+<code class="language-plaintext highlighter-rouge">AuthProvider</code> + <code class="language-plaintext highlighter-rouge">AuthBadge</code> inside the top bar. Respect <code class="language-plaintext highlighter-rouge">basePath</code> via
+<code class="language-plaintext highlighter-rouge">next/link</code> (no hardcoded <code class="language-plaintext highlighter-rouge">/</code>).</li>
+</ul>
+
+<h3 id="phase-2--screen-flow">Phase 2 — Screen flow</h3>
+<ul>
+  <li>Rebuild routes to the reference’s flow, keeping our route names where
+the API/auth depend on them:
+<code class="language-plaintext highlighter-rouge">/</code> welcome → <code class="language-plaintext highlighter-rouge">/report</code> domain-select → <code class="language-plaintext highlighter-rouge">/report/[type]</code> form →
+<code class="language-plaintext highlighter-rouge">/profile</code> (optional) → <code class="language-plaintext highlighter-rouge">/result</code> (was inline “done”) → <code class="language-plaintext highlighter-rouge">/dashboard</code>
+(optional). Keep <code class="language-plaintext highlighter-rouge">/sign-in</code>, <code class="language-plaintext highlighter-rouge">/account</code>, <code class="language-plaintext highlighter-rouge">/auth/callback</code> as-is.</li>
+  <li>Port <code class="language-plaintext highlighter-rouge">DomainSelection</code> and the <code class="language-plaintext highlighter-rouge">ReportForm</code> progress-wizard, but render
+<strong>our</strong> steps: Photo (EXIF) → Class (event_class grid) → Where
+(coarse-geo) → Consent → Submitting → Result.</li>
+</ul>
+
+<h3 id="phase-3--backend-wiring-keep-ducklake--mcp">Phase 3 — Backend wiring (keep DuckLake + MCP)</h3>
+<ul>
+  <li>Submission calls <code class="language-plaintext highlighter-rouge">createReport(payload, photo)</code> → <code class="language-plaintext highlighter-rouge">POST /v1/reports</code>
+(already flows to DuckLake via <code class="language-plaintext highlighter-rouge">kg_writer.py</code>). Keep mock mode.</li>
+  <li><strong>Channel split (see <code class="language-plaintext highlighter-rouge">plan/09-mobile-datastore.md</code>):</strong> the mobile build sends
+<code class="language-plaintext highlighter-rouge">X-Client-Channel: mobile</code> and FastAPI persists it to MongoDB (then syncs to
+DuckLake); the web build stays DuckLake-direct. Privacy enforcement is shared
+and runs before either sink.</li>
+  <li>Result screen: poll <code class="language-plaintext highlighter-rouge">getReportStatus(id, claim_token)</code> →
+render <code class="language-plaintext highlighter-rouge">next_action</code> gauge + <code class="language-plaintext highlighter-rouge">copy</code> + <code class="language-plaintext highlighter-rouge">sources</code>. No score.</li>
+  <li>Profile: <code class="language-plaintext highlighter-rouge">attachProfile()</code> PATCH with <code class="language-plaintext highlighter-rouge">claim_token</code>.</li>
+  <li>Dashboard (optional): <code class="language-plaintext highlighter-rouge">getContext()</code> ZCTA aggregations only.</li>
+</ul>
+
+<h3 id="phase-4--privacy-re-integration--governance">Phase 4 — Privacy re-integration &amp; governance</h3>
+<ul>
+  <li>Re-wire <code class="language-plaintext highlighter-rouge">coarse-geo.ts</code> + <code class="language-plaintext highlighter-rouge">exif-stripper.ts</code> into the new form steps;
+keep the consent checklist gate before submit.</li>
+  <li>Walk the CONTRIBUTING.md privacy checklist; confirm no raw lat/lon, no
+diagnosis copy, EXIF stripped, claim-token status reads.</li>
+</ul>
+
+<h3 id="phase-5--deploy-reconciliation--verify">Phase 5 — Deploy reconciliation + verify</h3>
+<ul>
+  <li>Confirm the Ansible <code class="language-plaintext highlighter-rouge">app</code> role still builds Next 16 (<code class="language-plaintext highlighter-rouge">npm install</code> +
+<code class="language-plaintext highlighter-rouge">gen:api</code> + <code class="language-plaintext highlighter-rouge">next build</code> → <code class="language-plaintext highlighter-rouge">out/</code>); it already handles missing
+lockfiles and <code class="language-plaintext highlighter-rouge">--legacy-peer-deps</code> fallbacks.</li>
+  <li>Confirm <code class="language-plaintext highlighter-rouge">deploy-app.yml</code> (gh-pages) and the nginx vhost serve the new
+<code class="language-plaintext highlighter-rouge">out/</code>. Run the full localhost playbook and re-check <code class="language-plaintext highlighter-rouge">http://&lt;host&gt;/</code>.</li>
+</ul>
+
+<h3 id="phase-6--optional-polish">Phase 6 — Optional polish</h3>
+<ul>
+  <li>Local dashboard from <code class="language-plaintext highlighter-rouge">/v1/context</code>; offline submit queue keyed by
+<code class="language-plaintext highlighter-rouge">claim_token</code>; QuestionRenderer-driven event-class schema.</li>
+</ul>
+
+<h2 id="risks--mitigations">Risks &amp; mitigations</h2>
+
+<ul>
+  <li><strong>Next 16 breaks static export / basePath</strong> → Phase 0 gate; if it
+regresses, fall back to Next 14 + port design only (design is
+framework-agnostic). Keep the upgrade on a branch.</li>
+  <li><strong>React 19 peer-dep churn</strong> (Supabase SSR, openapi-fetch) → bump
+together; <code class="language-plaintext highlighter-rouge">--legacy-peer-deps</code> already tolerated by the <code class="language-plaintext highlighter-rouge">app</code> role.</li>
+  <li><strong>Governance regression</strong> (score creeps back in) → result screen reads
+only <code class="language-plaintext highlighter-rouge">next_action</code>; add a test asserting no <code class="language-plaintext highlighter-rouge">diagnos*</code>/score copy.</li>
+  <li><strong>New form fields outrun the spec</strong> → spec-first rule; fold extras into
+<code class="language-plaintext highlighter-rouge">notes</code> until added to <code class="language-plaintext highlighter-rouge">openapi.yaml</code>.</li>
+</ul>
+
+<h2 id="acceptance-checklist">Acceptance checklist</h2>
+
+<ul class="task-list">
+  <li class="task-list-item"><input type="checkbox" class="task-list-item-checkbox" disabled="disabled" /><code class="language-plaintext highlighter-rouge">npm run build</code> emits <code class="language-plaintext highlighter-rouge">out/</code> with <code class="language-plaintext highlighter-rouge">basePath</code> on Next 16; <code class="language-plaintext highlighter-rouge">typecheck</code> clean.</li>
+  <li class="task-list-item"><input type="checkbox" class="task-list-item-checkbox" disabled="disabled" />New UX matches the reference (AppShell frame, teal system, wizard, gauge).</li>
+  <li class="task-list-item"><input type="checkbox" class="task-list-item-checkbox" disabled="disabled" />A report POSTs to <code class="language-plaintext highlighter-rouge">/v1/reports</code>, lands in DuckLake (new snapshot), and the result screen shows server <code class="language-plaintext highlighter-rouge">next_action</code> only.</li>
+  <li class="task-list-item"><input type="checkbox" class="task-list-item-checkbox" disabled="disabled" />EXIF stripped + location coarse; consent gate present; anonymous path works.</li>
+  <li class="task-list-item"><input type="checkbox" class="task-list-item-checkbox" disabled="disabled" />Supabase sign-in still optional and functional.</li>
+  <li class="task-list-item"><input type="checkbox" class="task-list-item-checkbox" disabled="disabled" />gh-pages + nginx + Ansible <code class="language-plaintext highlighter-rouge">app</code> role all serve the new build.</li>
+  <li class="task-list-item"><input type="checkbox" class="task-list-item-checkbox" disabled="disabled" />CONTRIBUTING.md privacy checklist walked in the PR.</li>
+</ul>
+
+
+  <footer>
+    Source: Ending Pandemics Academy &middot; University of Arizona Mel &amp;
+    Enid Zuckerman College of Public Health &middot; Global Health Institute.
+  </footer>
+</body>
+</html>

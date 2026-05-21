@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Plan 04 — End-to-end data flows</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      max-width: 1100px;
+      margin: 2rem auto;
+      padding: 0 1.25rem;
+      color: #1a1a1a;
+      line-height: 1.55;
+    }
+    nav.crumbs { font-size: .9rem; color: #555; margin-bottom: 1rem; }
+    nav.crumbs a { color: #1F3A93; text-decoration: none; }
+    h1 { border-bottom: 3px solid #1F3A93; padding-bottom: .35rem; }
+    h2 { margin-top: 2.25rem; color: #1F3A93; }
+    h3 { margin-top: 1.25rem; }
+    table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: .95rem; }
+    th, td { border: 1px solid #ddd; padding: .5rem .75rem; text-align: left; vertical-align: top; }
+    th { background: #f0f3f8; }
+    blockquote {
+      border-left: 4px solid #1F3A93;
+      background: #f4f6fb;
+      margin: 1rem 0;
+      padding: .75rem 1rem;
+    }
+    code { background: #f1f3f7; padding: 1px 5px; border-radius: 3px; font-size: .9em; }
+    pre code { display: block; padding: .75rem 1rem; overflow-x: auto; }
+    footer { margin-top: 4rem; padding-top: 1rem; border-top: 1px solid #ddd; color: #666; font-size: .85rem; }
+    a { color: #1F3A93; }
+  </style>
+</head>
+<body>
+  <nav class="crumbs">
+    <a href="/epihack-2026/">EpiHack AZ 2026</a>
+  </nav>
+
+  <h1 id="04--end-to-end-data-flows">04 — End-to-end data flows</h1>
+
+<p>Four worked scenarios, one per persona × vertical. Each shows the
+Minimum-Dataset fields populated, the MCPs called, the agents
+invoked, and the Figure 3 timeliness milestones triggered.</p>
+
+<hr />
+
+<h2 id="scenario-a--hiker-mails-in-a-tick">Scenario A — Hiker mails in a tick</h2>
+
+<p><strong>Persona:</strong> Recreational hiker, age 38, has a tick attached after
+a weekend hike near Patagonia (Santa Cruz County).</p>
+
+<p><strong>Channel:</strong> Mobile app.</p>
+
+<h3 id="steps">Steps</h3>
+
+<ol>
+  <li><strong>User opens the app.</strong> “Submit a tick” flow.</li>
+  <li>Camera capture of the tick on a coin for scale. App-side
+client-side ML estimates engorgement; user enters date attached,
+approximate hours attached, location on body.</li>
+  <li><strong>Intake Agent</strong> populates the Minimum Dataset:
+    <ul>
+      <li>General: age, sex, ZIP, GPS coordinates, date of report.</li>
+      <li>Exposure: tick bite, attached for ~6 h, leg.</li>
+      <li>Auxiliary: photo of tick.</li>
+    </ul>
+  </li>
+  <li><strong>Geo-Enrichment Agent</strong> resolves GPS → <code class="language-plaintext highlighter-rouge">county.santa_cruz</code>,
+not on a reservation; pulls
+<code class="language-plaintext highlighter-rouge">vectorsurv-mcp.agency_region_intersect</code> to find the responsible
+county vector-control agency.</li>
+  <li><strong>Validation Agent</strong> photo-quality check passes; species
+tentatively identified as <em>Rhipicephalus sanguineus</em> (brown dog
+tick) but with low confidence — flagged for Walker lab.</li>
+  <li><strong>Triage Agent (VBD branch):</strong>
+    <ul>
+      <li>Matches <code class="language-plaintext highlighter-rouge">vector.rhipicephalus_sanguineus → transmittedBy →
+pathogen.rickettsia_rickettsii (RMSF)</code> from
+<code class="language-plaintext highlighter-rouge">schema/deep/pathogens.sql</code>.</li>
+      <li>No symptoms reported; triage class = <code class="language-plaintext highlighter-rouge">mail-tick-to-walker-lab</code>
+        <ul>
+          <li><code class="language-plaintext highlighter-rouge">self-monitor-for-14-days</code>.</li>
+        </ul>
+      </li>
+    </ul>
+  </li>
+  <li><strong>Enrichment Agent:</strong>
+    <ul>
+      <li><code class="language-plaintext highlighter-rouge">great-az-tick-check-mcp.create_submission(user, tick_meta)</code>
+returns a mailing label PDF.</li>
+      <li><code class="language-plaintext highlighter-rouge">vectorsurv-mcp.get_pools(arthropod="tick", county=Santa Cruz,
+last 90 days)</code> — nothing reported nearby, so no live signal.</li>
+      <li>Looks up <code class="language-plaintext highlighter-rouge">schema/deep/outbreaks.sql</code> for any active RMSF
+event — historical tribal-lands cluster noted but not active
+near Patagonia.</li>
+    </ul>
+  </li>
+  <li><strong>Persistence:</strong> observation node lands with edges to
+<code class="language-plaintext highlighter-rouge">pathogen.rickettsia_rickettsii</code>, <code class="language-plaintext highlighter-rouge">county.santa_cruz</code>,
+<code class="language-plaintext highlighter-rouge">resource.ua_extension_tickcheck</code>, and <code class="language-plaintext highlighter-rouge">focus.rmsf</code>.</li>
+  <li><strong>Notification Agent:</strong> in-app card with the mailing label, an
+ICD-10 reference (<code class="language-plaintext highlighter-rouge">A77.0</code>), a 14-day symptom watchlist, and a
+one-tap “if symptoms appear” booking link.</li>
+</ol>
+
+<h3 id="milestones-triggered">Milestones triggered</h3>
+<ul>
+  <li><em>Detect</em> — at step 2 (community reported a tick exposure).</li>
+  <li><em>Verify</em> (potential, deferred) — when Walker lab returns species
+    <ul>
+      <li>pathogen results, the Knowledge Update Agent ingests the
+result and edges the observation to a <code class="language-plaintext highlighter-rouge">lab_result</code> node.</li>
+    </ul>
+  </li>
+</ul>
+
+<hr />
+
+<h2 id="scenario-b--symptomatic-patient-calls-211">Scenario B — Symptomatic patient calls 211</h2>
+
+<p><strong>Persona:</strong> Construction worker, age 52, Phoenix, fevers + severe
+muscle aches for 3 days, no obvious bite memory.</p>
+
+<p><strong>Channel:</strong> Voice via 211 Arizona (transcribed by a downstream
+voice-MCP).</p>
+
+<h3 id="steps-1">Steps</h3>
+
+<ol>
+  <li><strong>211 operator</strong> opens the worker’s intake on the Sentinel
+web console; voice transcript streams in.</li>
+  <li><strong>Intake Agent</strong> extracts:
+    <ul>
+      <li>General: age, sex (M), Phoenix ZIP, occupation = construction.</li>
+      <li>Human: fever, severe muscle aches, mild headache, 3-day onset,
+has not sought care.</li>
+      <li>Exposure: outdoor occupation, no remembered bite, no recent
+travel.</li>
+    </ul>
+  </li>
+  <li><strong>Geo-Enrichment Agent:</strong> <code class="language-plaintext highlighter-rouge">county.maricopa</code>.</li>
+  <li><strong>Validation Agent:</strong> no duplicate report; flagged as “symptomatic,
+no exposure history — open differential.”</li>
+  <li><strong>Triage Agent (VBD branch):</strong>
+    <ul>
+      <li>Symptoms match WNV, dengue (low likelihood given no travel),
+and — importantly — <strong>leptospirosis</strong> (occupational exposure).</li>
+      <li>Calls <code class="language-plaintext highlighter-rouge">vectorsurv-mcp.get_pools(target_acronym="WNV",
+county=Maricopa, last 30 days)</code> — WNV pool positivity at
+<strong>8.2 per 1000</strong> in nearby ZCTAs, well above threshold.</li>
+    </ul>
+  </li>
+  <li><strong>Enrichment Agent:</strong>
+    <ul>
+      <li>Attaches the live WNV vector-index reading.</li>
+      <li>Calls <code class="language-plaintext highlighter-rouge">adhs-mcp.recent_cases("WNV", Maricopa)</code> — confirms
+uptick.</li>
+      <li>Calls <code class="language-plaintext highlighter-rouge">knowledge-graph-mcp.outbreak_check("WNV", Maricopa)</code> —
+edges to a fresh <code class="language-plaintext highlighter-rouge">outbreak.maricopa_wnv_2026</code> if one exists.</li>
+    </ul>
+  </li>
+  <li><strong>Triage class = <code class="language-plaintext highlighter-rouge">urgent-care</code> + <code class="language-plaintext highlighter-rouge">clinician-alert-WNV</code>.</strong></li>
+  <li><strong>Notification Agent:</strong>
+    <ul>
+      <li>Worker: “Given your symptoms and current WNV activity in
+Maricopa, please go to an urgent care or ED today. Here is
+the nearest one open now.” (One-tap call + directions.)</li>
+      <li>211 operator: same in real time.</li>
+      <li><strong>Agency channel:</strong> an aggregated pin on the MCDPH analyst
+dashboard, no PII.</li>
+    </ul>
+  </li>
+</ol>
+
+<h3 id="milestones-triggered-1">Milestones triggered</h3>
+<ul>
+  <li><em>Detect</em> — symptom onset 3 days ago (computed from date-of-
+illness field).</li>
+  <li><em>Notify</em> — the agency dashboard pin is the local Notify event;
+Maricopa Vector Control is paged if cluster threshold reached.</li>
+  <li>The interval <em>Detect → Notify</em> lands in the <code class="language-plaintext highlighter-rouge">agent_run</code> audit
+table; this is the headline metric.</li>
+</ul>
+
+<hr />
+
+<h2 id="scenario-c--unsheltered-resident-heat-check-in">Scenario C — Unsheltered resident heat check-in</h2>
+
+<p><strong>Persona:</strong> Unsheltered resident, no phone, downtown Phoenix on a
+115 °F Magenta-HeatRisk day. CHW is doing block-by-block outreach
+with a tablet.</p>
+
+<p><strong>Channel:</strong> CHW-mediated, on the CHW’s tablet.</p>
+
+<h3 id="steps-2">Steps</h3>
+
+<ol>
+  <li><strong>CHW</strong> opens the Sentinel field app; “Heat check-in” flow.</li>
+  <li>CHW enters: approximate age, sex, currently unsheltered,
+sweating profusely but mentation intact, no chronic medications
+reported, last drank water ~3 h ago, current GPS.</li>
+  <li><strong>Intake Agent</strong> suppresses Email, Phone, Household member ID
+per the anonymous-outreach consent profile.</li>
+  <li><strong>Geo-Enrichment Agent:</strong> ZCTA 85003.</li>
+  <li><strong>Validation Agent:</strong> accepts; flags as
+“high-risk-population observation.”</li>
+  <li><strong>Triage Agent (Heat branch):</strong>
+    <ul>
+      <li>Computes vulnerability score: unsheltered (+3),
+outdoor-exposure (+2), no AC (+2), Magenta HeatRisk (+3),
+symptomatic (heat exhaustion: heavy sweat + headache, +2).
+Total = <strong>12</strong> (max ~15).</li>
+      <li>Calls <code class="language-plaintext highlighter-rouge">nws-heatrisk-mcp.heatrisk(lat,lon,today)</code> =
+<strong>Magenta</strong> (highest level).</li>
+    </ul>
+  </li>
+  <li><strong>Enrichment Agent:</strong>
+    <ul>
+      <li><code class="language-plaintext highlighter-rouge">mag-hrn-mcp.search_centers(lat, lon, radius=2km,
+open_now=true, pets_ok=false)</code> → 4 results.</li>
+      <li><code class="language-plaintext highlighter-rouge">211-az-mcp.transport_to_cooling_center(zip, urgency="high")</code>
+→ ride dispatch available.</li>
+    </ul>
+  </li>
+  <li><strong>Triage class = <code class="language-plaintext highlighter-rouge">go-to-cooling-center</code> + <code class="language-plaintext highlighter-rouge">dispatch-CHW-transport</code>.</strong></li>
+  <li><strong>Notification Agent:</strong>
+    <ul>
+      <li>CHW: card with the nearest center + a one-tap “request
+transport” button.</li>
+      <li>Center operator: a heads-up message via <code class="language-plaintext highlighter-rouge">mag-hrn-mcp</code>
+(peer-to-peer between operators).</li>
+      <li>Aggregated: observation lands in the Cluster Detection
+Agent’s stream — five unsheltered heat-exhaustion check-ins
+in the same ZCTA in 2 h triggers a county heat-emergency
+alert.</li>
+    </ul>
+  </li>
+</ol>
+
+<h3 id="milestones-triggered-2">Milestones triggered</h3>
+<ul>
+  <li><em>Predict</em> — the Magenta HeatRisk forecast 24 h prior was the
+predictive alert.</li>
+  <li><em>Prevent</em> — the CHW outreach happening in response to the
+Magenta forecast is itself the Prevent action.</li>
+  <li><em>Detect → Respond</em> interval is what this scenario optimizes.</li>
+</ul>
+
+<hr />
+
+<h2 id="scenario-d--agency-side-cluster-review">Scenario D — Agency-side cluster review</h2>
+
+<p><strong>Persona:</strong> ADHS Vector-Borne &amp; Zoonotic Diseases epidemiologist,
+end of week.</p>
+
+<p><strong>Channel:</strong> Agency web dashboard.</p>
+
+<h3 id="steps-3">Steps</h3>
+
+<ol>
+  <li>The <strong>Cluster Detection Agent</strong> ran nightly and flagged a
+small but unusual cluster: 4 hantavirus-compatible observations
+in Coconino County over the last 10 days, mostly from CHW
+check-ins in tribal communities.</li>
+  <li><strong>Notification Agent</strong> wrote a row to the ADHS analyst queue
+(no PHI exposed to the wider system).</li>
+  <li><strong>Epi opens the dashboard</strong> — sees the cluster overlaid on
+the <a href="../map/">MapLibre map</a> (every pin carries
+<code class="language-plaintext highlighter-rouge">kg_node_id</code>; clicking opens the underlying observation
+with its source MCP receipts).</li>
+  <li>Dashboard queries (plain SQL against the kg):</li>
+</ol>
+
+<div class="language-sql highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">-- Co-located WHISPers wildlife mortality events</span>
+<span class="k">SELECT</span> <span class="n">w</span><span class="p">.</span><span class="n">label</span><span class="p">,</span> <span class="n">w</span><span class="p">.</span><span class="n">description</span><span class="p">,</span> <span class="n">p</span><span class="p">.</span><span class="n">value_text</span> <span class="k">AS</span> <span class="n">event_date</span>
+<span class="k">FROM</span>   <span class="n">kg</span><span class="p">.</span><span class="n">node</span> <span class="n">w</span>
+<span class="k">JOIN</span>   <span class="n">kg</span><span class="p">.</span><span class="n">property</span> <span class="n">p</span> <span class="k">ON</span> <span class="n">p</span><span class="p">.</span><span class="n">node_id</span> <span class="o">=</span> <span class="n">w</span><span class="p">.</span><span class="n">node_id</span> <span class="k">AND</span> <span class="n">p</span><span class="p">.</span><span class="k">key</span> <span class="o">=</span> <span class="s1">'event_date'</span>
+<span class="k">WHERE</span>  <span class="n">w</span><span class="p">.</span><span class="n">node_type</span> <span class="o">=</span> <span class="s1">'whispers_event'</span>
+  <span class="k">AND</span>  <span class="n">w</span><span class="p">.</span><span class="n">node_id</span> <span class="k">IN</span> <span class="p">(</span>
+    <span class="k">SELECT</span> <span class="n">object_id</span> <span class="k">FROM</span> <span class="n">kg</span><span class="p">.</span><span class="n">edge</span>
+    <span class="k">WHERE</span> <span class="n">subject_id</span> <span class="k">IN</span> <span class="p">(</span><span class="k">SELECT</span> <span class="n">node_id</span> <span class="k">FROM</span> <span class="n">cluster_observations</span><span class="p">)</span>
+      <span class="k">AND</span> <span class="n">predicate</span> <span class="o">=</span> <span class="s1">'colocatedWith'</span>
+  <span class="p">);</span>
+
+<span class="c1">-- Recent NEON small-mammal data near the cluster</span>
+<span class="k">SELECT</span> <span class="o">*</span> <span class="k">FROM</span> <span class="n">kg</span><span class="p">.</span><span class="n">v_datasets_apis</span>
+<span class="k">WHERE</span>  <span class="n">resource_id</span> <span class="o">=</span> <span class="s1">'program.neon_srer'</span>
+  <span class="k">AND</span>  <span class="n">informs_questions</span> <span class="k">LIKE</span> <span class="s1">'%hantavirus%'</span><span class="p">;</span>
+</code></pre></div></div>
+
+<ol>
+  <li>Epi clicks “open Verify workflow” — the Knowledge Update Agent
+pulls the latest ADHS hantavirus-case report via <code class="language-plaintext highlighter-rouge">adhs-mcp</code> and
+the latest NEON rodent-pathogen testing via a future
+<code class="language-plaintext highlighter-rouge">neon-mcp</code>, both edged to the cluster.</li>
+  <li><strong>Decision:</strong> field investigation dispatched. The dispatch is
+itself a <code class="language-plaintext highlighter-rouge">Verify</code> milestone event, written back to the kg via
+<code class="language-plaintext highlighter-rouge">knowledge-graph-mcp</code>.</li>
+  <li>The <strong>Figure 3 timeliness clock</strong> for this potential outbreak
+now has Detect (community check-in), Notify (agency queue), and
+Verify (field dispatch) timestamps. <em>Lab Confirmation</em> and
+<em>Respond</em> will follow.</li>
+</ol>
+
+<h3 id="why-this-is-a-living-database-scenario">Why this is a “living database” scenario</h3>
+
+<p>Nothing in this flow was bespoke. The cluster detector ran on the
+same <code class="language-plaintext highlighter-rouge">observation</code> table community reports land in; the dashboard
+queries were the same recursive-CTE patterns used by the
+<a href="../graph/">knowledge-graph viewer</a>; the MCP pulls were the same
+ones the Intake Agent uses live. The agency epi got an end-to-end
+investigative workspace without anyone writing a new ETL job.</p>
+
+
+  <footer>
+    Source: Ending Pandemics Academy &middot; University of Arizona Mel &amp;
+    Enid Zuckerman College of Public Health &middot; Global Health Institute.
+  </footer>
+</body>
+</html>

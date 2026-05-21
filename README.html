@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>EpiHack Arizona 2026</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      max-width: 1100px;
+      margin: 2rem auto;
+      padding: 0 1.25rem;
+      color: #1a1a1a;
+      line-height: 1.55;
+    }
+    nav.crumbs { font-size: .9rem; color: #555; margin-bottom: 1rem; }
+    nav.crumbs a { color: #1F3A93; text-decoration: none; }
+    h1 { border-bottom: 3px solid #1F3A93; padding-bottom: .35rem; }
+    h2 { margin-top: 2.25rem; color: #1F3A93; }
+    h3 { margin-top: 1.25rem; }
+    table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: .95rem; }
+    th, td { border: 1px solid #ddd; padding: .5rem .75rem; text-align: left; vertical-align: top; }
+    th { background: #f0f3f8; }
+    blockquote {
+      border-left: 4px solid #1F3A93;
+      background: #f4f6fb;
+      margin: 1rem 0;
+      padding: .75rem 1rem;
+    }
+    code { background: #f1f3f7; padding: 1px 5px; border-radius: 3px; font-size: .9em; }
+    pre code { display: block; padding: .75rem 1rem; overflow-x: auto; }
+    footer { margin-top: 4rem; padding-top: 1rem; border-top: 1px solid #ddd; color: #666; font-size: .85rem; }
+    a { color: #1F3A93; }
+  </style>
+</head>
+<body>
+  <nav class="crumbs">
+    <a href="/epihack-2026/">EpiHack AZ 2026</a>
+  </nav>
+
+  <h1 id="epihack-2026">epihack-2026</h1>
+
+<p>EpiHack AZ 2026 — a working repository for the
+<a href="https://endingpandemicsacademy.arizona.edu/trainings-events/epihack-arizona">EpiHack Arizona</a>
+event hosted by the Ending Pandemics Academy and the University of Arizona
+Global Health Institute.</p>
+
+<h2 id="a-living-database-for-ending-pandemics">A living database for ending pandemics</h2>
+
+<p>This repository is an experiment in building a <strong>living knowledge graph
+for One Health surveillance</strong>. Three pieces of infrastructure do the
+heavy lifting:</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Layer</th>
+      <th>Role</th>
+      <th>What it lets us do</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong><a href="https://claude.com/product/claude-code">Claude Code</a></strong></td>
+      <td>Agentic authoring</td>
+      <td>Drafts the schema, runs parallel sub-agents to research AZ counties / tribes / pathogens / outbreaks / datasets / standards, keeps the prose docs in sync with the SQL seeds, and opens pull requests against this repo. Every commit message in <code class="language-plaintext highlighter-rouge">git log</code> describes a Claude-led change.</td>
+    </tr>
+    <tr>
+      <td><strong>GitHub</strong></td>
+      <td>Source of truth + review surface</td>
+      <td>Every change — new content, schema, MCP code, visualizations — lands as a pull request; humans review and merge. Versioned snapshots of upstream specs (e.g. <code class="language-plaintext highlighter-rouge">mcp/vectorsurv-mcp/openapi/</code>) make API drift a <code class="language-plaintext highlighter-rouge">git diff</code> away. The site itself is served via GitHub Pages with Jekyll.</td>
+    </tr>
+    <tr>
+      <td><strong><a href="https://ducklake.select/">DuckLake</a> (Postgres + <a href="https://duckdb.org/">DuckDB</a>)</strong></td>
+      <td>Queryable knowledge graph</td>
+      <td>A property-graph (<code class="language-plaintext highlighter-rouge">kg.node</code>, <code class="language-plaintext highlighter-rouge">kg.edge</code>, <code class="language-plaintext highlighter-rouge">kg.property</code>) seeded from version-controlled SQL; Postgres holds the DuckLake catalog (time-travel, branches, ACID), DuckDB is the query engine. Joins Parquet + Postgres + CSV in a single SQL statement; works on a laptop and at hack-day scale.</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>What makes it <em>living</em> rather than a static snapshot:</p>
+
+<ul>
+  <li><strong>New AZ data sources land via PR.</strong> A sub-agent does the research,
+drafts a <code class="language-plaintext highlighter-rouge">schema/deep/*.sql</code> seed, and opens a PR. Reviewers (humans
+or other agents) merge. The next <code class="language-plaintext highlighter-rouge">.read</code> rebuilds the graph.</li>
+  <li><strong>Upstream API drift is detected, not silently swallowed.</strong> The
+<code class="language-plaintext highlighter-rouge">mcp/vectorsurv-mcp/openapi/</code> directory holds versioned snapshots; a
+<code class="language-plaintext highlighter-rouge">git diff</code> between two snapshots is the changelog the MCP client
+reacts to.</li>
+  <li><strong>MCP servers stream live agency data into the same graph.</strong>
+The included <a href="./mcp/vectorsurv-mcp/"><code class="language-plaintext highlighter-rouge">vectorsurv-mcp</code></a> exposes the
+national mosquito- and tick-surveillance API as MCP tools (sites,
+collections, pools, vector-index calculations, human / equine
+arbovirus case counts). An LLM client can query VectorSurv and
+drop the results into the same DuckLake graph.</li>
+  <li><strong>The visualizations are knowledge-graph-aware.</strong> Every pin on the
+<a href="./map/">map</a> and every node in the
+<a href="./graph/">pathogen graph</a> carries a <code class="language-plaintext highlighter-rouge">kg_node_id</code> that round-trips
+to the SQL graph. Click a feature, get the canonical node back.</li>
+</ul>
+
+<h2 id="system-architecture">System architecture</h2>
+
+<p>Alongside the knowledge graph, the repo ships a working
+participatory-surveillance application. Four loosely-coupled components
+share one origin:</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Component</th>
+      <th>Stack</th>
+      <th>Role</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><a href="./app/"><code class="language-plaintext highlighter-rouge">app/</code></a></td>
+      <td>Next.js 16 + React 19 + TypeScript + Tailwind</td>
+      <td>Mobile-first anonymous reporting app (tick / heat / cool-off), typed against <code class="language-plaintext highlighter-rouge">api/openapi.yaml</code>. Static-exported to <code class="language-plaintext highlighter-rouge">/epihack-2026/app/</code>.</td>
+    </tr>
+    <tr>
+      <td><a href="./agents/"><code class="language-plaintext highlighter-rouge">agents/</code></a></td>
+      <td>Python 3.11 + FastAPI + Pydantic v2 + <code class="language-plaintext highlighter-rouge">anthropic</code> + <code class="language-plaintext highlighter-rouge">mcp</code></td>
+      <td>The HTTP backend + eight-agent orchestrator (Intake → Geo → Validation → Triage → Enrichment → Notification + Cluster + KnowledgeUpdate). Serves <code class="language-plaintext highlighter-rouge">api/openapi.yaml</code>.</td>
+    </tr>
+    <tr>
+      <td><a href="./mcp/"><code class="language-plaintext highlighter-rouge">mcp/</code></a></td>
+      <td>FastMCP + httpx + Pydantic v2</td>
+      <td><strong>Eleven</strong> MCP servers wrapping live (and, where no upstream API exists, mock) agency data sources.</td>
+    </tr>
+    <tr>
+      <td><a href="./dashboard/"><code class="language-plaintext highlighter-rouge">dashboard/</code></a>, <a href="./today/"><code class="language-plaintext highlighter-rouge">today/</code></a>, <a href="./map/"><code class="language-plaintext highlighter-rouge">map/</code></a>, <a href="./graph/"><code class="language-plaintext highlighter-rouge">graph/</code></a></td>
+      <td>Vanilla HTML + ES modules</td>
+      <td>Agency analyst workspace, public citizen view, and the two knowledge-graph viewers.</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3 id="two-stores-one-privacy-contract">Two stores, one privacy contract</h3>
+
+<p>As of <a href="/epihack-2026/plan/09-mobile-datastore.html"><code class="language-plaintext highlighter-rouge">plan/09</code></a> the write path is
+<strong>dual-sink</strong>: the <strong>mobile app persists to MongoDB</strong>, while the <strong>web
+build and all analytics stay on DuckLake</strong>. Both channels POST to the
+same <code class="language-plaintext highlighter-rouge">/v1/reports</code> endpoint and run the <em>same</em> privacy enforcement
+(coarsen location, strip/reject EXIF GPS, never-diagnose triage guard,
+SHA-256 audit digests) <strong>before</strong> the sink is chosen by an
+<code class="language-plaintext highlighter-rouge">X-Client-Channel</code> header — so the contract lives in one place
+(<code class="language-plaintext highlighter-rouge">agents/.../api/routes/reports.py</code>). Mobile documents are then replayed
+into DuckLake by a watermarked, idempotent <code class="language-plaintext highlighter-rouge">mongo_to_ducklake</code> sync, so
+the agents, MCP servers, and cluster detection all see one unified
+dataset.</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>  web build  ─┐                            ┌─► DuckLake  (kg_writer) ──────────────┐
+              ├─ POST /v1/reports · FastAPI ┤                                       ├─► knowledge graph
+  mobile app ─┘   + X-Client-Channel        └─► MongoDB (mongo_writer) ─ sync ──────┘   (agents · MCP ·
+                                                                                         cluster scan)
+   privacy enforcement (validate · coarsen · EXIF check · triage-guard · SHA-256 digests)
+   runs inside FastAPI BEFORE the sink is chosen — one contract for both channels
+</code></pre></div></div>
+
+<h2 id="site-roadmap">Site roadmap</h2>
+
+<p>Everything in this repository is also a page on the published site at
+<a href="https://tyson-swetnam.github.io/epihack-2026/">https://tyson-swetnam.github.io/epihack-2026/</a>.</p>
+
+<h3 id="reference-frameworks">Reference frameworks</h3>
+<ul>
+  <li><a href="/epihack-2026/index.html">Top-level landing page</a> — entry point with cards to every section.</li>
+  <li><a href="./figures/">Figures</a> — the four EpiHack reference posters plus the breakout-session worksheet, transcribed into structured Markdown with explicit RDF-style triples.</li>
+</ul>
+
+<h3 id="focus-groups">Focus groups</h3>
+<ul>
+  <li><a href="./wildlife/">Wildlife &amp; Vector-Borne Diseases</a> — four guiding questions, a 30+ resource catalog spanning state / county / tribal / federal / academic / citizen-science, plus a draft participatory-surveillance system design.</li>
+  <li><a href="./heat/">Heat</a> — four guiding questions, vulnerable populations, and a 30+ heat-resource catalog (ADHS, MAG HRN, Phoenix OHRM, UA Heat Resilience Initiative, NWS HeatRisk, 211 Arizona).</li>
+</ul>
+
+<h3 id="interactive-viewers">Interactive viewers</h3>
+<ul>
+  <li><a href="./map/">Map</a> — MapLibre GL map of Arizona surfacing the geospatial slice of the knowledge graph: 15 counties, 22 tribal nations, NEON Domain 14 sites, agency HQs by jurisdiction, federal-land units, and historical outbreak locations. Mobile-responsive with a collapsible panel.</li>
+  <li><a href="./graph/">Pathogen knowledge graph</a> — Cytoscape.js node-edge viewer for the 16 pathogens with their vectors, reservoirs, focus areas, and surveilling agencies. Color- and shape-coded; filter by pathogen class; switch layouts.</li>
+</ul>
+
+<h3 id="application-plan">Application plan</h3>
+<ul>
+  <li><a href="./plan/">AZ One Health Sentinel — plan</a> — the multi-document plan (<code class="language-plaintext highlighter-rouge">01</code>–<code class="language-plaintext highlighter-rouge">09</code> plus cluster-calibration, evaluation, and federation notes) for a mobile-first participatory-surveillance app spanning Vector-Borne Disease and Heat. Covers Figure 2 parameter mapping by vertical, the MCP integration topology, the eight-agent architecture, four worked end-to-end data flows, the <a href="/epihack-2026/plan/07-auth.html">auth model</a>, the <a href="/epihack-2026/plan/08-mobile-ux-revamp.html">mobile UX revamp</a>, the <a href="/epihack-2026/plan/09-mobile-datastore.html">dual MongoDB/DuckLake datastore</a>, and a phased roadmap tied to the <a href="/epihack-2026/figures/03-outbreak-timeliness-metrics.html">Figure 3 timeliness milestones</a>.</li>
+</ul>
+
+<h3 id="mcp-servers-live-data-ingestion-for-llms">MCP servers (live data ingestion for LLMs)</h3>
+<p>Eleven servers ship today; see <a href="/epihack-2026/mcp/README.html"><code class="language-plaintext highlighter-rouge">mcp/README.md</code></a> for the
+full index (tool tables, auth posture, test counts).</p>
+<ul>
+  <li><a href="./mcp/vectorsurv-mcp/"><code class="language-plaintext highlighter-rouge">vectorsurv-mcp</code></a> — VectorSurv national mosquito + tick surveillance API (spec v1.0.44). 13 tools.</li>
+  <li><a href="./mcp/knowledge-graph-mcp/"><code class="language-plaintext highlighter-rouge">knowledge-graph-mcp</code></a> — Read-only DuckDB query MCP over the kg (572 nodes / 791 edges / 1027 properties). 12 tools + SELECT-only SQL escape-hatch.</li>
+  <li><a href="./mcp/great-az-tick-check-mcp/"><code class="language-plaintext highlighter-rouge">great-az-tick-check-mcp</code></a> — Mock submission tracking for the UA Cooperative Extension tick program. 5 tools.</li>
+  <li><a href="./mcp/nws-heatrisk-mcp/"><code class="language-plaintext highlighter-rouge">nws-heatrisk-mcp</code></a> — NWS HeatRisk + alerts + heat-index. 7 tools.</li>
+  <li><a href="./mcp/mag-hrn-mcp/"><code class="language-plaintext highlighter-rouge">mag-hrn-mcp</code></a> — MAG Heat Relief Network cooling-center search. 5 tools.</li>
+  <li><a href="./mcp/adhs-mcp/"><code class="language-plaintext highlighter-rouge">adhs-mcp</code></a> — ADHS public surveillance summaries (heat mortality, arbovirus, reportable conditions). 6 tools.</li>
+  <li><a href="./mcp/211-az-mcp/"><code class="language-plaintext highlighter-rouge">211-az-mcp</code></a> — 211 Arizona referrals + transport dispatch. 6 tools.</li>
+  <li><a href="./mcp/whispers-mcp/"><code class="language-plaintext highlighter-rouge">whispers-mcp</code></a> — USGS WHISPers wildlife mortality events. 6 tools.</li>
+  <li><a href="./mcp/inaturalist-mcp/"><code class="language-plaintext highlighter-rouge">inaturalist-mcp</code></a> — iNaturalist citizen-science observations. 6 tools.</li>
+  <li><a href="./mcp/sms-entry-mcp/"><code class="language-plaintext highlighter-rouge">sms-entry-mcp</code></a> — SMS-only intake adapter; Twilio HMAC-SHA1 signature check, normalisation, intent parsing. 6 tools.</li>
+  <li><a href="./mcp/wearable-mcp/"><code class="language-plaintext highlighter-rouge">wearable-mcp</code></a> — HealthKit / Health Connect readings (skin temp, HRV, sweat rate, heart rate); on-device-only posture, mock-by-default. 4 tools.</li>
+</ul>
+
+<h3 id="reporting-app--backend">Reporting app + backend</h3>
+<ul>
+  <li><a href="./app/"><code class="language-plaintext highlighter-rouge">app/</code></a> — Mobile-first reporting app: <strong>Next.js 16 + React 19 + TypeScript + Tailwind</strong>, typed against <code class="language-plaintext highlighter-rouge">api/openapi.yaml</code>. Anonymous Human / Animal / Environmental flows (tick mail-in, heat check-in, anonymous heat self-report, “where can I cool off?”), client-side EXIF strip + ZIP / 1 km coarsening, a localStorage offline retry queue, and an <code class="language-plaintext highlighter-rouge">X-Client-Channel</code> header that routes the write to MongoDB (mobile) or DuckLake (web). The original vanilla-HTML flows live on as a read-only archive at <a href="./app/legacy/"><code class="language-plaintext highlighter-rouge">app/legacy/</code></a>.</li>
+  <li><a href="./agents/"><code class="language-plaintext highlighter-rouge">agents/</code></a> — The FastAPI backend + 8-agent pipeline (Intake → Geo-Enrichment → Validation → Triage → Enrichment → Notification → Cluster Detection → Knowledge Update). Two write sinks (<code class="language-plaintext highlighter-rouge">kg_writer</code> → DuckLake, <code class="language-plaintext highlighter-rouge">mongo_writer</code> → MongoDB) behind one privacy-enforcing endpoint, plus the <code class="language-plaintext highlighter-rouge">mongo_to_ducklake</code> sync. Offline test suite; Scenarios A and C run end-to-end against shipped MCP-tool names.</li>
+  <li>See <a href="/epihack-2026/plan/EXECUTION-STATUS.html"><code class="language-plaintext highlighter-rouge">plan/EXECUTION-STATUS.md</code></a>, <a href="/epihack-2026/plan/EXECUTION-STATUS-PHASE-1-2.html"><code class="language-plaintext highlighter-rouge">plan/EXECUTION-STATUS-PHASE-1-2.md</code></a>, and <a href="/epihack-2026/plan/EXECUTION-STATUS-PHASE-4.html"><code class="language-plaintext highlighter-rouge">plan/EXECUTION-STATUS-PHASE-4.md</code></a> for the verification matrix.</li>
+</ul>
+
+<h3 id="public-dashboard-phase-3">Public dashboard (Phase 3)</h3>
+<ul>
+  <li><a href="./today/"><code class="language-plaintext highlighter-rouge">today/</code></a> — <em>AZ One Health Today</em>: a citizen-facing aggregated view (today’s HeatRisk, WNV pool positivity, recent wildlife signals, and a five-number statewide snapshot). Auto-detects county, no login, no PII — renders only pre-aggregated kg fields.</li>
+</ul>
+
+<h3 id="agency-dashboard-phase-3">Agency dashboard (Phase 3)</h3>
+<ul>
+  <li><a href="./dashboard/"><code class="language-plaintext highlighter-rouge">dashboard/</code></a> — Read-only analyst workspace for ADHS Vector-Borne &amp; Zoonotic Diseases, Maricopa County DPH Heat Surveillance, AZ Game &amp; Fish Wildlife Health Program, and Coconino HHS. Four-audience landing pages, status cards, Cluster Detection Agent feed, lazy-loaded MapLibre embed, sparkline case-count tables, and a SQL preview that round-trips to <code class="language-plaintext highlighter-rouge">knowledge-graph-mcp</code>. Implements Scenario D from <a href="/epihack-2026/plan/04-data-flows.html"><code class="language-plaintext highlighter-rouge">plan/04-data-flows.md</code></a>.</li>
+</ul>
+
+<h3 id="knowledge-graph-sql">Knowledge-graph SQL</h3>
+<ul>
+  <li><a href="./schema/"><code class="language-plaintext highlighter-rouge">schema/</code></a> — core graph (frameworks) plus worksheet template, focus areas, designs, World Café cards, and the two focus-group seeds.</li>
+  <li><a href="./schema/deep/"><code class="language-plaintext highlighter-rouge">schema/deep/</code></a> — sub-agent deep-research seeds: all 15 AZ counties, all 22 federally recognized AZ tribes, pathogens (with vectors / reservoirs / ICD-10), historical AZ outbreaks (with Figure 3 milestone dates), datasets &amp; APIs (NEON DPs, WHISPers, NWS, GBIF, iNat), interop standards (FHIR, OMOP, ICD-10, Darwin Core), MCP servers.</li>
+</ul>
+
+<h3 id="breakout-artifacts">Breakout artifacts</h3>
+<ul>
+  <li><a href="./worksheets/">Worksheets</a> — completed design worksheets from EpiHack breakouts.</li>
+  <li><a href="./notes/world-cafe/">World Café notes</a> — Q4 cards transcribed from Heat, Unhoused, and Information Flow breakouts.</li>
+</ul>
+
+<h2 id="contents">Contents</h2>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>README.md       Project overview (this file)
+index.html      Top-level site landing page (linked from GitHub Pages)
+CLAUDE.md       Repo guide for Claude Code / contributors
+api/
+  └── openapi.yaml   Source of truth for the app ⇄ backend HTTP contract
+
+app/            Next.js 16 + React 19 + TypeScript + Tailwind reporting app
+  ├── src/app/         -- routes: home, report/[type], account, profile, sign-in, auth
+  ├── src/lib/         -- api-client, coarse-geo, exif-stripper, offline-queue,
+  │                       api-types.ts (generated from openapi.yaml — do not hand-edit)
+  ├── src/components/  -- ReportFlow, AppShell, OfflineFlusher, ProfileForm
+  └── legacy/          -- original vanilla-HTML flows (read-only archive)
+
+agents/         FastAPI backend + 8-agent orchestrator (Python 3.11)
+  └── src/onehealth_agents/
+      ├── api/             -- FastAPI app + routes (reports, profile, auth, context)
+      ├── orchestrator.py  -- runs the 8 agents below
+      ├── intake.py geo.py validation.py triage.py enrichment.py
+      │                       notification.py cluster.py update.py   -- the 8 agents
+      ├── kg_writer.py     -- DuckLake sink (web channel)
+      ├── mongo_writer.py  -- MongoDB sink (mobile channel)
+      ├── sync/            -- mongo_to_ducklake watermarked, idempotent ETL
+      └── mcp_client.py audit.py contracts.py ...
+
+mcp/            Eleven MCP servers, one uv workspace each -- see mcp/README.md
+  ├── vectorsurv-mcp/ knowledge-graph-mcp/ great-az-tick-check-mcp/
+  ├── nws-heatrisk-mcp/ mag-hrn-mcp/ adhs-mcp/ 211-az-mcp/
+  └── whispers-mcp/ inaturalist-mcp/ sms-entry-mcp/ wearable-mcp/
+
+map/            MapLibre GL map of AZ (counties, tribes, NEON sites, agency
+                HQs, federal lands, outbreaks); each pin carries a kg_node_id.
+graph/          Cytoscape.js pathogen knowledge graph (16 pathogens).
+dashboard/      Phase-3 agency-side read-only analyst workspace
+                (ADHS / MCDPH / AZGFD / Coconino).
+today/          Phase-3 public citizen-facing aggregated view (no login, no PII).
+figures/        Structured transcriptions of the five EpiHack reference figures.
+wildlife/ heat/ Focus-group materials (4 questions + 30+ resource catalogs each).
+worksheets/     Completed design worksheets from EpiHack breakouts.
+notes/world-cafe/  World Café Q4 breakout cards (heat, unhoused, info-flow).
+evaluation/     Cluster-detector evaluation harness + 2024 baseline.
+
+schema/         Knowledge-graph SQL (property graph: kg.node / edge / property)
+  ├── knowledge_graph.sql  -- core graph (frameworks)
+  ├── system_designs.sql world_cafe.sql wildlife_vectors.sql heat.sql
+  └── deep/                -- parallel sub-agent deep-research seeds
+      ├── standards.sql        -- FHIR/OMOP/ICD-10/Darwin Core (load FIRST)
+      ├── pathogens.sql        -- vectors / reservoirs / ICD-10 (load SECOND)
+      ├── counties.sql tribes.sql outbreaks.sql datasets_apis.sql
+      ├── application.sql followups.sql audit.sql
+      └── cluster_followups.sql outbreaks_near_me.sql mcp_servers.sql
+
+ansible/        One-command VM deploy (Postgres + DuckLake, self-hosted
+                MongoDB + sync timer, MCP servers, FastAPI, app, nginx).
+deploy/         VM sizing, DNS, and the operations runbook.
+plan/           01–09 plan docs + cluster-calibration / evaluation / status.
+</code></pre></div></div>
+
+<p>The Markdown files use YAML frontmatter and explicit <code class="language-plaintext highlighter-rouge">subject | predicate |
+object</code> tables so they can be parsed directly into the knowledge-graph
+tables defined in <code class="language-plaintext highlighter-rouge">schema/knowledge_graph.sql</code>.</p>
+
+<h2 id="knowledge-framework-ducklake--duckdb--postgres">Knowledge framework: DuckLake + DuckDB + Postgres</h2>
+
+<p>The figures encode three reusable conceptual frameworks that we want to
+operationalize as a queryable knowledge graph:</p>
+
+<ol>
+  <li><strong>Figure 1</strong> — the <em>purpose</em> of a One Health participatory system.</li>
+  <li><strong>Figure 2</strong> — the <em>minimum key data parameters</em> (a typed data
+dictionary across General / Human / Severity / Exposure / Auxiliary /
+Environmental / Livestock / Wildlife).</li>
+  <li><strong>Figure 3</strong> — the <em>outbreak timeliness milestones</em> used to compute
+inter-milestone intervals.</li>
+  <li><strong>Figure 4</strong> — the <em>12-step lifecycle</em> for designing and launching
+participatory surveillance.</li>
+</ol>
+
+<p>These are all relational by nature (parameters belong to categories,
+milestones precede milestones, steps precede steps, sectors emit signals)
+which is why a property-graph encoding is a natural fit.</p>
+
+<h2 id="focus-groups-1">Focus groups</h2>
+
+<p>EpiHack Arizona 2026 broke participants into focus groups, each chartered
+to apply the frameworks above to a concrete domain. This repository covers
+two:</p>
+
+<ol>
+  <li><strong><a href="./wildlife/">Wildlife &amp; Vector-Borne Diseases</a></strong> — four
+guiding questions on how Arizona tracks wildlife and vector density;
+how zoonotic infections are monitored in wildlife and vectors; what
+technologies could improve surveillance; and how participatory
+surveillance can better track wildlife disease. Anchored on <strong>NEON</strong>,
+<strong>ADHS</strong>, <strong>AZGFD</strong>, the <strong>Great Arizona Tick Check</strong>, USGS WHISPers,
+USDA APHIS, USFWS, the 22 AZ tribal nations, and 15 county vector
+programs.</li>
+  <li><strong><a href="./heat/">Heat</a></strong> — four guiding questions on how the public
+is informed about cooling-center locations; whether centers share
+resources in real time; what severe-heat education is provided; and
+who is most vulnerable to heat in Arizona. Anchored on the
+<strong>ADHS Heat Preparedness Network</strong>, the <strong>MAG Heat Relief Network</strong>
+at hrn.azmag.gov, the <strong>Phoenix Office of Heat Response and Mitigation</strong>,
+the <strong>UA Heat Resilience Initiative</strong> (which umbrellas SW-IFL, NIHHIS,
+CLIMAS, BRACE, and SCORCH), NWS HeatRisk, and <strong>211 Arizona</strong>.</li>
+</ol>
+
+<h3 id="why-ducklake--duckdb--postgres">Why DuckLake + DuckDB + Postgres</h3>
+
+<table>
+  <thead>
+    <tr>
+      <th>Layer</th>
+      <th>Role</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Postgres</strong></td>
+      <td>DuckLake catalog: snapshot metadata, schema evolution, ACID transactions over the lakehouse.</td>
+    </tr>
+    <tr>
+      <td><strong>DuckLake</strong></td>
+      <td>Open lakehouse format on top of Parquet, catalog in Postgres. Gives us time travel, branches, and multi-writer concurrency without standing up Iceberg/Hudi infrastructure.</td>
+    </tr>
+    <tr>
+      <td><strong>DuckDB</strong></td>
+      <td>Embedded query engine. Reads/writes DuckLake natively; can join Parquet, Postgres, and CSV in a single SQL statement; works on a laptop and at hack-day scale.</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>DuckLake is the <strong>web + analytics store</strong>; the mobile app writes to
+<strong>MongoDB</strong>, which is synced back into DuckLake so the agents, MCP
+servers, and cluster detection see one dataset (see
+<a href="#system-architecture">System architecture</a>). The bootstrap below builds
+the DuckLake side.</p>
+
+<h3 id="bootstrap">Bootstrap</h3>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># 1. Postgres for the DuckLake catalog</span>
+createdb epihack
+
+<span class="c"># 2. DuckDB session</span>
+duckdb
+</code></pre></div></div>
+
+<div class="language-sql highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">-- Inside DuckDB:</span>
+<span class="n">INSTALL</span> <span class="n">ducklake</span><span class="p">;</span>  <span class="n">INSTALL</span> <span class="n">postgres</span><span class="p">;</span>
+<span class="k">LOAD</span>    <span class="n">ducklake</span><span class="p">;</span>  <span class="k">LOAD</span>    <span class="n">postgres</span><span class="p">;</span>
+
+<span class="n">ATTACH</span> <span class="s1">'ducklake:postgres:dbname=epihack host=localhost user=epihack'</span>
+  <span class="k">AS</span> <span class="n">epihack</span>
+  <span class="p">(</span><span class="n">DATA_PATH</span> <span class="s1">'s3://epihack/ducklake/'</span><span class="p">);</span>     <span class="c1">-- or a local path for laptop dev</span>
+
+<span class="n">USE</span> <span class="n">epihack</span><span class="p">;</span>
+<span class="p">.</span><span class="k">read</span> <span class="k">schema</span><span class="o">/</span><span class="n">knowledge_graph</span><span class="p">.</span><span class="k">sql</span>
+<span class="p">.</span><span class="k">read</span> <span class="k">schema</span><span class="o">/</span><span class="n">system_designs</span><span class="p">.</span><span class="k">sql</span>
+<span class="p">.</span><span class="k">read</span> <span class="k">schema</span><span class="o">/</span><span class="n">world_cafe</span><span class="p">.</span><span class="k">sql</span>
+<span class="p">.</span><span class="k">read</span> <span class="k">schema</span><span class="o">/</span><span class="n">wildlife_vectors</span><span class="p">.</span><span class="k">sql</span>   <span class="c1">-- focus group 1</span>
+<span class="p">.</span><span class="k">read</span> <span class="k">schema</span><span class="o">/</span><span class="n">heat</span><span class="p">.</span><span class="k">sql</span>               <span class="c1">-- focus group 2</span>
+<span class="p">.</span><span class="k">read</span> <span class="k">schema</span><span class="o">/</span><span class="n">deep</span><span class="o">/</span><span class="n">standards</span><span class="p">.</span><span class="k">sql</span>     <span class="c1">-- must load first  (SNOMED / ICD-10 FKs)</span>
+<span class="p">.</span><span class="k">read</span> <span class="k">schema</span><span class="o">/</span><span class="n">deep</span><span class="o">/</span><span class="n">pathogens</span><span class="p">.</span><span class="k">sql</span>     <span class="c1">-- must load second (pathogen FKs)</span>
+<span class="p">.</span><span class="k">read</span> <span class="k">schema</span><span class="o">/</span><span class="n">deep</span><span class="o">/</span><span class="n">counties</span><span class="p">.</span><span class="k">sql</span>
+<span class="p">.</span><span class="k">read</span> <span class="k">schema</span><span class="o">/</span><span class="n">deep</span><span class="o">/</span><span class="n">tribes</span><span class="p">.</span><span class="k">sql</span>
+<span class="p">.</span><span class="k">read</span> <span class="k">schema</span><span class="o">/</span><span class="n">deep</span><span class="o">/</span><span class="n">outbreaks</span><span class="p">.</span><span class="k">sql</span>
+<span class="p">.</span><span class="k">read</span> <span class="k">schema</span><span class="o">/</span><span class="n">deep</span><span class="o">/</span><span class="n">datasets_apis</span><span class="p">.</span><span class="k">sql</span>
+<span class="p">.</span><span class="k">read</span> <span class="k">schema</span><span class="o">/</span><span class="n">deep</span><span class="o">/</span><span class="n">application</span><span class="p">.</span><span class="k">sql</span>
+<span class="p">.</span><span class="k">read</span> <span class="k">schema</span><span class="o">/</span><span class="n">deep</span><span class="o">/</span><span class="n">followups</span><span class="p">.</span><span class="k">sql</span>
+</code></pre></div></div>
+
+<p>After loading, the graph is queryable in plain SQL. Examples:</p>
+
+<div class="language-sql highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">-- All parameters in the Exposure class</span>
+<span class="k">SELECT</span> <span class="n">n</span><span class="p">.</span><span class="n">label</span>
+<span class="k">FROM</span>   <span class="n">kg</span><span class="p">.</span><span class="n">edge</span> <span class="n">e</span>
+<span class="k">JOIN</span>   <span class="n">kg</span><span class="p">.</span><span class="n">node</span> <span class="n">n</span> <span class="k">ON</span> <span class="n">n</span><span class="p">.</span><span class="n">node_id</span> <span class="o">=</span> <span class="n">e</span><span class="p">.</span><span class="n">subject_id</span>
+<span class="k">WHERE</span>  <span class="n">e</span><span class="p">.</span><span class="n">predicate</span> <span class="o">=</span> <span class="s1">'belongsTo'</span>
+  <span class="k">AND</span>  <span class="n">e</span><span class="p">.</span><span class="n">object_id</span> <span class="o">=</span> <span class="s1">'category.exposure'</span><span class="p">;</span>
+
+<span class="c1">-- Milestone ordering for timeliness metrics</span>
+<span class="k">SELECT</span> <span class="n">n</span><span class="p">.</span><span class="n">label</span><span class="p">,</span> <span class="n">p</span><span class="p">.</span><span class="n">value_num</span> <span class="k">AS</span> <span class="n">ordinal</span>
+<span class="k">FROM</span>   <span class="n">kg</span><span class="p">.</span><span class="n">node</span> <span class="n">n</span>
+<span class="k">JOIN</span>   <span class="n">kg</span><span class="p">.</span><span class="n">property</span> <span class="n">p</span> <span class="k">ON</span> <span class="n">p</span><span class="p">.</span><span class="n">node_id</span> <span class="o">=</span> <span class="n">n</span><span class="p">.</span><span class="n">node_id</span> <span class="k">AND</span> <span class="n">p</span><span class="p">.</span><span class="k">key</span> <span class="o">=</span> <span class="s1">'ordinal'</span>
+<span class="k">WHERE</span>  <span class="n">n</span><span class="p">.</span><span class="n">node_type</span> <span class="o">=</span> <span class="s1">'milestone'</span>
+<span class="k">ORDER</span>  <span class="k">BY</span> <span class="n">p</span><span class="p">.</span><span class="n">value_num</span><span class="p">;</span>
+
+<span class="c1">-- Wide summary of completed system designs</span>
+<span class="k">SELECT</span> <span class="o">*</span> <span class="k">FROM</span> <span class="n">kg</span><span class="p">.</span><span class="n">v_design_summary</span><span class="p">;</span>
+
+<span class="c1">-- Which focus areas does each design target?</span>
+<span class="k">SELECT</span> <span class="n">d</span><span class="p">.</span><span class="n">label</span> <span class="k">AS</span> <span class="n">design</span><span class="p">,</span> <span class="n">f</span><span class="p">.</span><span class="n">label</span> <span class="k">AS</span> <span class="n">focus_area</span>
+<span class="k">FROM</span>   <span class="n">kg</span><span class="p">.</span><span class="n">edge</span> <span class="n">e</span>
+<span class="k">JOIN</span>   <span class="n">kg</span><span class="p">.</span><span class="n">node</span> <span class="n">d</span> <span class="k">ON</span> <span class="n">d</span><span class="p">.</span><span class="n">node_id</span> <span class="o">=</span> <span class="n">e</span><span class="p">.</span><span class="n">subject_id</span>
+<span class="k">JOIN</span>   <span class="n">kg</span><span class="p">.</span><span class="n">node</span> <span class="n">f</span> <span class="k">ON</span> <span class="n">f</span><span class="p">.</span><span class="n">node_id</span> <span class="o">=</span> <span class="n">e</span><span class="p">.</span><span class="n">object_id</span>
+<span class="k">WHERE</span>  <span class="n">e</span><span class="p">.</span><span class="n">predicate</span> <span class="o">=</span> <span class="s1">'targetsFocusArea'</span>
+<span class="k">ORDER</span>  <span class="k">BY</span> <span class="n">design</span><span class="p">,</span> <span class="n">focus_area</span><span class="p">;</span>
+
+<span class="c1">-- All World Café Q4 engagement tactics, grouped by card</span>
+<span class="k">SELECT</span> <span class="o">*</span> <span class="k">FROM</span> <span class="n">kg</span><span class="p">.</span><span class="n">v_engagement_tactics</span> <span class="k">ORDER</span> <span class="k">BY</span> <span class="n">card</span><span class="p">,</span> <span class="n">tactic</span><span class="p">;</span>
+
+<span class="c1">-- Lifecycle chain via recursive CTE</span>
+<span class="k">WITH</span> <span class="k">RECURSIVE</span> <span class="k">chain</span> <span class="k">AS</span> <span class="p">(</span>
+  <span class="k">SELECT</span> <span class="n">subject_id</span><span class="p">,</span> <span class="n">object_id</span><span class="p">,</span> <span class="mi">1</span> <span class="k">AS</span> <span class="n">depth</span>
+  <span class="k">FROM</span>   <span class="n">kg</span><span class="p">.</span><span class="n">edge</span>
+  <span class="k">WHERE</span>  <span class="n">predicate</span> <span class="o">=</span> <span class="s1">'precedes'</span> <span class="k">AND</span> <span class="n">subject_id</span> <span class="o">=</span> <span class="s1">'step.01_assess_needs'</span>
+  <span class="k">UNION</span> <span class="k">ALL</span>
+  <span class="k">SELECT</span> <span class="n">e</span><span class="p">.</span><span class="n">subject_id</span><span class="p">,</span> <span class="n">e</span><span class="p">.</span><span class="n">object_id</span><span class="p">,</span> <span class="k">c</span><span class="p">.</span><span class="n">depth</span> <span class="o">+</span> <span class="mi">1</span>
+  <span class="k">FROM</span>   <span class="n">kg</span><span class="p">.</span><span class="n">edge</span> <span class="n">e</span>
+  <span class="k">JOIN</span>   <span class="k">chain</span> <span class="k">c</span> <span class="k">ON</span> <span class="n">e</span><span class="p">.</span><span class="n">subject_id</span> <span class="o">=</span> <span class="k">c</span><span class="p">.</span><span class="n">object_id</span>
+  <span class="k">WHERE</span>  <span class="n">e</span><span class="p">.</span><span class="n">predicate</span> <span class="o">=</span> <span class="s1">'precedes'</span>
+<span class="p">)</span>
+<span class="k">SELECT</span> <span class="o">*</span> <span class="k">FROM</span> <span class="k">chain</span><span class="p">;</span>
+</code></pre></div></div>
+
+<h3 id="next-steps-for-the-epihack-build">Next steps for the EpiHack build</h3>
+
+<ul class="task-list">
+  <li class="task-list-item"><input type="checkbox" class="task-list-item-checkbox" disabled="disabled" />Wire incoming participatory-surveillance reports into a <code class="language-plaintext highlighter-rouge">report</code> fact
+    table whose columns are the parameters from Figure 2.</li>
+  <li class="task-list-item"><input type="checkbox" class="task-list-item-checkbox" disabled="disabled" />Compute timeliness intervals (Figure 3) as a <code class="language-plaintext highlighter-rouge">metric</code> view between
+    milestone-date columns on the <code class="language-plaintext highlighter-rouge">outbreak</code> table.</li>
+  <li class="task-list-item"><input type="checkbox" class="task-list-item-checkbox" disabled="disabled" />Expose the graph as a GraphQL or Cypher-style API for the hackathon
+    teams — DuckDB’s recursive CTEs handle the path queries.</li>
+  <li class="task-list-item"><input type="checkbox" class="task-list-item-checkbox" disabled="disabled" />Track the lifecycle (Figure 4) as project state for each pilot
+    community deployment.</li>
+</ul>
+
+<h2 id="self-hosting-on-a-vm">Self-hosting on a VM</h2>
+
+<p>Spinning up your own instance? <a href="/epihack-2026/deploy/README.html"><code class="language-plaintext highlighter-rouge">deploy/README.md</code></a>
+walks through VM sizing, DNS, and the operations runbook;
+<a href="./ansible/"><code class="language-plaintext highlighter-rouge">ansible/</code></a> is a one-command Ansible playbook that takes
+a fresh Ubuntu 24.04 VM from <code class="language-plaintext highlighter-rouge">apt update</code> to a running deployment of
+Claude Code, every MCP server in <a href="./mcp/"><code class="language-plaintext highlighter-rouge">mcp/</code></a>, the FastAPI backend,
+the Next.js reporting app, Postgres for the DuckLake catalog,
+self-hosted MongoDB for the mobile write-path (bound to <code class="language-plaintext highlighter-rouge">127.0.0.1</code>,
+auth enabled) with its <code class="language-plaintext highlighter-rouge">mongo_to_ducklake</code> sync timer, and nginx with
+optional Let’s Encrypt TLS.</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">cd </span>ansible
+<span class="nb">cp </span>inventory.example.yml inventory.yml          <span class="c"># edit ansible_host</span>
+<span class="nb">cp </span>group_vars/all.vault.example.yml group_vars/all.vault.yml
+ansible-vault encrypt group_vars/all.vault.yml  <span class="c"># fill in secrets first</span>
+ansible-galaxy <span class="nb">install</span> <span class="nt">-r</span> requirements.yml
+ansible-playbook <span class="nt">-i</span> inventory.yml playbook.yml <span class="nt">--ask-vault-pass</span>
+</code></pre></div></div>
+
+<h2 id="contributing--governance">Contributing + governance</h2>
+
+<p>The repository is now stewarded by a standing review board (ADHS,
+AZGFD, ITCA-TEC, Maricopa Vector Control) per the cross-cutting
+governance track in <a href="/epihack-2026/plan/05-roadmap.html"><code class="language-plaintext highlighter-rouge">plan/05-roadmap.md</code></a>.
+Contributions are welcome through pull requests; the six documents
+below describe the conventions, the review structure, the security
+posture, and the version history.</p>
+
+<ul>
+  <li><a href="/epihack-2026/CONTRIBUTING.html"><code class="language-plaintext highlighter-rouge">CONTRIBUTING.md</code></a> — local environment
+setup, PR workflow, MCP-server and schema-seed templates, coding
+style, and the privacy + data-sovereignty checklist every PR
+touching observation data must pass.</li>
+  <li><a href="/epihack-2026/GOVERNANCE.html"><code class="language-plaintext highlighter-rouge">GOVERNANCE.md</code></a> — standing review board
+membership, proposal-then-merge cadence, tribal-partner veto,
+opt-in posture for tribal data, conflict-of-interest disclosure,
+and sunset clauses for MCP servers that proxy tribal data.</li>
+  <li><a href="/epihack-2026/SECURITY.html"><code class="language-plaintext highlighter-rouge">SECURITY.md</code></a> — private-disclosure channel,
+the five-class threat model
+(re-identification / credential leakage / token reuse /
+prompt-injection / cluster-detection false positives), mitigations
+in place, and an itemised list of known security gaps.</li>
+  <li><a href="/epihack-2026/CHANGELOG.html"><code class="language-plaintext highlighter-rouge">CHANGELOG.md</code></a> — per-phase rollup of what
+landed and when (PRs #1 through #8), plus the “Next” backlog from
+<a href="/epihack-2026/plan/EXECUTION-STATUS-PHASE-1-2.html"><code class="language-plaintext highlighter-rouge">plan/EXECUTION-STATUS-PHASE-1-2.md</code></a>
+and <a href="/epihack-2026/plan/CLUSTER-CALIBRATION.html"><code class="language-plaintext highlighter-rouge">plan/CLUSTER-CALIBRATION.md</code></a>.</li>
+  <li><a href="/epihack-2026/mcp/README.html"><code class="language-plaintext highlighter-rouge">mcp/README.md</code></a> — index of all 11 MCP
+servers with tool counts, auth posture, and test counts, plus the
+recipe for adding a new MCP server.</li>
+  <li><a href="/epihack-2026/NOTICE"><code class="language-plaintext highlighter-rouge">NOTICE</code></a> — third-party attribution for runtime
+dependencies (MapLibre, Cytoscape, FastMCP / <code class="language-plaintext highlighter-rouge">mcp</code> SDK, pydantic,
+httpx, DuckDB / DuckLake), data sources surfaced via MCP, and
+upstream-spec snapshots.</li>
+</ul>
+
+<h2 id="license">License</h2>
+
+<p>See <a href="./LICENSE">LICENSE</a>.</p>
+
+
+  <footer>
+    Source: Ending Pandemics Academy &middot; University of Arizona Mel &amp;
+    Enid Zuckerman College of Public Health &middot; Global Health Institute.
+  </footer>
+</body>
+</html>

@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>MCP servers — index</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      max-width: 1100px;
+      margin: 2rem auto;
+      padding: 0 1.25rem;
+      color: #1a1a1a;
+      line-height: 1.55;
+    }
+    nav.crumbs { font-size: .9rem; color: #555; margin-bottom: 1rem; }
+    nav.crumbs a { color: #1F3A93; text-decoration: none; }
+    h1 { border-bottom: 3px solid #1F3A93; padding-bottom: .35rem; }
+    h2 { margin-top: 2.25rem; color: #1F3A93; }
+    h3 { margin-top: 1.25rem; }
+    table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: .95rem; }
+    th, td { border: 1px solid #ddd; padding: .5rem .75rem; text-align: left; vertical-align: top; }
+    th { background: #f0f3f8; }
+    blockquote {
+      border-left: 4px solid #1F3A93;
+      background: #f4f6fb;
+      margin: 1rem 0;
+      padding: .75rem 1rem;
+    }
+    code { background: #f1f3f7; padding: 1px 5px; border-radius: 3px; font-size: .9em; }
+    pre code { display: block; padding: .75rem 1rem; overflow-x: auto; }
+    footer { margin-top: 4rem; padding-top: 1rem; border-top: 1px solid #ddd; color: #666; font-size: .85rem; }
+    a { color: #1F3A93; }
+  </style>
+</head>
+<body>
+  <nav class="crumbs">
+    <a href="/epihack-2026/">EpiHack AZ 2026</a>
+  </nav>
+
+  <h1 id="mcp-servers">MCP servers</h1>
+
+<p>This directory holds the family of Model Context Protocol servers
+that the EpiHack Arizona 2026 stack uses to stream live (and, where
+upstream APIs are absent, mock) agency data into an LLM client like
+Claude Desktop or Claude Code, or into the agent pipeline under
+<a href="../agents/"><code class="language-plaintext highlighter-rouge">agents/</code></a>.</p>
+
+<p>Eleven servers ship today. Every server follows the same shape:</p>
+
+<ul>
+  <li>A <code class="language-plaintext highlighter-rouge">src/&lt;package&gt;/server.py</code> exposing a <a href="https://gofastmcp.com/">FastMCP</a>
+<code class="language-plaintext highlighter-rouge">mcp</code> instance with <code class="language-plaintext highlighter-rouge">@mcp.tool</code> decorated handlers.</li>
+  <li>A <code class="language-plaintext highlighter-rouge">src/&lt;package&gt;/client.py</code> that wraps the upstream HTTP API
+(or a canned-data fallback) with <code class="language-plaintext highlighter-rouge">httpx</code> + pydantic v2.</li>
+  <li>A per-package <code class="language-plaintext highlighter-rouge">pyproject.toml</code> you can <code class="language-plaintext highlighter-rouge">uv sync</code> independently.</li>
+  <li>A <code class="language-plaintext highlighter-rouge">README.md</code> documenting the tool table, env-var configuration,
+and the upstream’s auth posture.</li>
+  <li>A <code class="language-plaintext highlighter-rouge">tests/</code> directory that runs offline (<code class="language-plaintext highlighter-rouge">uv run pytest</code>).</li>
+</ul>
+
+<h2 id="index">Index</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>Server</th>
+      <th>Description</th>
+      <th style="text-align: right">Tools</th>
+      <th>Auth posture</th>
+      <th style="text-align: right">Tests</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><a href="./vectorsurv-mcp/"><code class="language-plaintext highlighter-rouge">vectorsurv-mcp/</code></a></td>
+      <td>VectorSurv national mosquito + tick surveillance API; pools, collections, agency-region intersects, vector-index math, case counts</td>
+      <td style="text-align: right">13</td>
+      <td>Username + password → bearer (<code class="language-plaintext highlighter-rouge">VECTORSURV_USERNAME</code>, <code class="language-plaintext highlighter-rouge">VECTORSURV_PASSWORD</code>) with auto-refresh</td>
+      <td style="text-align: right">6</td>
+    </tr>
+    <tr>
+      <td><a href="./knowledge-graph-mcp/"><code class="language-plaintext highlighter-rouge">knowledge-graph-mcp/</code></a></td>
+      <td>Read-only DuckDB query MCP over the EpiHack DuckLake kg (572 nodes / 791 edges / 1027 properties); regions-at-point, pathogen-by-vector, outbreak check, SELECT-only SQL escape hatch</td>
+      <td style="text-align: right">12</td>
+      <td>None — local DuckLake catalog via env path (<code class="language-plaintext highlighter-rouge">KG_DUCKDB_PATH</code>); SELECT-only SQL parser blocks all writes</td>
+      <td style="text-align: right">22</td>
+    </tr>
+    <tr>
+      <td><a href="./great-az-tick-check-mcp/"><code class="language-plaintext highlighter-rouge">great-az-tick-check-mcp/</code></a></td>
+      <td>UA Cooperative Extension Great AZ Tick Check mail-in submission tracking + species feedback (mock backend by default)</td>
+      <td style="text-align: right">5</td>
+      <td>Optional <code class="language-plaintext highlighter-rouge">GATTC_API_TOKEN</code> for a future real backend; defaults to mock-mode (no auth)</td>
+      <td style="text-align: right">10</td>
+    </tr>
+    <tr>
+      <td><a href="./nws-heatrisk-mcp/"><code class="language-plaintext highlighter-rouge">nws-heatrisk-mcp/</code></a></td>
+      <td>NWS public API + WPC HeatRisk gridded product; current conditions, forecast, active alerts, heat-index calculation</td>
+      <td style="text-align: right">7</td>
+      <td>None — public API; requires a polite <code class="language-plaintext highlighter-rouge">NWS_USER_AGENT</code> per NOAA guidance</td>
+      <td style="text-align: right">17</td>
+    </tr>
+    <tr>
+      <td><a href="./mag-hrn-mcp/"><code class="language-plaintext highlighter-rouge">mag-hrn-mcp/</code></a></td>
+      <td>MAG Heat Relief Network cooling / hydration / respite / donation centers across Phoenix metro (May 1 – Sep 30); supply status tool is mock-only until MAG ships an occupancy feed</td>
+      <td style="text-align: right">5</td>
+      <td>None — public ArcGIS Feature Service (<code class="language-plaintext highlighter-rouge">MAG_HRN_FEATURE_SERVICE_URL</code>); defaults to canned dataset of 12 Phoenix sites</td>
+      <td style="text-align: right">35</td>
+    </tr>
+    <tr>
+      <td><a href="./adhs-mcp/"><code class="language-plaintext highlighter-rouge">adhs-mcp/</code></a></td>
+      <td>ADHS public surveillance summaries: heat mortality, arbovirus weekly summaries, reportable conditions (no public REST API today — canned data drawn from ADHS PDFs + ArcGIS dashboards)</td>
+      <td style="text-align: right">6</td>
+      <td>Optional <code class="language-plaintext highlighter-rouge">ADHS_API_TOKEN</code> for a future real backend; mock-by-default</td>
+      <td style="text-align: right">46</td>
+    </tr>
+    <tr>
+      <td><a href="./211-az-mcp/"><code class="language-plaintext highlighter-rouge">211-az-mcp/</code></a></td>
+      <td>211 Arizona referrals + cooling-center referrals + transport dispatch with in-memory chain-of-call tracking</td>
+      <td style="text-align: right">6</td>
+      <td>Optional <code class="language-plaintext highlighter-rouge">AZ211_API_KEY</code> + <code class="language-plaintext highlighter-rouge">AZ211_BACKEND_URL</code> for a future real backend; mock-by-default</td>
+      <td style="text-align: right">23</td>
+    </tr>
+    <tr>
+      <td><a href="./whispers-mcp/"><code class="language-plaintext highlighter-rouge">whispers-mcp/</code></a></td>
+      <td>USGS WHISPers wildlife mortality events; public read-only listing tools with canned-fallback on network errors</td>
+      <td style="text-align: right">6</td>
+      <td>None for the public listing tools (<code class="language-plaintext highlighter-rouge">WHISPERS_BASE_URL</code>); env-overridable + silent canned fallback</td>
+      <td style="text-align: right">15</td>
+    </tr>
+    <tr>
+      <td><a href="./inaturalist-mcp/"><code class="language-plaintext highlighter-rouge">inaturalist-mcp/</code></a></td>
+      <td>iNaturalist citizen-science observations (AZ <code class="language-plaintext highlighter-rouge">place_id=53</code>); ticks, mosquitoes, fleas, rodent reservoirs</td>
+      <td style="text-align: right">6</td>
+      <td>None — public iNaturalist API; requires <code class="language-plaintext highlighter-rouge">INAT_USER_AGENT</code> per iNat guidance</td>
+      <td style="text-align: right">8</td>
+    </tr>
+    <tr>
+      <td><a href="./sms-entry-mcp/"><code class="language-plaintext highlighter-rouge">sms-entry-mcp/</code></a></td>
+      <td>SMS-only intake adapter; pure-function Twilio HMAC-SHA1 signature check, normalisation, intent parsing</td>
+      <td style="text-align: right">6</td>
+      <td>Optional <code class="language-plaintext highlighter-rouge">SMS_TWILIO_AUTH_TOKEN</code> for the gateway service; <code class="language-plaintext highlighter-rouge">SMS_MODE=mock</code> by default</td>
+      <td style="text-align: right">19</td>
+    </tr>
+    <tr>
+      <td><a href="./wearable-mcp/"><code class="language-plaintext highlighter-rouge">wearable-mcp/</code></a></td>
+      <td>HealthKit / Health Connect wearable readings (skin temp, HRV, sweat rate, heart rate); on-device-only privacy posture, mock-by-default</td>
+      <td style="text-align: right">4</td>
+      <td>None — readings stay on-device; mock profiles (<code class="language-plaintext highlighter-rouge">rest</code>, <code class="language-plaintext highlighter-rouge">heat</code>) ship inline</td>
+      <td style="text-align: right">23</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>Tool and test counts are sourced from each server’s README and its
+<code class="language-plaintext highlighter-rouge">tests/</code> directory; bumps land in the same PR that ships the change.</p>
+
+<h2 id="how-to-add-a-new-mcp-server">How to add a new MCP server</h2>
+
+<p>Use <a href="./vectorsurv-mcp/"><code class="language-plaintext highlighter-rouge">vectorsurv-mcp/</code></a> as the template — it is the most
+complete reference in the family and follows every convention
+reviewers expect.</p>
+
+<h3 id="1-scaffold">1. Scaffold</h3>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">cd </span>mcp
+<span class="nb">cp</span> <span class="nt">-R</span> vectorsurv-mcp my-new-server-mcp
+<span class="nb">cd </span>my-new-server-mcp
+<span class="c"># rename src/vectorsurv_mcp → src/my_new_server_mcp; update pyproject.toml</span>
+</code></pre></div></div>
+
+<p>Target layout:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>mcp/my-new-server/
+├── README.md                  # what / why / tool table / auth / env vars
+├── pyproject.toml             # FastMCP + httpx + pydantic v2; uv workspace
+├── src/my_new_server_mcp/
+│   ├── __init__.py
+│   ├── __main__.py            # `python -m my_new_server_mcp` entry
+│   ├── server.py              # FastMCP() instance + @mcp.tool definitions
+│   └── client.py              # httpx wrapper; env-overridable base URL
+├── examples/
+│   └── claude_desktop_config.json
+└── tests/
+    └── test_*.py              # uv run pytest
+</code></pre></div></div>
+
+<h3 id="2-conventions-reviewers-will-check">2. Conventions reviewers will check</h3>
+
+<ul>
+  <li><strong>Prefix every tool name</strong> with a short server prefix (<code class="language-plaintext highlighter-rouge">vectorsurv_</code>,
+<code class="language-plaintext highlighter-rouge">kg_</code>, <code class="language-plaintext highlighter-rouge">mag_</code>, <code class="language-plaintext highlighter-rouge">az211_</code>, <code class="language-plaintext highlighter-rouge">gattc_</code>, <code class="language-plaintext highlighter-rouge">nws_</code>, <code class="language-plaintext highlighter-rouge">whispers_</code>, <code class="language-plaintext highlighter-rouge">inat_</code>,
+<code class="language-plaintext highlighter-rouge">adhs_</code>, <code class="language-plaintext highlighter-rouge">sms_</code>, <code class="language-plaintext highlighter-rouge">wearable_</code>). The orchestrator at
+<a href="../agents/src/onehealth_agents/mcp_client.py"><code class="language-plaintext highlighter-rouge">agents/src/onehealth_agents/mcp_client.py</code></a>
+dispatches on the prefix; collisions silently break end-to-end
+scenarios.</li>
+  <li><strong>Base URL via env var.</strong> Hard-coded URLs are a deploy blocker. Read
+from <code class="language-plaintext highlighter-rouge">os.environ.get("&lt;SERVER&gt;_BASE_URL")</code> with a sensible default.
+If the upstream has no API today, ship a mock backend behind the
+same env-var contract.</li>
+  <li><strong>Canned-data fallback for tests.</strong> Tests must run with no network.
+Put canned data in a sibling module (<code class="language-plaintext highlighter-rouge">canned_data.py</code> /
+<code class="language-plaintext highlighter-rouge">mock_data.py</code>) and silently fall back on connection errors.</li>
+  <li><strong>Versioned OpenAPI snapshot</strong> if the upstream publishes one. Drop
+it in <code class="language-plaintext highlighter-rouge">openapi/</code> and reference it from the README. PRs that bump
+the snapshot are the changelog the client reacts to.</li>
+  <li><strong>No credentials in source.</strong> All tokens and keys read from
+<code class="language-plaintext highlighter-rouge">os.environ</code>. <code class="language-plaintext highlighter-rouge">.env.example</code> next to the server documents what is
+required; <code class="language-plaintext highlighter-rouge">.env</code> is <code class="language-plaintext highlighter-rouge">.gitignore</code>d.</li>
+  <li><strong>Mock-by-default for any tool that proxies an unverified upstream.</strong>
+Mark mock-only tools clearly in the README and in the FastMCP tool
+docstring so the LLM does not present mock data as authoritative.</li>
+  <li><strong>Tribal-data proxies need a sunset clause</strong> in <code class="language-plaintext highlighter-rouge">pyproject.toml</code>
+<code class="language-plaintext highlighter-rouge">description</code> and the README header naming the MOU the server
+depends on. The <code class="language-plaintext highlighter-rouge">__main__.py</code> entry must refuse to start past the
+MOU expiry date unless <code class="language-plaintext highlighter-rouge">MOU_RENEWED_THROUGH=&lt;ISO-date&gt;</code> is set in
+the environment. See <a href="/epihack-2026/GOVERNANCE.html"><code class="language-plaintext highlighter-rouge">GOVERNANCE.md</code></a> sunset
+clauses.</li>
+</ul>
+
+<h3 id="3-register-the-new-server">3. Register the new server</h3>
+
+<p>Three places need an entry:</p>
+
+<ol>
+  <li><strong>This file</strong> — add a row to the index table above with the tool
+count, auth posture, and test count.</li>
+  <li><strong><a href="/epihack-2026/schema/deep/mcp_servers.sql"><code class="language-plaintext highlighter-rouge">schema/deep/mcp_servers.sql</code></a></strong> —
+add a <code class="language-plaintext highlighter-rouge">mcp_server</code> node plus per-tool nodes, using the next free
+edge-id range.</li>
+  <li><strong><a href="/epihack-2026/plan/02-mcp-integration.html"><code class="language-plaintext highlighter-rouge">plan/02-mcp-integration.md</code></a></strong> —
+if the new server unlocks a new agent → MCP tool route.</li>
+  <li><strong><code class="language-plaintext highlighter-rouge">agents/src/onehealth_agents/mcp_client.py</code></strong> — if any of the
+eight agents will call a tool on the new server, add the route +
+wire up the prefix.</li>
+</ol>
+
+<h3 id="4-test-plan-in-the-pr">4. Test plan in the PR</h3>
+
+<p>The PR description must include, at minimum:</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">cd mcp/my-new-server &amp;&amp; uv run pytest</code> output (tool count + test
+count summary).</li>
+  <li>A Claude Desktop config snippet (in <code class="language-plaintext highlighter-rouge">examples/claude_desktop_config.json</code>)
+and a screenshot or transcript showing the tools appear in the
+client.</li>
+  <li>For servers that proxy an authenticated upstream: a redacted log
+showing a successful end-to-end call.</li>
+</ul>
+
+<p>See <a href="/epihack-2026/CONTRIBUTING.html"><code class="language-plaintext highlighter-rouge">CONTRIBUTING.md</code></a> for the full PR workflow
+and the privacy + data-sovereignty checklist.</p>
+
+
+  <footer>
+    Source: Ending Pandemics Academy &middot; University of Arizona Mel &amp;
+    Enid Zuckerman College of Public Health &middot; Global Health Institute.
+  </footer>
+</body>
+</html>

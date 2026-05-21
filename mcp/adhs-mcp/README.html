@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>ADHS MCP server</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      max-width: 1100px;
+      margin: 2rem auto;
+      padding: 0 1.25rem;
+      color: #1a1a1a;
+      line-height: 1.55;
+    }
+    nav.crumbs { font-size: .9rem; color: #555; margin-bottom: 1rem; }
+    nav.crumbs a { color: #1F3A93; text-decoration: none; }
+    h1 { border-bottom: 3px solid #1F3A93; padding-bottom: .35rem; }
+    h2 { margin-top: 2.25rem; color: #1F3A93; }
+    h3 { margin-top: 1.25rem; }
+    table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: .95rem; }
+    th, td { border: 1px solid #ddd; padding: .5rem .75rem; text-align: left; vertical-align: top; }
+    th { background: #f0f3f8; }
+    blockquote {
+      border-left: 4px solid #1F3A93;
+      background: #f4f6fb;
+      margin: 1rem 0;
+      padding: .75rem 1rem;
+    }
+    code { background: #f1f3f7; padding: 1px 5px; border-radius: 3px; font-size: .9em; }
+    pre code { display: block; padding: .75rem 1rem; overflow-x: auto; }
+    footer { margin-top: 4rem; padding-top: 1rem; border-top: 1px solid #ddd; color: #666; font-size: .85rem; }
+    a { color: #1F3A93; }
+  </style>
+</head>
+<body>
+  <nav class="crumbs">
+    <a href="/epihack-2026/">EpiHack AZ 2026</a>
+  </nav>
+
+  <h1 id="adhs-mcp--model-context-protocol-server-for-arizona-department-of-health-services-public-data"><code class="language-plaintext highlighter-rouge">adhs-mcp</code> — Model Context Protocol server for Arizona Department of Health Services public data</h1>
+
+<p>A <a href="https://modelcontextprotocol.io/">Model Context Protocol</a> server
+that wraps <a href="https://www.azdhs.gov/">Arizona Department of Health Services</a>
+public surveillance data — the <strong>weekly arbovirus surveillance
+summary</strong>, the <strong>annual heat-mortality report series</strong> (published at
+<a href="https://pub.azdhs.gov/health-stats/report/heat/">pub.azdhs.gov/health-stats/report/heat/</a>),
+zoonotic case counts (hantavirus, plague, rabies, RMSF, tularemia),
+the ADHS Vector-Borne &amp; Zoonotic Diseases program, and the Heat
+Preparedness Network ArcGIS map — as a set of tools an LLM (Claude
+Desktop, Claude Code, Claude API agents, or any other MCP client) can
+call.</p>
+
+<p>Built for the EpiHack Arizona 2026
+<a href="/epihack-2026/heat/index.html">Heat</a> and
+<a href="/epihack-2026/wildlife/index.html">Wildlife &amp; Vector-Borne Diseases</a> focus
+groups, and threaded into the multi-MCP joins in
+<a href="../../plan/02-mcp-integration.html"><code class="language-plaintext highlighter-rouge">plan/02-mcp-integration.md</code></a>.</p>
+
+<blockquote>
+  <p><strong>Mock-by-default.</strong> ADHS does <strong>not</strong> publish a clean REST API
+today. Surveillance reports are distributed as <strong>PDFs</strong>
+(heat-mortality series, weekly vector-borne summaries) and the Heat
+Preparedness Network lives on an
+<a href="https://experience.arcgis.com/experience/c5bdf9ab90894e1baa5860c450dedb3b">ArcGIS Experience dashboard</a>.
+This server ships with <strong>canned data</strong> sourced from those reports
+and from the EpiHack knowledge graph (<code class="language-plaintext highlighter-rouge">schema/heat.sql</code>,
+<code class="language-plaintext highlighter-rouge">schema/deep/standards.sql</code>, <code class="language-plaintext highlighter-rouge">heat/04-vulnerable-populations.md</code>,
+<code class="language-plaintext highlighter-rouge">wildlife/resources.md</code>). The canned constants live in a single
+file — <a href="/epihack-2026/mcp/adhs-mcp/src/adhs_mcp/canned_data.py"><code class="language-plaintext highlighter-rouge">src/adhs_mcp/canned_data.py</code></a>
+— so a contributor updating the numbers from a new ADHS report only
+has to touch that file. Set <code class="language-plaintext highlighter-rouge">ADHS_BACKEND_URL</code> in the environment
+to swap in a real HTTP backend once one ships.</p>
+</blockquote>
+
+<h2 id="what-it-does">What it does</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>MCP tool</th>
+      <th>What it returns</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">adhs_recent_cases</code></td>
+      <td>Weekly case counts (<code class="language-plaintext highlighter-rouge">week_of</code>, <code class="language-plaintext highlighter-rouge">county</code>, <code class="language-plaintext highlighter-rouge">confirmed</code>, <code class="language-plaintext highlighter-rouge">probable</code>, <code class="language-plaintext highlighter-rouge">source_report_url</code>) for one of WNV, SLEV, DENV, ZIKV, HANTAVIRUS, PLAGUE, RABIES, RMSF, TULAREMIA.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">adhs_heat_mortality_summary</code></td>
+      <td>Annual heat-mortality counts (statewide + per-county) for 2013–2024.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">adhs_arbovirus_surveillance_summary</code></td>
+      <td>Weekly arbovirus rows: positive mosquito pools, sentinel-chicken seroconversion (where active), human + equine cases, county trap-network size.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">adhs_vector_borne_zoonotic_program</code></td>
+      <td>Structured description of the ADHS VBZD program — pathogens monitored, labs, reporting cadence.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">adhs_heat_preparedness_network</code></td>
+      <td>Pointer to the ADHS Heat Preparedness Network ArcGIS map + season window.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">adhs_reportable_conditions</code></td>
+      <td>ICD-10-CM / SNOMED CT / CDC NNDSS coded list of AZ-reportable conditions.</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>Plus two MCP <strong>resources</strong>:</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">adhs://pathogen-acronyms</code> — same shape as
+<code class="language-plaintext highlighter-rouge">vectorsurv://disease-acronyms</code> but pinned to ADHS terminology
+(covers the zoonotic + tick-borne pathogens VectorSurv itself
+doesn’t carry).</li>
+  <li><code class="language-plaintext highlighter-rouge">adhs://heat-mortality-summary-text</code> — human-readable summary text
+from <a href="/epihack-2026/heat/04-vulnerable-populations.html"><code class="language-plaintext highlighter-rouge">heat/04-vulnerable-populations.md</code></a>
+with links back to the ADHS report portal.</li>
+</ul>
+
+<h2 id="where-the-canned-numbers-came-from">Where the canned numbers came from</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>Datum</th>
+      <th>Value</th>
+      <th>Source</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>AZ heat deaths 2013–2024 (cumulative)</td>
+      <td>&gt;4,320</td>
+      <td><code class="language-plaintext highlighter-rouge">heat/04-vulnerable-populations.md</code>, also encoded as <code class="language-plaintext highlighter-rouge">group.heat / az_heat_deaths_2013_2024</code> in <code class="language-plaintext highlighter-rouge">schema/heat.sql</code>.</td>
+    </tr>
+    <tr>
+      <td>AZ heat deaths 2023</td>
+      <td>990</td>
+      <td>Same, plus <code class="language-plaintext highlighter-rouge">group.heat / az_heat_deaths_2023</code>.</td>
+    </tr>
+    <tr>
+      <td>AZ heat deaths 2024</td>
+      <td>602</td>
+      <td>Provided in the task brief; preliminary ADHS figure.</td>
+    </tr>
+    <tr>
+      <td>AZ heat ER visits / year</td>
+      <td>~4,298</td>
+      <td><code class="language-plaintext highlighter-rouge">heat/04-vulnerable-populations.md</code> + <code class="language-plaintext highlighter-rouge">group.heat / az_heat_er_visits_per_year</code> in <code class="language-plaintext highlighter-rouge">schema/heat.sql</code>.</td>
+    </tr>
+    <tr>
+      <td>MCDPH surveillance start year</td>
+      <td>2006</td>
+      <td><code class="language-plaintext highlighter-rouge">heat/04-vulnerable-populations.md</code> (2006); <code class="language-plaintext highlighter-rouge">schema/heat.sql</code> (2005).</td>
+    </tr>
+    <tr>
+      <td>Maricopa Vector Control trap count</td>
+      <td>800+</td>
+      <td><code class="language-plaintext highlighter-rouge">wildlife/resources.md</code> (“Over 800 vector traps county-wide”).</td>
+    </tr>
+    <tr>
+      <td>MAG HRN sites</td>
+      <td>200+</td>
+      <td><code class="language-plaintext highlighter-rouge">schema/heat.sql / group.heat / mag_hrn_sites</code>.</td>
+    </tr>
+    <tr>
+      <td>ADHS Heat Preparedness Network map URL</td>
+      <td><code class="language-plaintext highlighter-rouge">experience.arcgis.com/experience/c5bdf9ab90894e1baa5860c450dedb3b</code></td>
+      <td><code class="language-plaintext highlighter-rouge">schema/heat.sql / tool.adhs_heat_map</code>.</td>
+    </tr>
+    <tr>
+      <td>ADHS heat-mortality portal</td>
+      <td><code class="language-plaintext highlighter-rouge">pub.azdhs.gov/health-stats/report/heat/</code></td>
+      <td><code class="language-plaintext highlighter-rouge">schema/heat.sql / tool.adhs_heat_mortality_dash</code>.</td>
+    </tr>
+    <tr>
+      <td>ICD-10 / SNOMED / NNDSS codes</td>
+      <td>various</td>
+      <td><code class="language-plaintext highlighter-rouge">schema/deep/standards.sql</code>.</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>Per-year statewide deaths for <strong>2013–2022</strong> are interpolated to bend
+between the 2014–2018 baseline and the 2020-onward escalation
+documented in MCDPH + ADHS reports. <strong>2023 (990)</strong> and <strong>2024 (602)</strong>
+are taken directly from the headline figures. <strong>Per-county splits</strong>
+(Maricopa / Pima / Yuma / other) are illustrative — Maricopa carries
+~85–90% of the statewide burden each year, consistent with the MCDPH
+surveillance footprint. Update these as new ADHS reports drop.</p>
+
+<h2 id="why-this-matters-for-epihack">Why this matters for EpiHack</h2>
+
+<p>ADHS sits at the intersection of every multi-MCP join in
+<a href="../../plan/02-mcp-integration.html"><code class="language-plaintext highlighter-rouge">plan/02-mcp-integration.md</code></a>:</p>
+
+<ul>
+  <li><strong>VBD triage (Wildlife-Q4)</strong> — when a community VBD report comes
+in, the Triage Agent calls <code class="language-plaintext highlighter-rouge">adhs_recent_cases</code> for the matching
+pathogen + county to decide whether there is an active outbreak
+context.</li>
+  <li><strong>Cooling-center awareness (Heat-Q1)</strong> — <code class="language-plaintext highlighter-rouge">adhs_heat_preparedness_network</code>
+is the statewide entry point; <code class="language-plaintext highlighter-rouge">mag-hrn-mcp</code> carries the detailed
+Phoenix-metro records, <code class="language-plaintext highlighter-rouge">211-az-mcp</code> carries the utility-assistance
+layer, and <code class="language-plaintext highlighter-rouge">knowledge-graph-mcp</code> ranks by vulnerable-population
+priority.</li>
+  <li><strong>Vulnerable populations (Heat-Q4)</strong> — <code class="language-plaintext highlighter-rouge">adhs://heat-mortality-summary-text</code>
+is the static context an LLM pulls before answering “who is most at
+risk?”; <code class="language-plaintext highlighter-rouge">adhs_heat_mortality_summary</code> is the structured timeseries
+for trend questions.</li>
+  <li><strong>Reportable conditions</strong> — <code class="language-plaintext highlighter-rouge">adhs_reportable_conditions</code> is the
+ICD-10 / SNOMED / NNDSS bridge between participatory observations
+and the formal NEDSS / NNDSS reporting stack.</li>
+</ul>
+
+<h2 id="pointing-at-a-real-backend">Pointing at a real backend</h2>
+
+<p>By default the server runs against the canned constants — all
+in-memory, no network. To swap in a real HTTP backend (an ADHS open-
+data API, a partner-operated proxy, etc.):</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">export </span><span class="nv">ADHS_BACKEND_URL</span><span class="o">=</span>https://adhs.example/api
+<span class="nb">export </span><span class="nv">ADHS_API_TOKEN</span><span class="o">=</span>...    <span class="c"># optional, if the real backend needs auth</span>
+</code></pre></div></div>
+
+<p>The HTTP path in
+<a href="/epihack-2026/mcp/adhs-mcp/src/adhs_mcp/client.py"><code class="language-plaintext highlighter-rouge">client.py</code></a> is a thin stub that raises
+<code class="language-plaintext highlighter-rouge">NotImplementedError</code> until the request bodies + response parsing
+for the real API are filled in. That way a misconfigured deployment
+(typo’d URL, wrong env) fails loudly rather than silently
+masquerading as a working canned-data server.</p>
+
+<p>A <code class="language-plaintext highlighter-rouge">.env.example</code> template is included; copy to <code class="language-plaintext highlighter-rouge">.env</code> and source it.</p>
+
+<h2 id="updating-the-numbers">Updating the numbers</h2>
+
+<p>When a new ADHS heat-mortality report drops (typically Q1 of the
+following year), or a new weekly arbovirus summary publishes:</p>
+
+<ol>
+  <li>Open <a href="/epihack-2026/mcp/adhs-mcp/src/adhs_mcp/canned_data.py"><code class="language-plaintext highlighter-rouge">src/adhs_mcp/canned_data.py</code></a>.</li>
+  <li>Update the relevant constant — <code class="language-plaintext highlighter-rouge">HEAT_MORTALITY_SUMMARY</code>,
+<code class="language-plaintext highlighter-rouge">RECENT_CASES</code>, <code class="language-plaintext highlighter-rouge">ARBOVIRUS_SURVEILLANCE</code>, etc.</li>
+  <li>Re-run <code class="language-plaintext highlighter-rouge">pytest</code>. The <code class="language-plaintext highlighter-rouge">tests/test_canned_data.py</code> suite enforces
+the documented totals; any drift fails CI loudly.</li>
+</ol>
+
+<h2 id="install--run">Install &amp; run</h2>
+
+<h3 id="as-a-claude-desktop-mcp-server">As a Claude Desktop MCP server</h3>
+
+<ol>
+  <li>Install <a href="https://docs.astral.sh/uv/"><code class="language-plaintext highlighter-rouge">uv</code></a> if you don’t have it.</li>
+  <li>Drop the snippet in <a href="/epihack-2026/mcp/adhs-mcp/examples/claude_desktop_config.json"><code class="language-plaintext highlighter-rouge">examples/claude_desktop_config.json</code></a>
+into your Claude Desktop config (<code class="language-plaintext highlighter-rouge">~/Library/Application Support/Claude/claude_desktop_config.json</code>
+on macOS, <code class="language-plaintext highlighter-rouge">%APPDATA%\Claude\claude_desktop_config.json</code> on Windows).</li>
+  <li>Replace the path with the absolute path to this directory.</li>
+  <li>Leave <code class="language-plaintext highlighter-rouge">ADHS_BACKEND_URL</code> empty to run with the canned data, or
+fill it in for a real backend.</li>
+  <li>Restart Claude Desktop.</li>
+</ol>
+
+<h3 id="standalone">Standalone</h3>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">cd </span>mcp/adhs-mcp
+uv <span class="nb">sync
+</span>uv run adhs-mcp                                <span class="c"># stdio (default)</span>
+<span class="nv">MCP_TRANSPORT</span><span class="o">=</span>streamable-http uv run adhs-mcp  <span class="c"># HTTP</span>
+</code></pre></div></div>
+
+<h3 id="tests">Tests</h3>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">cd </span>mcp/adhs-mcp
+uv run pytest
+</code></pre></div></div>
+
+<p>All tests are <strong>offline</strong> — no network, no credentials, no scraping.
+<code class="language-plaintext highlighter-rouge">tests/test_canned_data.py</code> pins the headline numbers from
+<code class="language-plaintext highlighter-rouge">heat/04-vulnerable-populations.md</code>; <code class="language-plaintext highlighter-rouge">tests/test_tools.py</code> exercises
+the client + pydantic round-trips for every tool; and
+<code class="language-plaintext highlighter-rouge">tests/test_reportable_conditions.py</code> enforces that every reportable
+condition carries either an ICD-10 or a SNOMED CT code (or both).</p>
+
+<h2 id="useful-links">Useful links</h2>
+
+<ul>
+  <li>ADHS home: <a href="https://www.azdhs.gov/">https://www.azdhs.gov/</a></li>
+  <li>ADHS Heat Mortality Report portal: <a href="https://pub.azdhs.gov/health-stats/report/heat/">https://pub.azdhs.gov/health-stats/report/heat/</a></li>
+  <li>ADHS Vector-Borne &amp; Zoonotic Diseases program:
+<a href="https://www.azdhs.gov/preparedness/epidemiology-disease-control/vector-borne-zoonotic-diseases/">https://www.azdhs.gov/preparedness/epidemiology-disease-control/vector-borne-zoonotic-diseases/</a></li>
+  <li>ADHS Heat Preparedness Network (ArcGIS):
+<a href="https://experience.arcgis.com/experience/c5bdf9ab90894e1baa5860c450dedb3b">https://experience.arcgis.com/experience/c5bdf9ab90894e1baa5860c450dedb3b</a></li>
+  <li>2012–2023 heat-related mortality PDF:
+<a href="https://www.azdhs.gov/documents/preparedness/epidemiology-disease-control/extreme-weather/pubs/heat-related-mortality-year-2012-2023.pdf">https://www.azdhs.gov/documents/preparedness/epidemiology-disease-control/extreme-weather/pubs/heat-related-mortality-year-2012-2023.pdf</a></li>
+</ul>
+
+<h2 id="license">License</h2>
+
+<p>MIT, alongside the rest of <code class="language-plaintext highlighter-rouge">epihack-2026</code>.</p>
+
+
+  <footer>
+    Source: Ending Pandemics Academy &middot; University of Arizona Mel &amp;
+    Enid Zuckerman College of Public Health &middot; Global Health Institute.
+  </footer>
+</body>
+</html>

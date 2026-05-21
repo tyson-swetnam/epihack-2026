@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Plan 02 — MCP integration: APIs that feed the Minimum Dataset</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      max-width: 1100px;
+      margin: 2rem auto;
+      padding: 0 1.25rem;
+      color: #1a1a1a;
+      line-height: 1.55;
+    }
+    nav.crumbs { font-size: .9rem; color: #555; margin-bottom: 1rem; }
+    nav.crumbs a { color: #1F3A93; text-decoration: none; }
+    h1 { border-bottom: 3px solid #1F3A93; padding-bottom: .35rem; }
+    h2 { margin-top: 2.25rem; color: #1F3A93; }
+    h3 { margin-top: 1.25rem; }
+    table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: .95rem; }
+    th, td { border: 1px solid #ddd; padding: .5rem .75rem; text-align: left; vertical-align: top; }
+    th { background: #f0f3f8; }
+    blockquote {
+      border-left: 4px solid #1F3A93;
+      background: #f4f6fb;
+      margin: 1rem 0;
+      padding: .75rem 1rem;
+    }
+    code { background: #f1f3f7; padding: 1px 5px; border-radius: 3px; font-size: .9em; }
+    pre code { display: block; padding: .75rem 1rem; overflow-x: auto; }
+    footer { margin-top: 4rem; padding-top: 1rem; border-top: 1px solid #ddd; color: #666; font-size: .85rem; }
+    a { color: #1F3A93; }
+  </style>
+</head>
+<body>
+  <nav class="crumbs">
+    <a href="/epihack-2026/">EpiHack AZ 2026</a>
+  </nav>
+
+  <h1 id="02--mcp-integration">02 — MCP integration</h1>
+
+<p>The app speaks <strong>MCP</strong> to upstream agencies, not bespoke HTTP clients.
+Each agency or data source gets one Model Context Protocol server;
+the agents in <a href="./03-agentic-architecture.html">03-agentic-architecture</a>
+call them by name. New agency partners join the system by shipping a
+server, not by negotiating bilateral integrations.</p>
+
+<h2 id="mcp-server-inventory">MCP server inventory</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>Server</th>
+      <th>Status</th>
+      <th>Backed by</th>
+      <th>Feeds vertical</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><a href="../mcp/vectorsurv-mcp/"><code class="language-plaintext highlighter-rouge">vectorsurv-mcp</code></a></td>
+      <td>✅ shipped</td>
+      <td>api.vectorsurv.org (OpenAPI v1.0.44)</td>
+      <td>VBD</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">nws-heatrisk-mcp</code></td>
+      <td>⏳ planned</td>
+      <td>api.weather.gov HeatRisk + alerts</td>
+      <td>Heat</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">mag-hrn-mcp</code></td>
+      <td>⏳ planned</td>
+      <td>hrn.azmag.gov (cooling-center registry)</td>
+      <td>Heat</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">adhs-mcp</code></td>
+      <td>⏳ planned</td>
+      <td>ADHS open-data (heat mortality, arbovirus reports)</td>
+      <td>Both</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">great-az-tick-check-mcp</code></td>
+      <td>⏳ planned</td>
+      <td>UA Cooperative Extension submission tracker</td>
+      <td>VBD</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">whispers-mcp</code></td>
+      <td>⏳ planned</td>
+      <td>USGS WHISPers wildlife mortality events</td>
+      <td>VBD</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">inaturalist-mcp</code></td>
+      <td>⏳ planned</td>
+      <td>iNaturalist API (vectors + wildlife observations)</td>
+      <td>VBD</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">211-az-mcp</code></td>
+      <td>⏳ planned</td>
+      <td>211 Arizona resource directory</td>
+      <td>Heat</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">knowledge-graph-mcp</code></td>
+      <td>⏳ planned</td>
+      <td>This repo’s DuckLake graph (read + write)</td>
+      <td>Both</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">outbreaks-near-me-mcp</code></td>
+      <td>🔭 future</td>
+      <td>Federation with Boston Children’s <a href="https://outbreaksnearme.org/us/en-US">Outbreaks Near Me</a> symptom-cluster platform (successor to Flu Near You). OBNM is the canonical human-symptom-side participatory-surveillance platform; this MCP would let the AZ agents pull symptom-cluster context for a user’s ZIP and contribute Sentinel reports back upstream. Gated on a partnership with the HealthMap team.</td>
+      <td>Both</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2 id="parameter-by-parameter-source-map">Parameter-by-parameter source map</h2>
+
+<p>Where each Minimum-Dataset parameter is allowed to be <strong>populated
+from upstream</strong> (vs. always coming from the user):</p>
+
+<h3 id="general-class">General class</h3>
+
+<table>
+  <thead>
+    <tr>
+      <th>Param</th>
+      <th>Source</th>
+      <th>MCP</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Geographical coordinates</td>
+      <td>Device GPS</td>
+      <td>— (client)</td>
+    </tr>
+    <tr>
+      <td>Postal code</td>
+      <td>Device GPS reverse-geocoded → county/tribe lookup</td>
+      <td><code class="language-plaintext highlighter-rouge">knowledge-graph-mcp</code> (regions)</td>
+    </tr>
+    <tr>
+      <td>Date of report</td>
+      <td>App timestamp</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>Household member ID</td>
+      <td>User-entered</td>
+      <td>—</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3 id="human-class--symptoms">Human class — symptoms</h3>
+
+<p>Always user-supplied; the <strong>Enrichment Agent</strong> adds derived
+context (e.g. SNOMED CT code, severity score) from
+<code class="language-plaintext highlighter-rouge">schema/deep/standards.sql</code>. No MCP populates symptoms.</p>
+
+<h3 id="auxiliary-class--digital-biomarker">Auxiliary class — digital biomarker</h3>
+
+<table>
+  <thead>
+    <tr>
+      <th>Param</th>
+      <th>Source</th>
+      <th>MCP</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Wearable skin-temp, HRV, sweat rate</td>
+      <td>HealthKit / Health Connect on device</td>
+      <td>— (client) — eventually <code class="language-plaintext highlighter-rouge">wearable-mcp</code> proxy</td>
+    </tr>
+    <tr>
+      <td>Photo</td>
+      <td>Camera</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>Lab confirmation</td>
+      <td>User-entered + (later) FHIR HL7 pull</td>
+      <td>future <code class="language-plaintext highlighter-rouge">fhir-mcp</code></td>
+    </tr>
+  </tbody>
+</table>
+
+<h3 id="environmental-class--pulled-live">Environmental class — pulled live</h3>
+
+<p>This is where MCPs do the heavy lifting:</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Param</th>
+      <th>MCP</th>
+      <th>Endpoint</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Ambient temperature</td>
+      <td><code class="language-plaintext highlighter-rouge">nws-heatrisk-mcp</code></td>
+      <td>api.weather.gov gridpoint forecast</td>
+    </tr>
+    <tr>
+      <td>Humidity</td>
+      <td><code class="language-plaintext highlighter-rouge">nws-heatrisk-mcp</code></td>
+      <td>same</td>
+    </tr>
+    <tr>
+      <td>Heat index</td>
+      <td><code class="language-plaintext highlighter-rouge">nws-heatrisk-mcp</code></td>
+      <td>computed client-side from T + RH</td>
+    </tr>
+    <tr>
+      <td>NWS HeatRisk level</td>
+      <td><code class="language-plaintext highlighter-rouge">nws-heatrisk-mcp</code></td>
+      <td>api.weather.gov/products/heatrisk</td>
+    </tr>
+    <tr>
+      <td>Active heat warning</td>
+      <td><code class="language-plaintext highlighter-rouge">nws-heatrisk-mcp</code></td>
+      <td>api.weather.gov/alerts/active</td>
+    </tr>
+    <tr>
+      <td>Vector density (mosquito)</td>
+      <td><code class="language-plaintext highlighter-rouge">vectorsurv-mcp</code></td>
+      <td><code class="language-plaintext highlighter-rouge">vectorsurv_calculate_abundance</code></td>
+    </tr>
+    <tr>
+      <td>Vector positivity (WNV pools)</td>
+      <td><code class="language-plaintext highlighter-rouge">vectorsurv-mcp</code></td>
+      <td><code class="language-plaintext highlighter-rouge">vectorsurv_calculate_infection_rate</code></td>
+    </tr>
+    <tr>
+      <td>Tick observations nearby</td>
+      <td><code class="language-plaintext highlighter-rouge">inaturalist-mcp</code></td>
+      <td>obs?taxon=Ixodida&amp;lat=…&amp;radius=…</td>
+    </tr>
+    <tr>
+      <td>Wildlife mortality events nearby</td>
+      <td><code class="language-plaintext highlighter-rouge">whispers-mcp</code></td>
+      <td>events?bbox=…</td>
+    </tr>
+    <tr>
+      <td>Standing water / recent rainfall</td>
+      <td>future <code class="language-plaintext highlighter-rouge">nws-precip-mcp</code></td>
+      <td>precip grid</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3 id="livestock--wildlife-class--both-user-and-mcp">Livestock / Wildlife class — both user and MCP</h3>
+
+<table>
+  <thead>
+    <tr>
+      <th>Param</th>
+      <th>MCP</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Species ID (from photo)</td>
+      <td><code class="language-plaintext highlighter-rouge">knowledge-graph-mcp</code> (taxonomy lookup) + Claude Vision</td>
+    </tr>
+    <tr>
+      <td>Number of sick/dead animals</td>
+      <td>User-entered</td>
+    </tr>
+    <tr>
+      <td>Date / location of incident</td>
+      <td>Device GPS + user</td>
+    </tr>
+    <tr>
+      <td>Cross-reference to current outbreak</td>
+      <td><code class="language-plaintext highlighter-rouge">knowledge-graph-mcp</code> + <code class="language-plaintext highlighter-rouge">whispers-mcp</code> + <code class="language-plaintext highlighter-rouge">vectorsurv-mcp</code></td>
+    </tr>
+  </tbody>
+</table>
+
+<h2 id="cooling-center-awareness-heat-q1--multi-mcp-join">Cooling-center awareness (Heat-Q1) — multi-MCP join</h2>
+
+<p>Heat-Q1’s “where can I cool off?” answer is a join across three
+MCPs and the knowledge graph:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>user_location  →  mag-hrn-mcp.search_centers(lat,lon,radius)
+              →  211-az-mcp.utility_assistance_nearby(zip)
+              →  knowledge-graph-mcp.match_focus_area("cooling_centers")
+              →  knowledge-graph-mcp.population_priority(user.demographic)
+              →  ranked list of {center, distance, services, transport_available}
+</code></pre></div></div>
+
+<p>The Notification Agent renders the result with the highest-priority
+match (per the
+<a href="../heat/04-vulnerable-populations.html">Q4 vulnerable-populations data</a>)
+first.</p>
+
+<h2 id="vbd-triage-wildlife-q4--multi-mcp-join">VBD triage (Wildlife-Q4) — multi-MCP join</h2>
+
+<p>A community VBD report goes through:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>user_report   →  vectorsurv-mcp.list_test_targets()
+                 (look up matching pathogen by symptom + vector)
+              →  vectorsurv-mcp.get_pools(near user.county, last 30 days)
+                 (any positive pools nearby?)
+              →  whispers-mcp.events(bbox=user.bbox, last 90 days)
+                 (any wildlife die-offs nearby?)
+              →  knowledge-graph-mcp.outbreak_check(pathogen, county)
+                 (active outbreak record?)
+              →  knowledge-graph-mcp.resource_lookup(pathogen,
+                                                    user.tribe?)
+                 (Great AZ Tick Check, AZGFD, ADHS, ITCA-TEC)
+              →  Triage Agent decision: self-care | see clinician |
+                 report to AZGFD | mail tick to Walker lab
+</code></pre></div></div>
+
+<h2 id="mcp-server-spec-template-for-each-new-server">MCP server spec template (for each new server)</h2>
+
+<p>To keep new MCP servers consistent with <code class="language-plaintext highlighter-rouge">vectorsurv-mcp</code>:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>mcp/&lt;name&gt;/
+  ├── README.md                 # what it does, install, env vars
+  ├── pyproject.toml            # mcp[cli] + httpx + pydantic
+  ├── .env.example              # credentials + PATH_* overrides
+  ├── examples/
+  │   └── claude_desktop_config.json
+  ├── openapi/                  # versioned upstream-spec snapshots
+  │   └── snapshot-&lt;version&gt;.json
+  ├── src/&lt;pkg&gt;/
+  │   ├── __init__.py
+  │   ├── __main__.py           # stdio + streamable-http entry
+  │   ├── client.py             # paths in env-overridable PATHS dict
+  │   └── server.py             # FastMCP tools + resources
+  └── tests/
+      └── test_*.py             # synthetic-data tests, no live creds
+</code></pre></div></div>
+
+<p>Every server also drops a schema seed under <code class="language-plaintext highlighter-rouge">schema/deep/</code> documenting
+its tools as graph nodes (<code class="language-plaintext highlighter-rouge">mcp_server</code>, <code class="language-plaintext highlighter-rouge">mcp_tool</code>, <code class="language-plaintext highlighter-rouge">api</code>,
+<code class="language-plaintext highlighter-rouge">operatedBy</code>, <code class="language-plaintext highlighter-rouge">wraps</code>, <code class="language-plaintext highlighter-rouge">exposedBy</code>, <code class="language-plaintext highlighter-rouge">informs</code>) so the knowledge graph
+itself can be queried for “what MCP tools answer Heat Q1?”.</p>
+
+<h2 id="auth--data-sovereignty-notes">Auth + data-sovereignty notes</h2>
+
+<ul>
+  <li><strong>VectorSurv</strong> requires a Gateway account; the token is held in
+the MCP-server process, never sent to the LLM. The MCP boundary is
+the auth boundary.</li>
+  <li><strong>Tribal data</strong> lives behind tribal sovereignty. MCP servers
+proxying tribal data (e.g. a future Navajo Epidemiology Center
+feed) operate under tribal DUAs and never expose row-level data
+without an explicit MOU. The Validation Agent enforces row-level
+cell suppression at write time.</li>
+  <li><strong>211 Arizona</strong> call records are sensitive; the <code class="language-plaintext highlighter-rouge">211-az-mcp</code>
+exposes aggregated resource availability and <em>not</em> caller PII.</li>
+  <li><strong>Personally-identifying observation data</strong> never leaves the app
+client unless the user explicitly opts into a verified outreach
+contact. Default flows are anonymous + ZIP-coarse.</li>
+</ul>
+
+
+  <footer>
+    Source: Ending Pandemics Academy &middot; University of Arizona Mel &amp;
+    Enid Zuckerman College of Public Health &middot; Global Health Institute.
+  </footer>
+</body>
+</html>

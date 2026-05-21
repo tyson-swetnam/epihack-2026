@@ -1,0 +1,38 @@
+[Unit]
+Description=AZ One Health Sentinel — FastAPI intake API
+After=network-online.target postgresql.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User={{ onehealth_user }}
+Group={{ onehealth_group }}
+WorkingDirectory={{ onehealth_repo_path }}/agents
+EnvironmentFile=/etc/onehealth-api.env
+# DuckDB stores its per-version extension cache under $HOME/.duckdb. With
+# ProtectHome=true the real /home is hidden, so point HOME at a writable dir
+# under /srv (covered by ReadWritePaths below).
+Environment=HOME={{ ducklake_duckdb_home }}
+ExecStart={{ onehealth_repo_path }}/agents/.venv/bin/uvicorn \
+    onehealth_agents.api:app \
+    --host {{ fastapi_bind_host }} \
+    --port {{ fastapi_bind_port }} \
+    --workers {{ fastapi_workers }} \
+    --proxy-headers \
+    --forwarded-allow-ips=127.0.0.1
+Restart=on-failure
+RestartSec=5
+# Sandboxing — relaxed enough that uvicorn + Python work; tight where it can.
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+# Repo (rsynced source), the DuckLake Parquet data dir, and the DuckDB
+# extension home all need to be writable by the service.
+ReadWritePaths={{ onehealth_repo_path }} {{ ducklake_data_path }} {{ ducklake_duckdb_home }}
+PrivateTmp=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+
+[Install]
+WantedBy=multi-user.target

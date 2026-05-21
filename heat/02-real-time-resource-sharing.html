@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Q2 — Do cooling centers share resources in real-time?</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      max-width: 1100px;
+      margin: 2rem auto;
+      padding: 0 1.25rem;
+      color: #1a1a1a;
+      line-height: 1.55;
+    }
+    nav.crumbs { font-size: .9rem; color: #555; margin-bottom: 1rem; }
+    nav.crumbs a { color: #1F3A93; text-decoration: none; }
+    h1 { border-bottom: 3px solid #1F3A93; padding-bottom: .35rem; }
+    h2 { margin-top: 2.25rem; color: #1F3A93; }
+    h3 { margin-top: 1.25rem; }
+    table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: .95rem; }
+    th, td { border: 1px solid #ddd; padding: .5rem .75rem; text-align: left; vertical-align: top; }
+    th { background: #f0f3f8; }
+    blockquote {
+      border-left: 4px solid #1F3A93;
+      background: #f4f6fb;
+      margin: 1rem 0;
+      padding: .75rem 1rem;
+    }
+    code { background: #f1f3f7; padding: 1px 5px; border-radius: 3px; font-size: .9em; }
+    pre code { display: block; padding: .75rem 1rem; overflow-x: auto; }
+    footer { margin-top: 4rem; padding-top: 1rem; border-top: 1px solid #ddd; color: #666; font-size: .85rem; }
+    a { color: #1F3A93; }
+  </style>
+</head>
+<body>
+  <nav class="crumbs">
+    <a href="/epihack-2026/">EpiHack AZ 2026</a>
+  </nav>
+
+  <h1 id="q2--real-time-resource-sharing-between-cooling-centers">Q2 — Real-time resource sharing between cooling centers</h1>
+
+<blockquote>
+  <p><strong>Do cooling centers share resources in real-time with each other,
+e.g., we have no space; we are short on water?</strong></p>
+</blockquote>
+
+<h2 id="starting-context">Starting context</h2>
+
+<p>The honest answer in 2026 is: <strong>mostly no</strong>, with notable exceptions.</p>
+
+<h3 id="what-already-exists">What already exists</h3>
+
+<ul>
+  <li>The <strong>MAG Heat Relief Network</strong> coordinates the network at the
+<em>regional</em> level — onboarding sites, publishing locations, and
+distributing donated supplies. MAG runs an
+<a href="https://azmag.gov/Programs/Heat-Relief-Network/Resources">annual resource-collection drive</a>
+for water bottles, hats, sunscreen, electrolyte packets, and
+lightweight clothing.</li>
+  <li>The <strong>City of Phoenix Office of Heat Response and Mitigation</strong>
+(OHRM / HeatReadyPHX) coordinates city-operated centers and
+partners with municipal libraries, parks and recreation, and
+community-based organizations.</li>
+  <li><strong>211 Arizona</strong> functions as a <em>human</em> router — operators see open
+centers and can refer a caller to an alternate location if their
+nearest one is full or closed.</li>
+  <li>The <strong>Clear Channel Outdoor + Maricopa County</strong> digital-billboard
+partnership can update messaging within a few hours.</li>
+</ul>
+
+<h3 id="what-is-mostly-absent">What is mostly absent</h3>
+
+<ul>
+  <li>A standing <strong>machine-readable, real-time feed</strong> of:
+    <ul>
+      <li>current occupancy / available seats per center,</li>
+      <li>supplies on hand (water, ice, ORS packets),</li>
+      <li>service hours overrides (e.g. a center closed today due to a power
+outage),</li>
+      <li>pet-availability today,</li>
+      <li>cross-center transportation availability.</li>
+    </ul>
+  </li>
+  <li>A standardized <strong>inter-center communication channel</strong> (most
+coordination still happens via phone and email).</li>
+</ul>
+
+<h2 id="data-model-sketch-for-the-participatory-system">Data-model sketch (for the participatory system)</h2>
+
+<p>A <code class="language-plaintext highlighter-rouge">cooling_center_status</code> event from a site operator could carry:</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Field</th>
+      <th>Example</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">center_id</code></td>
+      <td><code class="language-plaintext highlighter-rouge">mag.hrn.0473</code></td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">as_of</code></td>
+      <td><code class="language-plaintext highlighter-rouge">2026-07-18T14:05:00-07:00</code></td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">is_open</code></td>
+      <td><code class="language-plaintext highlighter-rouge">true</code></td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">seats_available</code></td>
+      <td><code class="language-plaintext highlighter-rouge">12</code></td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">pets_ok_today</code></td>
+      <td><code class="language-plaintext highlighter-rouge">true</code></td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">water_status</code></td>
+      <td><code class="language-plaintext highlighter-rouge">low</code> (<code class="language-plaintext highlighter-rouge">ok</code> | <code class="language-plaintext highlighter-rouge">low</code> | <code class="language-plaintext highlighter-rouge">out</code>)</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">ice_status</code></td>
+      <td><code class="language-plaintext highlighter-rouge">out</code></td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">transport_available</code></td>
+      <td><code class="language-plaintext highlighter-rouge">false</code></td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">notes</code></td>
+      <td>“AC unit struggling, room temp 82 °F”</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>Aggregated and published as an open GeoJSON/Parquet feed, this would
+power both the public map (Q1) and operator dashboards.</p>
+
+<h2 id="technology-options">Technology options</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>Approach</th>
+      <th>Trade-off</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Lightweight web form / SMS short-code for site operators to post status each shift</td>
+      <td>Easy to adopt; relies on humans remembering</td>
+    </tr>
+    <tr>
+      <td>QR-code “open-shift / close-shift” check-in for staff</td>
+      <td>Captures hours-of-operation automatically</td>
+    </tr>
+    <tr>
+      <td>IoT temperature + occupancy sensors at participating centers</td>
+      <td>Highest fidelity; capex and connectivity required</td>
+    </tr>
+    <tr>
+      <td>Federated mutual-aid app between centers</td>
+      <td>Adds peer-to-peer logistics (water transfers)</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2 id="see-also">See also</h2>
+
+<ul>
+  <li><a href="/epihack-2026/heat/01-public-awareness-cooling-centers.html">Q1 — Cooling-center awareness</a></li>
+  <li><a href="/epihack-2026/heat/03-heat-safety-education.html">Q3 — Heat-safety education</a></li>
+  <li><a href="/epihack-2026/heat/resources.html">Resources — full catalog</a></li>
+</ul>
+
+
+  <footer>
+    Source: Ending Pandemics Academy &middot; University of Arizona Mel &amp;
+    Enid Zuckerman College of Public Health &middot; Global Health Institute.
+  </footer>
+</body>
+</html>

@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>evaluation/</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      max-width: 1100px;
+      margin: 2rem auto;
+      padding: 0 1.25rem;
+      color: #1a1a1a;
+      line-height: 1.55;
+    }
+    nav.crumbs { font-size: .9rem; color: #555; margin-bottom: 1rem; }
+    nav.crumbs a { color: #1F3A93; text-decoration: none; }
+    h1 { border-bottom: 3px solid #1F3A93; padding-bottom: .35rem; }
+    h2 { margin-top: 2.25rem; color: #1F3A93; }
+    h3 { margin-top: 1.25rem; }
+    table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: .95rem; }
+    th, td { border: 1px solid #ddd; padding: .5rem .75rem; text-align: left; vertical-align: top; }
+    th { background: #f0f3f8; }
+    blockquote {
+      border-left: 4px solid #1F3A93;
+      background: #f4f6fb;
+      margin: 1rem 0;
+      padding: .75rem 1rem;
+    }
+    code { background: #f1f3f7; padding: 1px 5px; border-radius: 3px; font-size: .9em; }
+    pre code { display: block; padding: .75rem 1rem; overflow-x: auto; }
+    footer { margin-top: 4rem; padding-top: 1rem; border-top: 1px solid #ddd; color: #666; font-size: .85rem; }
+    a { color: #1F3A93; }
+  </style>
+</head>
+<body>
+  <nav class="crumbs">
+    <a href="/epihack-2026/">EpiHack AZ 2026</a>
+  </nav>
+
+  <h1 id="evaluation"><code class="language-plaintext highlighter-rouge">evaluation/</code></h1>
+
+<p>Pre-extracted historical baselines and reproducibility recipes for the
+Phase-4 evaluation harness from
+<a href="/epihack-2026/plan/05-roadmap.html"><code class="language-plaintext highlighter-rouge">plan/05-roadmap.md</code></a>. See
+<a href="/epihack-2026/plan/EVALUATION.html"><code class="language-plaintext highlighter-rouge">plan/EVALUATION.md</code></a> for the full methodology
+and example scorecard.</p>
+
+<h2 id="files">Files</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>Path</th>
+      <th>Purpose</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">baseline-2024.json</code></td>
+      <td>2024 Arizona historical-counterfactual baselines, extracted by hand from <a href="/epihack-2026/schema/deep/outbreaks.sql"><code class="language-plaintext highlighter-rouge">schema/deep/outbreaks.sql</code></a>. The <code class="language-plaintext highlighter-rouge">per_vertical_per_agency_baseline</code> block is the canonical lookup table the <a href="../agents/src/onehealth_agents/evaluation.py"><code class="language-plaintext highlighter-rouge">MilestoneEvaluator</code></a> joins against.</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><code class="language-plaintext highlighter-rouge">baseline-&lt;year&gt;.json</code> is what the evaluator looks for. New years
+(<code class="language-plaintext highlighter-rouge">baseline-2025.json</code>, <code class="language-plaintext highlighter-rouge">baseline-2026.json</code>, …) can be added by
+copying <code class="language-plaintext highlighter-rouge">baseline-2024.json</code>, replacing the contents, and pointing
+the CLI at the new year via <code class="language-plaintext highlighter-rouge">--baseline-year 2025</code>.</p>
+
+<h2 id="how-baseline-2024json-was-constructed">How <code class="language-plaintext highlighter-rouge">baseline-2024.json</code> was constructed</h2>
+
+<p>The 2024 outbreaks encoded in <code class="language-plaintext highlighter-rouge">schema/deep/outbreaks.sql</code> are:</p>
+
+<ul>
+  <li><strong><code class="language-plaintext highlighter-rouge">outbreak.az_hantavirus_2024</code></strong> – 11 cases across 5 counties, 6
+combined 2023-2024 deaths. <code class="language-plaintext highlighter-rouge">start_date '2024-01'</code>, ADHS HAN
+advisory on <code class="language-plaintext highlighter-rouge">2024-07-08</code>. Reported by <code class="language-plaintext highlighter-rouge">resource.adhs</code> and
+<code class="language-plaintext highlighter-rouge">resource.coconino_hhs</code>.</li>
+  <li><strong><code class="language-plaintext highlighter-rouge">outbreak.az_heat_2024</code></strong> – 602 Maricopa heat-associated
+deaths, 70 days at or above 110 °F, 113 consecutive days at or
+above 100 °F. <code class="language-plaintext highlighter-rouge">start_date '2024-04'</code>, ongoing-through-October.
+Reported by <code class="language-plaintext highlighter-rouge">resource.mcdph_heat</code>, <code class="language-plaintext highlighter-rouge">resource.adhs_heat</code>,
+<code class="language-plaintext highlighter-rouge">resource.phoenix_ohrm</code>.</li>
+</ul>
+
+<p>For each outbreak we extracted (or computed) the Figure-3 milestone
+timestamps from the published record:</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Milestone</th>
+      <th>Hantavirus 2024</th>
+      <th>Heat 2024</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Detect</td>
+      <td><code class="language-plaintext highlighter-rouge">2024-01-15</code> (midpoint of month-only start)</td>
+      <td><code class="language-plaintext highlighter-rouge">2024-04-15</code> (midpoint of month-only start; proxied as first heat-attributable ED cluster)</td>
+    </tr>
+    <tr>
+      <td>Notify</td>
+      <td><code class="language-plaintext highlighter-rouge">2024-07-08</code> (HAN advisory, exact)</td>
+      <td><code class="language-plaintext highlighter-rouge">2024-04-20</code> (estimated, ~5 days post-Detect)</td>
+    </tr>
+    <tr>
+      <td>Verify</td>
+      <td>not in published record</td>
+      <td>not in published record</td>
+    </tr>
+    <tr>
+      <td>Lab</td>
+      <td>not in published record</td>
+      <td>not in published record</td>
+    </tr>
+    <tr>
+      <td>Respond</td>
+      <td>not in published record</td>
+      <td><code class="language-plaintext highlighter-rouge">2024-04-22</code> (estimated, MCDPH cooling-center activation)</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>The implied Detect → Notify intervals (in minutes) are then:</p>
+
+<ul>
+  <li><strong>Hantavirus 2024:</strong> 174 days, 12 hours -&gt; 251,280 minutes.</li>
+  <li><strong>Heat 2024:</strong> 5 days -&gt; 7,200 minutes.</li>
+</ul>
+
+<p><code class="language-plaintext highlighter-rouge">milestone_precision</code> in the JSON records which figures are exact vs
+estimated. When a more authoritative published record becomes
+available (MMWR follow-up, AAR), regenerate the JSON to overwrite
+the estimates with ground truth.</p>
+
+<h2 id="reproducing-the-harness-locally">Reproducing the harness locally</h2>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code># Install dependencies (one-time)
+cd agents
+uv sync --extra dev
+uv pip install duckdb          # optional; only needed for the live SQL path
+
+# Run the offline evaluation tests
+uv run pytest tests/test_evaluation.py -v
+
+# Generate an empty scorecard (no audit data wired)
+uv run python -m onehealth_agents.evaluation \
+    --start 2026-05-01 \
+    --end 2026-09-30 \
+    --format md
+
+# Generate the JSON form (for piping into downstream tooling)
+uv run python -m onehealth_agents.evaluation \
+    --start 2026-05-01 \
+    --end 2026-09-30 \
+    --format json &gt; /tmp/scorecard.json
+
+# Point at the production DuckLake catalog
+KG_DUCKLAKE_URI=postgres://... uv run python -m onehealth_agents.evaluation \
+    --start 2026-05-01 \
+    --end 2026-09-30 \
+    --agency resource.mcdph_heat \
+    --agency resource.adhs \
+    --format md
+</code></pre></div></div>
+
+<p>The CLI uses <code class="language-plaintext highlighter-rouge">evaluation/baseline-&lt;year&gt;.json</code> from the repo root by
+default. <code class="language-plaintext highlighter-rouge">--baseline-path /path/to/other.json</code> overrides the location.</p>
+
+<h2 id="adding-a-new-baseline-year">Adding a new baseline year</h2>
+
+<ol>
+  <li>Copy <code class="language-plaintext highlighter-rouge">baseline-2024.json</code> to <code class="language-plaintext highlighter-rouge">baseline-&lt;year&gt;.json</code>.</li>
+  <li>Update <code class="language-plaintext highlighter-rouge">year</code>, <code class="language-plaintext highlighter-rouge">source</code>, <code class="language-plaintext highlighter-rouge">outbreaks[].slug</code>, milestone dates, and
+counts to match the relevant <code class="language-plaintext highlighter-rouge">schema/deep/outbreaks.sql</code> rows.</li>
+  <li>Update <code class="language-plaintext highlighter-rouge">per_vertical_per_agency_baseline</code> with the recomputed
+median intervals per (vertical, agency).</li>
+  <li>Add a test case in
+<a href="../agents/tests/test_evaluation.py"><code class="language-plaintext highlighter-rouge">agents/tests/test_evaluation.py</code></a>
+that loads the new file via <code class="language-plaintext highlighter-rouge">Baseline.load(...)</code> and asserts a
+key interval, mirroring <code class="language-plaintext highlighter-rouge">test_baseline_2024_loads_with_expected_intervals</code>.</li>
+  <li>Drive the CLI with <code class="language-plaintext highlighter-rouge">--baseline-year &lt;year&gt;</code> and confirm the
+PASS / FAIL verdicts on the rendered scorecard.</li>
+</ol>
+
+
+  <footer>
+    Source: Ending Pandemics Academy &middot; University of Arizona Mel &amp;
+    Enid Zuckerman College of Public Health &middot; Global Health Institute.
+  </footer>
+</body>
+</html>

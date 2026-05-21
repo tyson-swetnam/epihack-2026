@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>CLAUDE.md</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      max-width: 1100px;
+      margin: 2rem auto;
+      padding: 0 1.25rem;
+      color: #1a1a1a;
+      line-height: 1.55;
+    }
+    nav.crumbs { font-size: .9rem; color: #555; margin-bottom: 1rem; }
+    nav.crumbs a { color: #1F3A93; text-decoration: none; }
+    h1 { border-bottom: 3px solid #1F3A93; padding-bottom: .35rem; }
+    h2 { margin-top: 2.25rem; color: #1F3A93; }
+    h3 { margin-top: 1.25rem; }
+    table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: .95rem; }
+    th, td { border: 1px solid #ddd; padding: .5rem .75rem; text-align: left; vertical-align: top; }
+    th { background: #f0f3f8; }
+    blockquote {
+      border-left: 4px solid #1F3A93;
+      background: #f4f6fb;
+      margin: 1rem 0;
+      padding: .75rem 1rem;
+    }
+    code { background: #f1f3f7; padding: 1px 5px; border-radius: 3px; font-size: .9em; }
+    pre code { display: block; padding: .75rem 1rem; overflow-x: auto; }
+    footer { margin-top: 4rem; padding-top: 1rem; border-top: 1px solid #ddd; color: #666; font-size: .85rem; }
+    a { color: #1F3A93; }
+  </style>
+</head>
+<body>
+  <nav class="crumbs">
+    <a href="/epihack-2026/">EpiHack AZ 2026</a>
+  </nav>
+
+  <h1 id="claudemd">CLAUDE.md</h1>
+
+<p>This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.</p>
+
+<h2 id="what-this-repo-is">What this repo is</h2>
+
+<p>EpiHack Arizona 2026 — the <strong>AZ One Health Sentinel</strong> stack. Four loosely-coupled components share one origin:</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Component</th>
+      <th>Stack</th>
+      <th>What it does</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">app/</code></td>
+      <td>Next.js 14 + React 18 + TS, static-exported</td>
+      <td>Mobile-first anonymous reporting app (tick / heat / cool-off). Published at <code class="language-plaintext highlighter-rouge">/epihack-2026/app/</code>.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">agents/</code></td>
+      <td>Python 3.11 + Pydantic v2 + FastAPI + <code class="language-plaintext highlighter-rouge">anthropic</code> + <code class="language-plaintext highlighter-rouge">mcp</code></td>
+      <td>Eight-agent orchestrator (Intake → Geo → Validation → Triage → Enrichment → Notification + Cluster + KnowledgeUpdate). Also serves <code class="language-plaintext highlighter-rouge">api/openapi.yaml</code>.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">mcp/&lt;name&gt;-mcp/</code></td>
+      <td>FastMCP + httpx + Pydantic v2, one uv workspace per server</td>
+      <td>Eleven MCP servers wrapping VectorSurv, NWS HeatRisk, MAG HRN, ADHS, 211 AZ, WHISPers, iNaturalist, Great AZ Tick Check, wearable, SMS, and a read-only DuckDB query MCP.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">dashboard/</code>, <code class="language-plaintext highlighter-rouge">map/</code>, <code class="language-plaintext highlighter-rouge">graph/</code>, <code class="language-plaintext highlighter-rouge">figures/</code>, focus-group dirs</td>
+      <td>Vanilla HTML + ES modules + one CSS file, <strong>no bundler</strong></td>
+      <td>Jekyll-rendered site at <code class="language-plaintext highlighter-rouge">/epihack-2026/</code>. MapLibre + Cytoscape via unpkg, pinned.</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>The knowledge graph itself lives in <code class="language-plaintext highlighter-rouge">schema/*.sql</code> + <code class="language-plaintext highlighter-rouge">schema/deep/*.sql</code>, loaded into <strong>DuckDB-on-DuckLake-on-Postgres</strong> (DuckLake = open lakehouse, catalog in Postgres). The graph is property-graph–shaped: <code class="language-plaintext highlighter-rouge">kg.node</code>, <code class="language-plaintext highlighter-rouge">kg.edge</code>, <code class="language-plaintext highlighter-rouge">kg.property</code>.</p>
+
+<h2 id="architectural-rules-that-span-multiple-files">Architectural rules that span multiple files</h2>
+
+<ul>
+  <li><strong><code class="language-plaintext highlighter-rouge">api/openapi.yaml</code> is the source of truth</strong> for the HTTP contract between <code class="language-plaintext highlighter-rouge">app/</code> and <code class="language-plaintext highlighter-rouge">agents/</code>. Edit the spec first; <code class="language-plaintext highlighter-rouge">app/src/lib/api-types.ts</code> is <em>generated</em> (<code class="language-plaintext highlighter-rouge">npm run gen:api</code>) and <code class="language-plaintext highlighter-rouge">agents/src/onehealth_agents/api/models.py</code> is validated against it. Never hand-edit <code class="language-plaintext highlighter-rouge">api-types.ts</code>.</li>
+  <li><strong>MCP tool names carry a server prefix.</strong> <code class="language-plaintext highlighter-rouge">vectorsurv_*</code>, <code class="language-plaintext highlighter-rouge">kg_*</code>, <code class="language-plaintext highlighter-rouge">mag_*</code>, <code class="language-plaintext highlighter-rouge">az211_*</code>, <code class="language-plaintext highlighter-rouge">gattc_*</code>, <code class="language-plaintext highlighter-rouge">nws_*</code>, <code class="language-plaintext highlighter-rouge">whispers_*</code>, <code class="language-plaintext highlighter-rouge">inat_*</code>, <code class="language-plaintext highlighter-rouge">adhs_*</code>, <code class="language-plaintext highlighter-rouge">sms_*</code>, <code class="language-plaintext highlighter-rouge">wearable_*</code>. The orchestrator (<code class="language-plaintext highlighter-rouge">agents/src/onehealth_agents/mcp_client.py</code>) dispatches on the prefix — collisions silently break Scenario A/C/D.</li>
+  <li><strong>Every knowledge-graph node has a stable dot-namespaced slug</strong> (<code class="language-plaintext highlighter-rouge">pathogen.west_nile</code>, <code class="language-plaintext highlighter-rouge">county.maricopa</code>). Renames cascade through <code class="language-plaintext highlighter-rouge">agents/</code>, dashboards, and map/graph viewers. Coordinate in the PR.</li>
+  <li><strong>Each <code class="language-plaintext highlighter-rouge">schema/deep/*.sql</code> seed owns a contiguous edge-ID range</strong> (counties 10000-, tribes 11000-, pathogens 12000-, outbreaks 13000-, standards 14000-, datasets_apis 15000-, mcp_servers 16000-, application 17000-, followups 30000-). New seeds: pick the next free range, document in the PR.</li>
+  <li><strong>SQL seed load order matters.</strong> <code class="language-plaintext highlighter-rouge">standards.sql</code> and <code class="language-plaintext highlighter-rouge">pathogens.sql</code> must load before the rest of <code class="language-plaintext highlighter-rouge">schema/deep/*.sql</code> (SNOMED/ICD-10 and pathogen FKs).</li>
+  <li><strong>The <code class="language-plaintext highlighter-rouge">kg_sql</code> escape hatch in <code class="language-plaintext highlighter-rouge">knowledge-graph-mcp</code> is SELECT-only by parser, not by convention.</strong> Don’t weaken that filter.</li>
+</ul>
+
+<h2 id="privacy-contract-load-bearing--enforced-in-code-not-just-docs">Privacy contract (load-bearing — enforced in code, not just docs)</h2>
+
+<p>These rules are encoded in <code class="language-plaintext highlighter-rouge">agents/src/onehealth_agents/validation.py</code> (the single enforcement point) and in <code class="language-plaintext highlighter-rouge">api/openapi.yaml</code> schema constraints:</p>
+
+<ol>
+  <li><strong>No precise lat/lon over the wire.</strong> <code class="language-plaintext highlighter-rouge">CoarseLocation</code> accepts <code class="language-plaintext highlighter-rouge">zip</code> or <code class="language-plaintext highlighter-rouge">grid_id</code> (1 km cell) only. Client coarsens via <code class="language-plaintext highlighter-rouge">app/src/lib/coarse-geo.ts</code>; server re-coarsens before persisting.</li>
+  <li><strong>EXIF GPS stripped before upload</strong> (<code class="language-plaintext highlighter-rouge">app/src/lib/exif-stripper.ts</code>); server rejects with <code class="language-plaintext highlighter-rouge">photo_exif_gps_present</code> (422) if it slips through.</li>
+  <li><strong>Tribal data is suppressed by default.</strong> Opt-in lives in <code class="language-plaintext highlighter-rouge">consent_profile</code> rows in the kg, consulted by ValidationAgent at write time.</li>
+  <li><strong>Triage is routing, not diagnosis.</strong> A regex output-guard on the server rejects <code class="language-plaintext highlighter-rouge">you have …</code>, <code class="language-plaintext highlighter-rouge">you may have …</code>, <code class="language-plaintext highlighter-rouge">diagnos*</code>. The client renders only the <code class="language-plaintext highlighter-rouge">next_action</code> enum, never free-form LLM copy as a verdict.</li>
+  <li><strong>Audit log stores SHA-256 digests of canonicalized JSON, never raw observations.</strong> No PII in <code class="language-plaintext highlighter-rouge">agent_run</code> rows.</li>
+  <li><strong>Cluster output uses ZCTA-week / ZCTA-2h aggregations</strong>, never individual observations.</li>
+</ol>
+
+<p>PRs touching <code class="language-plaintext highlighter-rouge">agents/</code>, <code class="language-plaintext highlighter-rouge">mcp/&lt;server&gt;/</code>, or <code class="language-plaintext highlighter-rouge">schema/deep/*.sql</code> must walk the checklist at the bottom of <code class="language-plaintext highlighter-rouge">CONTRIBUTING.md</code> or are blocked regardless of code review.</p>
+
+<h2 id="commands">Commands</h2>
+
+<h3 id="knowledge-graph-bootstrap">Knowledge graph bootstrap</h3>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>duckdb
+</code></pre></div></div>
+<div class="language-sql highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">INSTALL</span> <span class="n">ducklake</span><span class="p">;</span> <span class="n">INSTALL</span> <span class="n">postgres</span><span class="p">;</span> <span class="k">LOAD</span> <span class="n">ducklake</span><span class="p">;</span> <span class="k">LOAD</span> <span class="n">postgres</span><span class="p">;</span>
+<span class="n">ATTACH</span> <span class="s1">'ducklake:postgres:dbname=epihack host=localhost user=epihack'</span>
+  <span class="k">AS</span> <span class="n">epihack</span> <span class="p">(</span><span class="n">DATA_PATH</span> <span class="s1">'s3://epihack/ducklake/'</span><span class="p">);</span>
+<span class="n">USE</span> <span class="n">epihack</span><span class="p">;</span>
+<span class="p">.</span><span class="k">read</span> <span class="k">schema</span><span class="o">/</span><span class="n">knowledge_graph</span><span class="p">.</span><span class="k">sql</span>
+<span class="p">.</span><span class="k">read</span> <span class="k">schema</span><span class="o">/</span><span class="n">system_designs</span><span class="p">.</span><span class="k">sql</span>
+<span class="p">.</span><span class="k">read</span> <span class="k">schema</span><span class="o">/</span><span class="n">world_cafe</span><span class="p">.</span><span class="k">sql</span>
+<span class="p">.</span><span class="k">read</span> <span class="k">schema</span><span class="o">/</span><span class="n">wildlife_vectors</span><span class="p">.</span><span class="k">sql</span>
+<span class="p">.</span><span class="k">read</span> <span class="k">schema</span><span class="o">/</span><span class="n">heat</span><span class="p">.</span><span class="k">sql</span>
+<span class="p">.</span><span class="k">read</span> <span class="k">schema</span><span class="o">/</span><span class="n">deep</span><span class="o">/</span><span class="n">standards</span><span class="p">.</span><span class="k">sql</span>      <span class="c1">-- must come first</span>
+<span class="p">.</span><span class="k">read</span> <span class="k">schema</span><span class="o">/</span><span class="n">deep</span><span class="o">/</span><span class="n">pathogens</span><span class="p">.</span><span class="k">sql</span>      <span class="c1">-- must come second</span>
+<span class="p">.</span><span class="k">read</span> <span class="k">schema</span><span class="o">/</span><span class="n">deep</span><span class="o">/</span><span class="n">counties</span><span class="p">.</span><span class="k">sql</span>
+<span class="p">.</span><span class="k">read</span> <span class="k">schema</span><span class="o">/</span><span class="n">deep</span><span class="o">/</span><span class="n">tribes</span><span class="p">.</span><span class="k">sql</span>
+<span class="p">.</span><span class="k">read</span> <span class="k">schema</span><span class="o">/</span><span class="n">deep</span><span class="o">/</span><span class="n">outbreaks</span><span class="p">.</span><span class="k">sql</span>
+<span class="p">.</span><span class="k">read</span> <span class="k">schema</span><span class="o">/</span><span class="n">deep</span><span class="o">/</span><span class="n">datasets_apis</span><span class="p">.</span><span class="k">sql</span>
+<span class="p">.</span><span class="k">read</span> <span class="k">schema</span><span class="o">/</span><span class="n">deep</span><span class="o">/</span><span class="n">application</span><span class="p">.</span><span class="k">sql</span>
+<span class="p">.</span><span class="k">read</span> <span class="k">schema</span><span class="o">/</span><span class="n">deep</span><span class="o">/</span><span class="n">followups</span><span class="p">.</span><span class="k">sql</span>
+</code></pre></div></div>
+
+<h3 id="reporting-app-app">Reporting app (<code class="language-plaintext highlighter-rouge">app/</code>)</h3>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">cd </span>app
+npm <span class="nb">install
+</span>npm run gen:api      <span class="c"># regenerate src/lib/api-types.ts from ../api/openapi.yaml</span>
+npm run dev          <span class="c"># localhost:3000; NEXT_PUBLIC_API_BASE=mock by default</span>
+npm run build        <span class="c"># writes out/ for static deploy</span>
+npm run typecheck    <span class="c"># tsc --noEmit</span>
+npm run lint
+</code></pre></div></div>
+
+<p>Point at a real backend: <code class="language-plaintext highlighter-rouge">NEXT_PUBLIC_API_BASE=http://localhost:8000 npm run dev</code>.</p>
+
+<h3 id="agents--fastapi-backend-agents">Agents / FastAPI backend (<code class="language-plaintext highlighter-rouge">agents/</code>)</h3>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">cd </span>agents
+uv <span class="nb">sync
+</span><span class="nv">ONEHEALTH_AUTH_MOCK</span><span class="o">=</span>1 uv run uvicorn onehealth_agents.api:app <span class="nt">--reload</span> <span class="nt">--port</span> 8000
+
+<span class="c"># Worked end-to-end scenarios against FakeMCPClient (no network):</span>
+uv run python examples/scenario_a_tick.py
+uv run python examples/scenario_c_heat.py
+
+<span class="c"># Tests (offline, no network):</span>
+uv run pytest
+uv run pytest tests/test_orchestrator.py::test_scenario_a   <span class="c"># single test</span>
+</code></pre></div></div>
+
+<h3 id="mcp-servers-one-uv-workspace-each">MCP servers (one uv workspace each)</h3>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">cd </span>mcp/vectorsurv-mcp <span class="o">&amp;&amp;</span> uv <span class="nb">sync</span> <span class="o">&amp;&amp;</span> uv run pytest
+<span class="nb">cd </span>mcp/knowledge-graph-mcp <span class="o">&amp;&amp;</span> <span class="nv">KG_DUCKDB_PATH</span><span class="o">=</span>/path/to/epihack.duckdb uv run python <span class="nt">-m</span> knowledge_graph_mcp
+</code></pre></div></div>
+<p>Every server can run standalone via <code class="language-plaintext highlighter-rouge">python -m &lt;package&gt;</code>. Tests must pass offline (canned-data fallback on connection errors).</p>
+
+<h3 id="lint--format">Lint / format</h3>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>uv run ruff check <span class="nb">.</span>
+uv run black <span class="nt">--check</span> <span class="nb">.</span>
+</code></pre></div></div>
+<p>Python: line length 88, pytest-asyncio for async tests. <strong>Tests must not hit the network</strong> — use the per-server <code class="language-plaintext highlighter-rouge">canned_data.py</code> / <code class="language-plaintext highlighter-rouge">mock_data.py</code> or <code class="language-plaintext highlighter-rouge">respx</code>.</p>
+
+<h3 id="jekyll-site-root">Jekyll site (root)</h3>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>bundle <span class="nb">install
+</span>bundle <span class="nb">exec </span>jekyll serve     <span class="c"># localhost:4000/epihack-2026/</span>
+<span class="c"># or, for any vanilla-JS subdirectory (map/, graph/, dashboard/):</span>
+python <span class="nt">-m</span> http.server 8000
+</code></pre></div></div>
+
+<h3 id="openapi-spec-validation">OpenAPI spec validation</h3>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>redocly lint api/openapi.yaml          <span class="c"># CI runs this on every spec change</span>
+redocly preview-docs api/openapi.yaml
+</code></pre></div></div>
+
+<h3 id="self-host-on-a-vm">Self-host on a VM</h3>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">cd </span>ansible
+<span class="nb">cp </span>inventory.example.yml inventory.yml          <span class="c"># edit ansible_host</span>
+<span class="nb">cp </span>group_vars/all.vault.example.yml group_vars/all.vault.yml
+ansible-vault encrypt group_vars/all.vault.yml
+ansible-galaxy <span class="nb">install</span> <span class="nt">-r</span> requirements.yml
+ansible-playbook <span class="nt">-i</span> inventory.yml playbook.yml <span class="nt">--ask-vault-pass</span>
+</code></pre></div></div>
+
+<h2 id="deployment">Deployment</h2>
+
+<p>Two GitHub Actions workflows publish to <strong>one</strong> <code class="language-plaintext highlighter-rouge">gh-pages</code> branch with <code class="language-plaintext highlighter-rouge">keep_files: true</code>:</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">.github/workflows/deploy-jekyll.yml</code> — builds the Jekyll root site; triggers on any push except <code class="language-plaintext highlighter-rouge">app/**</code>, <code class="language-plaintext highlighter-rouge">api/**</code>.</li>
+  <li><code class="language-plaintext highlighter-rouge">.github/workflows/deploy-app.yml</code> — builds <code class="language-plaintext highlighter-rouge">app/</code> and lands it under <code class="language-plaintext highlighter-rouge">gh-pages:/app/</code>; triggers on <code class="language-plaintext highlighter-rouge">app/**</code> or <code class="language-plaintext highlighter-rouge">api/openapi.yaml</code>.</li>
+</ul>
+
+<p><code class="language-plaintext highlighter-rouge">_config.yml</code> <strong>excludes</strong> <code class="language-plaintext highlighter-rouge">app/</code>, <code class="language-plaintext highlighter-rouge">api/</code>, and <code class="language-plaintext highlighter-rouge">agents/</code> from Jekyll — those are built separately. Don’t add Jekyll frontmatter to files under those directories.</p>
+
+<h2 id="conventions-worth-knowing-before-editing">Conventions worth knowing before editing</h2>
+
+<ul>
+  <li><strong>No bundlers</strong> for <code class="language-plaintext highlighter-rouge">dashboard/</code>, <code class="language-plaintext highlighter-rouge">map/</code>, <code class="language-plaintext highlighter-rouge">graph/</code>, focus-group viewers, or <code class="language-plaintext highlighter-rouge">app/legacy/</code>. Plain ES modules from the same origin. Third-party JS only via pinned unpkg URLs (MapLibre, Cytoscape).</li>
+  <li><strong>One PR per concern</strong>, ~200-line diffs. Reviewers will ask to split anything larger.</li>
+  <li><strong>Adding an MCP server</strong>: copy <code class="language-plaintext highlighter-rouge">mcp/vectorsurv-mcp/</code> as the template. Register in (1) <code class="language-plaintext highlighter-rouge">mcp/README.md</code> index, (2) <code class="language-plaintext highlighter-rouge">schema/deep/mcp_servers.sql</code>, (3) <code class="language-plaintext highlighter-rouge">plan/02-mcp-integration.md</code>, and (4) <code class="language-plaintext highlighter-rouge">agents/src/onehealth_agents/mcp_client.py</code> if any agent will call it.</li>
+  <li><strong>Adding a kg seed</strong>: copy <code class="language-plaintext highlighter-rouge">schema/deep/pathogens.sql</code>. Cite every fact inline (<code class="language-plaintext highlighter-rouge">-- source: &lt;URL&gt;</code>). Use <code class="language-plaintext highlighter-rouge">value_text</code> / <code class="language-plaintext highlighter-rouge">value_num</code> / <code class="language-plaintext highlighter-rouge">value_json</code> consistently — lat/lon and ordinals go in <code class="language-plaintext highlighter-rouge">value_num</code>.</li>
+  <li><strong>MCP credentials are env-var only.</strong> <code class="language-plaintext highlighter-rouge">.env</code> is gitignored; each server has a <code class="language-plaintext highlighter-rouge">.env.example</code>.</li>
+  <li><strong>Tribal-data MCP servers need a sunset clause</strong> in <code class="language-plaintext highlighter-rouge">pyproject.toml</code> description and a <code class="language-plaintext highlighter-rouge">MOU_RENEWED_THROUGH</code> env-var refusal in <code class="language-plaintext highlighter-rouge">__main__.py</code>. See <code class="language-plaintext highlighter-rouge">GOVERNANCE.md</code>.</li>
+</ul>
+
+<h2 id="where-to-look-first">Where to look first</h2>
+
+<ul>
+  <li><strong>Plan &amp; roadmap</strong>: <code class="language-plaintext highlighter-rouge">plan/</code> (numbered 01-07 + EXECUTION-STATUS-*.md). <code class="language-plaintext highlighter-rouge">plan/03-agentic-architecture.md</code> for the eight-agent contract; <code class="language-plaintext highlighter-rouge">plan/04-data-flows.md</code> for the four worked scenarios A/B/C/D; <code class="language-plaintext highlighter-rouge">plan/06-mobile-app.md</code> for the privacy contract; <code class="language-plaintext highlighter-rouge">plan/07-auth.md</code> for Supabase auth.</li>
+  <li><strong>What’s wired vs. what’s stubbed</strong>: <code class="language-plaintext highlighter-rouge">plan/EXECUTION-STATUS.md</code> and <code class="language-plaintext highlighter-rouge">plan/EXECUTION-STATUS-PHASE-1-2.md</code> track shipped components, MCP tool inventory, and known follow-ups (slug mismatches, missing SNOMED/LOINC codes, etc.).</li>
+  <li><strong>Governance, security, contributing</strong>: <code class="language-plaintext highlighter-rouge">GOVERNANCE.md</code> (review board, tribal-partner veto, sunset clauses), <code class="language-plaintext highlighter-rouge">SECURITY.md</code> (five-class threat model), <code class="language-plaintext highlighter-rouge">CONTRIBUTING.md</code> (PR workflow + privacy checklist).</li>
+</ul>
+
+
+  <footer>
+    Source: Ending Pandemics Academy &middot; University of Arizona Mel &amp;
+    Enid Zuckerman College of Public Health &middot; Global Health Institute.
+  </footer>
+</body>
+</html>

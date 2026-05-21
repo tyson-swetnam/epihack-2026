@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Great Arizona Tick Check MCP server</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      max-width: 1100px;
+      margin: 2rem auto;
+      padding: 0 1.25rem;
+      color: #1a1a1a;
+      line-height: 1.55;
+    }
+    nav.crumbs { font-size: .9rem; color: #555; margin-bottom: 1rem; }
+    nav.crumbs a { color: #1F3A93; text-decoration: none; }
+    h1 { border-bottom: 3px solid #1F3A93; padding-bottom: .35rem; }
+    h2 { margin-top: 2.25rem; color: #1F3A93; }
+    h3 { margin-top: 1.25rem; }
+    table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: .95rem; }
+    th, td { border: 1px solid #ddd; padding: .5rem .75rem; text-align: left; vertical-align: top; }
+    th { background: #f0f3f8; }
+    blockquote {
+      border-left: 4px solid #1F3A93;
+      background: #f4f6fb;
+      margin: 1rem 0;
+      padding: .75rem 1rem;
+    }
+    code { background: #f1f3f7; padding: 1px 5px; border-radius: 3px; font-size: .9em; }
+    pre code { display: block; padding: .75rem 1rem; overflow-x: auto; }
+    footer { margin-top: 4rem; padding-top: 1rem; border-top: 1px solid #ddd; color: #666; font-size: .85rem; }
+    a { color: #1F3A93; }
+  </style>
+</head>
+<body>
+  <nav class="crumbs">
+    <a href="/epihack-2026/">EpiHack AZ 2026</a>
+  </nav>
+
+  <h1 id="great-az-tick-check-mcp--model-context-protocol-server-for-the-ua-great-arizona-tick-check"><code class="language-plaintext highlighter-rouge">great-az-tick-check-mcp</code> — Model Context Protocol server for the UA Great Arizona Tick Check</h1>
+
+<p>A <a href="https://modelcontextprotocol.io/">Model Context Protocol</a> server
+that wraps the <a href="https://extension.arizona.edu/programs/great-arizona-tick-check">University of Arizona Cooperative Extension’s
+<strong>Great Arizona Tick Check</strong></a>
+program — Dr. <strong>Kathleen Walker</strong>’s lab in Forbes 410, Department of
+Entomology, UA Tucson — as a set of tools an LLM (Claude Desktop,
+Claude Code, Claude API agents, or any other MCP client) can call.</p>
+
+<p>Built for the EpiHack Arizona 2026 <a href="../../wildlife/index.html">Wildlife &amp; Vector-Borne Diseases
+focus group</a> and threaded into
+<a href="../../plan/04-data-flows.html">Scenario A</a> (“Hiker mails in a tick”)
+of the <a href="../../plan/04-data-flows.html">end-to-end data flows</a>.</p>
+
+<blockquote>
+  <p><strong>Mock-by-default.</strong> The Great Arizona Tick Check is a <strong>mail-in</strong>
+program — there is <strong>no public REST API today</strong>. This server ships
+with an in-memory mock backend so the rest of the EpiHack stack can
+develop against it. The mock is good enough to demo the full
+create → status → species + pathogen-results flow in a single LLM
+session, and bad enough that you would never confuse it for the
+real lab. When a real backend ships, set <code class="language-plaintext highlighter-rouge">GATTC_BACKEND_URL</code> in the
+environment and the client routes to it instead (see
+<a href="#pointing-at-a-real-backend">Pointing at a real backend</a>).</p>
+</blockquote>
+
+<h2 id="what-it-does">What it does</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>MCP tool</th>
+      <th>What it returns</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">gattc_create_submission</code></td>
+      <td>A new submission ID, the lab’s static mailing address, a placeholder mailing-label URL, a status URL, and the estimated turnaround in days.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">gattc_submission_status</code></td>
+      <td>Current status (<code class="language-plaintext highlighter-rouge">received</code> → <code class="language-plaintext highlighter-rouge">identifying</code> → <code class="language-plaintext highlighter-rouge">testing</code> → <code class="language-plaintext highlighter-rouge">complete</code>); once <code class="language-plaintext highlighter-rouge">complete</code> it also returns <code class="language-plaintext highlighter-rouge">species</code> and <code class="language-plaintext highlighter-rouge">pathogens_tested</code>.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">gattc_species_identification_from_photo</code></td>
+      <td>A <em>low-confidence</em> best-guess species + alternatives from a short list of AZ-relevant ticks. Always carries <code class="language-plaintext highlighter-rouge">verify_with_lab: true</code>.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">gattc_pathogens_screened</code></td>
+      <td>Reference list of pathogens the Walker lab screens for, each with its ICD-10 code.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">gattc_mailing_label</code></td>
+      <td>Placeholder mailing-label URL (PDF or PNG) plus the lab’s mailing address.</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>Plus two MCP <strong>resources</strong>: <code class="language-plaintext highlighter-rouge">gattc://mailing-address</code> and
+<code class="language-plaintext highlighter-rouge">gattc://az-tick-species</code> so an LLM can pull them as context without
+having to call a tool.</p>
+
+<h2 id="why-this-matters-for-epihack">Why this matters for EpiHack</h2>
+
+<p>The Great Arizona Tick Check is the
+<a href="../../wildlife/resources.html#university-of-arizona-cooperative-extension-—-great-arizona-tick-check">closest thing Arizona has</a>
+to a statewide participatory tick-surveillance program — exactly the
+pattern EpiHack is trying to scale across heat and vector-borne
+disease. Wrapping it as an MCP server lets an LLM:</p>
+
+<ul>
+  <li>Hand a hiker a printable mailing label and the lab’s address in one
+call (Scenario A, step 9).</li>
+  <li>Poll for the lab’s species identification and PCR results as soon
+as they land, then write them back into the
+<a href="../../schema/">DuckLake knowledge graph</a>.</li>
+  <li>Give the Triage Agent an “if you see a tick like this, here’s what
+the Walker lab screens for” reference table without bespoke glue
+code.</li>
+</ul>
+
+<h2 id="pathogens-screened">Pathogens screened</h2>
+
+<p>The reference list returned by <code class="language-plaintext highlighter-rouge">gattc_pathogens_screened</code>. ICD-10
+codes for <em>Rickettsia rickettsii</em> come from
+<a href="/epihack-2026/schema/deep/standards.sql"><code class="language-plaintext highlighter-rouge">schema/deep/standards.sql</code></a>; the
+others come from
+<a href="/epihack-2026/schema/deep/pathogens.sql"><code class="language-plaintext highlighter-rouge">schema/deep/pathogens.sql</code></a> and
+standard CDC tick-borne disease references.</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Pathogen</th>
+      <th>Disease</th>
+      <th>ICD-10</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><em>Rickettsia rickettsii</em></td>
+      <td>Rocky Mountain spotted fever</td>
+      <td>A77.0</td>
+    </tr>
+    <tr>
+      <td><em>Rickettsia parkeri</em></td>
+      <td>R. parkeri rickettsiosis</td>
+      <td>A77.8</td>
+    </tr>
+    <tr>
+      <td><em>Borrelia burgdorferi</em></td>
+      <td>Lyme disease</td>
+      <td>A69.20</td>
+    </tr>
+    <tr>
+      <td><em>Anaplasma phagocytophilum</em></td>
+      <td>Anaplasmosis</td>
+      <td>A77.49</td>
+    </tr>
+    <tr>
+      <td><em>Babesia microti</em></td>
+      <td>Babesiosis</td>
+      <td>B60.0</td>
+    </tr>
+    <tr>
+      <td><em>Ehrlichia chaffeensis</em></td>
+      <td>Ehrlichiosis</td>
+      <td>A77.40</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2 id="az-relevant-tick-species">AZ-relevant tick species</h2>
+
+<p>The short list <code class="language-plaintext highlighter-rouge">gattc_species_identification_from_photo</code> chooses
+from:</p>
+
+<ul>
+  <li><strong>Brown dog tick</strong> (<em>Rhipicephalus sanguineus</em>) — dominant
+statewide; principal RMSF vector, especially in tribal-community
+clusters.</li>
+  <li><strong>Western black-legged tick</strong> (<em>Ixodes pacificus</em>) — Lyme +
+anaplasmosis; documented in Mohave County.</li>
+  <li><strong>Gulf Coast tick</strong> (<em>Amblyomma maculatum</em>) — <em>R. parkeri</em> vector;
+range-expanding into Cochise and Santa Cruz counties.</li>
+  <li><strong>Rocky Mountain wood tick</strong> (<em>Dermacentor andersoni</em>) — Colorado
+tick fever, RMSF, tularemia at higher elevations.</li>
+  <li><strong>American dog tick</strong> (<em>Dermacentor variabilis</em>) — secondary RMSF
+vector, also tularemia.</li>
+</ul>
+
+<h2 id="pointing-at-a-real-backend">Pointing at a real backend</h2>
+
+<p>By default the server runs in <strong>mock mode</strong> — submissions live in a
+dict for the lifetime of the process. To swap in a real HTTP backend
+once the Walker lab (or a partner) ships one:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">export </span><span class="nv">GATTC_BACKEND_URL</span><span class="o">=</span>https://great-arizona-tick-check.example/api
+<span class="nb">export </span><span class="nv">GATTC_API_TOKEN</span><span class="o">=</span>...    <span class="c"># optional, if the real backend needs auth</span>
+</code></pre></div></div>
+
+<p>The HTTP path in <a href="/epihack-2026/mcp/great-az-tick-check-mcp/src/great_az_tick_check_mcp/client.py"><code class="language-plaintext highlighter-rouge">client.py</code></a>
+is intentionally a thin stub that raises <code class="language-plaintext highlighter-rouge">NotImplementedError</code> until
+the request bodies + response parsing for the real API are filled in.
+That way a misconfigured deployment (typo’d URL, wrong env) fails
+loudly rather than silently masquerading as a working mock.</p>
+
+<p>A <code class="language-plaintext highlighter-rouge">.env.example</code> template is included; copy to <code class="language-plaintext highlighter-rouge">.env</code> and source it.</p>
+
+<h2 id="submitting-ticks-the-real-way">Submitting ticks the real way</h2>
+
+<p>This server doesn’t replace the real program — it shadows it. The
+real mailing address (printed verbatim by <code class="language-plaintext highlighter-rouge">gattc_create_submission</code>
+and the <code class="language-plaintext highlighter-rouge">gattc://mailing-address</code> resource) is:</p>
+
+<blockquote>
+  <p>Dr. Kathleen Walker
+Forbes 410, Department of Entomology
+P.O. Box 210036
+University of Arizona
+Tucson, AZ 85721</p>
+</blockquote>
+
+<p>See the
+<a href="https://extension.arizona.edu/programs/great-arizona-tick-check">Great Arizona Tick Check homepage</a>
+and
+<a href="https://extension.arizona.edu/programs/great-arizona-tick-check/help-us">Help Us page</a>
+for current submission instructions (a tick in a sealed bag, ideally
+frozen 1–2 days, with date + city/town + ZIP).</p>
+
+<h2 id="install--run">Install &amp; run</h2>
+
+<h3 id="as-a-claude-desktop-mcp-server">As a Claude Desktop MCP server</h3>
+
+<ol>
+  <li>Install <a href="https://docs.astral.sh/uv/"><code class="language-plaintext highlighter-rouge">uv</code></a> if you don’t have it.</li>
+  <li>Drop the snippet in <a href="/epihack-2026/mcp/great-az-tick-check-mcp/examples/claude_desktop_config.json"><code class="language-plaintext highlighter-rouge">examples/claude_desktop_config.json</code></a>
+into your Claude Desktop config (<code class="language-plaintext highlighter-rouge">~/Library/Application Support/Claude/claude_desktop_config.json</code>
+on macOS, <code class="language-plaintext highlighter-rouge">%APPDATA%\Claude\claude_desktop_config.json</code> on Windows).</li>
+  <li>Replace the path with the absolute path to this directory.</li>
+  <li>Leave <code class="language-plaintext highlighter-rouge">GATTC_BACKEND_URL</code> empty to run in mock mode, or fill it in
+for a real backend.</li>
+  <li>Restart Claude Desktop.</li>
+</ol>
+
+<h3 id="standalone">Standalone</h3>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">cd </span>mcp/great-az-tick-check-mcp
+uv <span class="nb">sync
+</span>uv run great-az-tick-check-mcp                 <span class="c"># stdio (default)</span>
+<span class="nv">MCP_TRANSPORT</span><span class="o">=</span>streamable-http uv run great-az-tick-check-mcp  <span class="c"># HTTP</span>
+</code></pre></div></div>
+
+<h3 id="tests">Tests</h3>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">cd </span>mcp/great-az-tick-check-mcp
+uv run pytest
+</code></pre></div></div>
+
+<p>Synthetic-data tests exercise the full create → status → complete
+flow, the species-guess response shape, the deterministic Walker-lab
+mailing address text, mailing-label URL generation, and the
+pathogens-screened reference list. No live credentials and no
+network calls.</p>
+
+<h2 id="what-a-real-walker-lab-integration-must-override">What a real Walker-lab integration must override</h2>
+
+<p>These are the deliberate stubs in this server. A future PR plugging
+the real backend in should at minimum:</p>
+
+<ul>
+  <li>Fill in <code class="language-plaintext highlighter-rouge">client._HttpBackend.create()</code> and <code class="language-plaintext highlighter-rouge">.get()</code> to POST/GET
+against the real submission endpoint. The <code class="language-plaintext highlighter-rouge">Submission</code> dataclass
+is the contract — whatever shape the real API returns has to map
+into it.</li>
+  <li>Replace the deterministic status progression in
+<code class="language-plaintext highlighter-rouge">client._MockBackend.get()</code> with whatever the real backend reports.</li>
+  <li>Replace <code class="language-plaintext highlighter-rouge">client._label_url</code> / <code class="language-plaintext highlighter-rouge">client._status_url</code> with whatever
+signed-URL or routing scheme the real backend uses (override the
+<code class="language-plaintext highlighter-rouge">GATTC_LABEL_BASE</code> and <code class="language-plaintext highlighter-rouge">GATTC_STATUS_BASE</code> env vars if just the
+base changes).</li>
+  <li>Plug a real image-classifier into <code class="language-plaintext highlighter-rouge">client.species_guess()</code> (the
+current implementation is deterministic and ignores the photo;
+the <code class="language-plaintext highlighter-rouge">verify_with_lab: true</code> flag is the safety net).</li>
+</ul>
+
+<h2 id="license">License</h2>
+
+<p>MIT, alongside the rest of <code class="language-plaintext highlighter-rouge">epihack-2026</code>.</p>
+
+
+  <footer>
+    Source: Ending Pandemics Academy &middot; University of Arizona Mel &amp;
+    Enid Zuckerman College of Public Health &middot; Global Health Institute.
+  </footer>
+</body>
+</html>

@@ -1,0 +1,125 @@
+# =============================================================================
+# Non-secret defaults. Override per-host in inventory.yml or
+# host_vars/<host>.yml if needed. Secrets live in all.vault.yml.
+# =============================================================================
+
+# --- Deploy user --------------------------------------------------------------
+onehealth_user:        onehealth
+onehealth_group:       onehealth
+onehealth_home:        "/home/{{ onehealth_user }}"
+onehealth_root:        "/srv/onehealth"
+onehealth_repo_path:   "{{ onehealth_root }}/epihack-2026"
+onehealth_repo_url:    "https://github.com/tyson-swetnam/epihack-2026.git"
+onehealth_repo_branch: "main"
+
+# --- Network ------------------------------------------------------------------
+# Override per-host in inventory.yml.
+onehealth_fqdn:        sentinel.example.org
+
+# --- Toolchain pins -----------------------------------------------------------
+node_major_version:    "20"           # NodeSource Node.js 20 LTS
+python_version:        "3.12"         # Ubuntu 24.04 default; 22.04 needs deadsnakes
+uv_version:            "latest"
+
+# --- Postgres ----------------------------------------------------------------
+postgres_version:      "16"
+postgres_db_name:      epihack
+postgres_db_user:      onehealth
+postgres_listen:       "127.0.0.1"    # bind only to loopback; nginx never proxies to it
+
+# --- DuckLake (knowledge-graph lakehouse) ------------------------------------
+# DuckDB query engine + DuckLake catalog in Postgres + Parquet data files on
+# local disk. Seeded once by the `ducklake` role; read by knowledge-graph-mcp
+# and written by the FastAPI reports write-path + audit sink at runtime.
+ducklake_data_path: "{{ onehealth_root }}/ducklake-data"
+# DuckDB needs a writable HOME for its per-version extension cache. The API
+# runs under systemd with ProtectHome=true (so /home is hidden) — give it a
+# dedicated home under /srv that the unit's ReadWritePaths covers.
+ducklake_duckdb_home: "{{ onehealth_root }}/duckdb-home"
+ducklake_uri: "ducklake:postgres:dbname={{ postgres_db_name }} host=127.0.0.1 user={{ postgres_db_user }} password={{ vault_postgres_password }}"
+# The kg-mcp venv ships duckdb (>=1.5) + the knowledge_graph_mcp package, so we
+# seed through it — exact version match with the runtime, no extra download.
+kg_mcp_venv_python: "{{ onehealth_repo_path }}/mcp/knowledge-graph-mcp/.venv/bin/python"
+# Operator CLI: the DuckDB command-line shell, installed to /usr/local/bin by
+# the `ducklake` role so operators can query the DuckLake catalog directly
+# (the runtime read/write path goes through the kg-mcp venv, not the CLI).
+# Pinned to match the venv's duckdb so extension formats stay compatible.
+duckdb_cli_version: "1.5.3"
+
+# --- DuckDB-WASM query console (browser-side) --------------------------------
+# The /query/ page (Jekyll site) runs DuckDB entirely in the browser via
+# DuckDB-WASM and rebuilds the kg.* graph by fetching the schema/*.sql seeds.
+# DuckDB-WASM itself is delivered client-side from pinned jsDelivr — the same
+# CDN-pinning convention used for MapLibre (map/) and Cytoscape (graph/) — so
+# there is NO server-side package to install. The only server requirement is
+# that nginx serve the static page + the SQL seeds, wired up in the `nginx`
+# role. Set false to omit those two location blocks (e.g. app-only deploys).
+serve_query_console: true
+
+# --- MongoDB (mobile-channel store, plan/09) ---------------------------------
+# Self-hosted MongoDB CE, bound to loopback, auth enabled. The FastAPI
+# mobile-channel write-path (mongo_writer.py) + the Mongo->DuckLake sync use it.
+mongodb_version:   "8.0"
+mongodb_bind:      "127.0.0.1"
+mongodb_db_name:   onehealth
+mongodb_app_user:  onehealth
+# Secret: vault_mongodb_password. authSource=admin (user created on admin db).
+mongodb_uri: "mongodb://{{ mongodb_app_user }}:{{ vault_mongodb_password }}@127.0.0.1:27017/{{ mongodb_db_name }}?authSource=admin"
+# How often the Mongo -> DuckLake sync timer fires (plan/09 Phase C).
+mongo_sync_interval: "5min"
+
+# --- Claude Code --------------------------------------------------------------
+claude_code_npm_package: "@anthropic-ai/claude-code"
+# Set in the vault: vault_anthropic_api_key
+# Optional model override; omit to use the CLI default.
+claude_code_model:     ""
+
+# --- MCP servers --------------------------------------------------------------
+# All eleven servers under mcp/<name>-mcp/ are installed and registered with
+# Claude Code via stdio. Override `mcp_servers` here to skip any.
+mcp_servers:
+  - vectorsurv-mcp
+  - knowledge-graph-mcp
+  - great-az-tick-check-mcp
+  - nws-heatrisk-mcp
+  - mag-hrn-mcp
+  - adhs-mcp
+  - 211-az-mcp
+  - whispers-mcp
+  - inaturalist-mcp
+  - sms-entry-mcp
+  - wearable-mcp
+
+# The python module is normally `<server-dir>` with dashes → underscores, but
+# a few packages don't follow that (and a module name can't start with a digit).
+# Override here; the claude.json template falls back to the dash→underscore rule.
+mcp_modules:
+  211-az-mcp: az211_mcp
+
+# iNaturalist's MCP server refuses to start without a descriptive User-Agent
+# (the iNat API requires every client to identify itself). Override per deploy.
+inat_user_agent: "az-onehealth-sentinel/0.1 (+https://github.com/tyson-swetnam/epihack-2026)"
+
+# --- FastAPI backend ----------------------------------------------------------
+fastapi_bind_host:     "127.0.0.1"
+fastapi_bind_port:     8000
+fastapi_workers:       2
+# In production, set ONEHEALTH_AUTH_MOCK=0 (real Supabase JWT validation).
+# Mock-mode is allowed for dev/staging.
+fastapi_auth_mock:     "0"
+fastapi_cors_origins:  "https://{{ onehealth_fqdn }}"
+
+# --- Next.js app --------------------------------------------------------------
+# Static export served by nginx directly out of {{ onehealth_repo_path }}/app/out.
+# Pointed at the same VM's FastAPI by default.
+app_api_base:          "https://{{ onehealth_fqdn }}/api"
+# Supabase URL is non-secret (visible to the browser); the anon key
+# is also non-secret in Supabase's model (RLS does the gating).
+# Override in inventory if you want them empty (auth-disabled build).
+app_supabase_url:      ""
+app_supabase_anon_key: ""
+
+# --- TLS ----------------------------------------------------------------------
+# Set to true to issue + auto-renew a Let's Encrypt cert after DNS resolves.
+tls_enabled:           false
+# Vault: vault_tls_email

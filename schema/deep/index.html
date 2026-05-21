@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Deep schema seeds — EpiHack Arizona 2026</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    max-width: 1100px;
+    margin: 2rem auto;
+    padding: 0 1.25rem;
+    color: #1a1a1a;
+    line-height: 1.55;
+  }
+  nav.crumbs { font-size: .9rem; color: #555; margin-bottom: 1rem; }
+  nav.crumbs a { color: #1F3A93; text-decoration: none; }
+  h1 { border-bottom: 3px solid #1F3A93; padding-bottom: .35rem; }
+  h2 { margin-top: 2.25rem; color: #1F3A93; }
+  .hero {
+    background: linear-gradient(135deg, #1F3A93 0%, #6A1B9A 100%);
+    color: #fff;
+    padding: 1.5rem;
+    border-radius: 10px;
+    margin: 1rem 0 2rem;
+  }
+  .hero h1 { color: #fff; border: none; margin: 0 0 .4rem 0; }
+  .hero p  { margin: 0; opacity: .95; }
+  table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: .92rem; }
+  th, td { border: 1px solid #ddd; padding: .55rem .75rem; text-align: left; vertical-align: top; }
+  th { background: #f0f3f8; }
+  td a { color: #1F3A93; text-decoration: none; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-weight: 600; }
+  td a:hover { text-decoration: underline; }
+  code { background: #f1f3f7; padding: 1px 5px; border-radius: 3px; font-size: .9em; }
+  .range { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .85em; color: #6A1B9A; white-space: nowrap; }
+  footer { margin-top: 4rem; padding-top: 1rem; border-top: 1px solid #ddd; color: #666; font-size: .85rem; }
+</style>
+</head>
+<body>
+
+<nav class="crumbs">
+  <a href="../../index.html">EpiHack AZ 2026</a> &raquo;
+  <a href="../index.html">DuckLake schema</a> &raquo;
+  Deep seeds
+</nav>
+
+<div class="hero">
+  <h1>Deep schema seeds</h1>
+  <p>Twelve domain-specific seeds produced by parallel deep-research
+     sub-agents. Each file is idempotent (every <code>INSERT</code> uses
+     <code>ON CONFLICT DO NOTHING</code>) and reserves a numeric block of
+     <code>edge_id</code> values to avoid collisions with the others.</p>
+</div>
+
+<h2>File index</h2>
+<table>
+  <thead>
+    <tr>
+      <th>File</th>
+      <th>What it seeds</th>
+      <th>Edge IDs</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><a href="pathogens.sql">pathogens.sql</a></td>
+      <td>Pathogens with vectors, reservoirs, AZ presence, ICD-10 codes,
+          and surveilling agencies. Drives the
+          <a href="../../graph/index.html">Cytoscape pathogen graph</a>.</td>
+      <td class="range">10000&ndash;10999</td>
+    </tr>
+    <tr>
+      <td><a href="tribes.sql">tribes.sql</a></td>
+      <td>All 22 federally recognized AZ tribes: enrollment, land base,
+          epidemiology contacts, ITCA-TEC affiliation, sovereignty
+          annotations.</td>
+      <td class="range">11000&ndash;11999</td>
+    </tr>
+    <tr>
+      <td><a href="counties.sql">counties.sql</a></td>
+      <td>All 15 Arizona counties (FIPS, seat, area, population, vector-control
+          program) plus agency-to-county edges.</td>
+      <td class="range">12000&ndash;12999</td>
+    </tr>
+    <tr>
+      <td><a href="datasets_apis.sql">datasets_apis.sql</a></td>
+      <td>Upstream datasets and APIs (NEON, WHISPers, NWS, GBIF, iNat,
+          VectorSurv, AZGFD, ArcGIS Feature Services, &hellip;) modeled
+          as <code>resource</code> and <code>api</code> nodes.</td>
+      <td class="range">13000&ndash;13999</td>
+    </tr>
+    <tr>
+      <td><a href="outbreaks.sql">outbreaks.sql</a></td>
+      <td>Historical AZ outbreaks (hantavirus, plague, WNV, &hellip;) with
+          the Figure&nbsp;3 timeliness-milestone dates
+          (Detect &rarr; Notify &rarr; Verify &rarr; Lab &rarr; Respond).</td>
+      <td class="range">14000&ndash;14999</td>
+    </tr>
+    <tr>
+      <td><a href="standards.sql">standards.sql</a></td>
+      <td>Interop standards: FHIR, OMOP CDM, ICD-10, SNOMED CT, LOINC,
+          Darwin Core, GeoSPARQL.</td>
+      <td class="range">15000&ndash;15999</td>
+    </tr>
+    <tr>
+      <td><a href="mcp_servers.sql">mcp_servers.sql</a></td>
+      <td>MCP servers and their exposed tools as graph nodes
+          (<code>mcp_server</code>, <code>mcp_tool</code>, <code>api</code>),
+          wired up with <code>wraps</code> / <code>exposedBy</code> /
+          <code>informs</code> edges.</td>
+      <td class="range">16000&ndash;16999</td>
+    </tr>
+    <tr>
+      <td><a href="application.sql">application.sql</a></td>
+      <td>Application runtime types: <code>observation</code> node type,
+          heat / VBD symptom and exposure enumerations, consent profiles,
+          wearable metrics, triage-class enum (<code>tc.*</code>).
+          Depends on <code>knowledge_graph.sql</code>.</td>
+      <td class="range">20000&ndash;20999</td>
+    </tr>
+    <tr>
+      <td><a href="followups.sql">followups.sql</a></td>
+      <td>Idempotent patch file: small gaps the Phase&nbsp;0 sub-agents
+          flagged (missing SNOMED codes, county aliases, &hellip;). Run
+          after every other seed.</td>
+      <td class="range">30000&ndash;30199</td>
+    </tr>
+    <tr>
+      <td><a href="audit.sql">audit.sql</a></td>
+      <td>Agent-runtime audit log (one row per agent invocation) plus a
+          per-observation timeliness pivot view that anchors the
+          Figure&nbsp;3 milestones. Depends on <code>application.sql</code>.</td>
+      <td class="range">40000&ndash;40999</td>
+    </tr>
+    <tr>
+      <td><a href="cluster_followups.sql">cluster_followups.sql</a></td>
+      <td>Closes the eight historical-outbreak gaps the cluster-detection
+          calibration sub-agent itemised in
+          <a href="../../plan/CLUSTER-CALIBRATION.html">plan/CLUSTER-CALIBRATION</a>.
+          Adds <code>single_case_alertable</code> flags read by the
+          Tier-A detector at runtime.</td>
+      <td class="range">50000&ndash;50999</td>
+    </tr>
+    <tr>
+      <td><a href="outbreaks_near_me.sql">outbreaks_near_me.sql</a></td>
+      <td>Boston Children's / HealthMap
+          <a href="https://outbreaksnearme.org/us/en-US">Outbreaks Near Me</a>
+          as a <code>resource_org</code> + dataset, with edges to
+          vector-borne / zoonotic focus areas and the Figure&nbsp;3
+          Detect milestone.</td>
+      <td class="range">60000&ndash;60999</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2>Where to start</h2>
+<ul>
+  <li>For the full bootstrap command order, see the
+      <a href="../index.html">schema landing page</a>.</li>
+  <li>For the figure-by-figure rationale, see
+      <a href="../../figures/index.html">figures/</a>.</li>
+  <li>For how the seeds feed the agentic pipeline, see
+      <a href="../../plan/index.html">plan/</a>.</li>
+</ul>
+
+<footer>
+  EpiHack Arizona 2026 &middot; DuckLake schema (deep seeds) &middot;
+  Source: Ending Pandemics Academy &middot; University of Arizona Mel &amp;
+  Enid Zuckerman College of Public Health &middot; Global Health Institute.
+</footer>
+
+</body>
+</html>

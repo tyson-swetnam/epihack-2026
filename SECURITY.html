@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Security policy</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      max-width: 1100px;
+      margin: 2rem auto;
+      padding: 0 1.25rem;
+      color: #1a1a1a;
+      line-height: 1.55;
+    }
+    nav.crumbs { font-size: .9rem; color: #555; margin-bottom: 1rem; }
+    nav.crumbs a { color: #1F3A93; text-decoration: none; }
+    h1 { border-bottom: 3px solid #1F3A93; padding-bottom: .35rem; }
+    h2 { margin-top: 2.25rem; color: #1F3A93; }
+    h3 { margin-top: 1.25rem; }
+    table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: .95rem; }
+    th, td { border: 1px solid #ddd; padding: .5rem .75rem; text-align: left; vertical-align: top; }
+    th { background: #f0f3f8; }
+    blockquote {
+      border-left: 4px solid #1F3A93;
+      background: #f4f6fb;
+      margin: 1rem 0;
+      padding: .75rem 1rem;
+    }
+    code { background: #f1f3f7; padding: 1px 5px; border-radius: 3px; font-size: .9em; }
+    pre code { display: block; padding: .75rem 1rem; overflow-x: auto; }
+    footer { margin-top: 4rem; padding-top: 1rem; border-top: 1px solid #ddd; color: #666; font-size: .85rem; }
+    a { color: #1F3A93; }
+  </style>
+</head>
+<body>
+  <nav class="crumbs">
+    <a href="/epihack-2026/">EpiHack AZ 2026</a>
+  </nav>
+
+  <h1 id="security-policy">Security policy</h1>
+
+<p>This repository contains a working participatory-surveillance stack
+for One Health observations in Arizona. Bugs that affect the
+<strong>confidentiality of observations</strong>, the <strong>integrity of
+cluster-detection signals</strong>, or the <strong>availability of agency-side
+dashboards during an active outbreak</strong> are treated as security
+incidents — not just functional bugs.</p>
+
+<h2 id="reporting-a-vulnerability">Reporting a vulnerability</h2>
+
+<blockquote>
+  <p><strong>Placeholder private channel — to be replaced at community handoff.</strong>
+The maintaining team will publish a real private disclosure address
+(a <code class="language-plaintext highlighter-rouge">security@</code> mailbox and/or a <a href="https://docs.github.com/en/code-security/security-advisories/working-with-repository-security-advisories/configuring-private-vulnerability-reporting-for-a-repository">GitHub Security Advisory
+private-disclosure
+link</a>)
+as part of the v1.0 handoff. Until then, please use the temporary
+channel below.</p>
+</blockquote>
+
+<p><strong>Temporary disclosure address (handoff placeholder):</strong>
+<code class="language-plaintext highlighter-rouge">epihack-security@arizona.edu</code> <em>(placeholder — confirm with the
+maintainer before sending sensitive material)</em>.</p>
+
+<p>When reporting, please include:</p>
+
+<ul>
+  <li>A description of the vulnerability and the impacted file(s) /
+endpoint(s).</li>
+  <li>A proof-of-concept or reproduction steps, if you have one.</li>
+  <li>The MCP server, agent, or schema path involved.</li>
+  <li>Whether the report covers a live deployment or only the public
+repo state.</li>
+  <li>Your preferred attribution string (or “anonymous”).</li>
+</ul>
+
+<p><strong>Do not</strong> open a public GitHub issue for security reports. Please
+allow up to <strong>10 business days</strong> for an initial response and <strong>90
+days</strong> for a coordinated fix before public disclosure. The standing
+review board (see <a href="/epihack-2026/GOVERNANCE.html">GOVERNANCE.md</a>) is looped in on
+any report that touches tribal data; ITCA-TEC is notified directly
+on those.</p>
+
+<h2 id="scope">Scope</h2>
+
+<p>In scope:</p>
+
+<ul>
+  <li>Anything under <a href="./mcp/"><code class="language-plaintext highlighter-rouge">mcp/</code></a>, <a href="./agents/"><code class="language-plaintext highlighter-rouge">agents/</code></a>,
+<a href="./schema/"><code class="language-plaintext highlighter-rouge">schema/</code></a>, <a href="./app/"><code class="language-plaintext highlighter-rouge">app/</code></a>, <a href="./dashboard/"><code class="language-plaintext highlighter-rouge">dashboard/</code></a>,
+<a href="./today/"><code class="language-plaintext highlighter-rouge">today/</code></a>, and the deploy config under <a href="./ansible/"><code class="language-plaintext highlighter-rouge">ansible/</code></a>.</li>
+  <li>The dual-sink report write path: the FastAPI <code class="language-plaintext highlighter-rouge">/v1/reports</code> endpoint,
+the DuckLake (<code class="language-plaintext highlighter-rouge">kg_writer</code>) and MongoDB (<code class="language-plaintext highlighter-rouge">mongo_writer</code>) sinks, and the
+<code class="language-plaintext highlighter-rouge">mongo_to_ducklake</code> sync (see <a href="/epihack-2026/plan/09-mobile-datastore.html"><code class="language-plaintext highlighter-rouge">plan/09</code></a>).</li>
+  <li>Documented integrations (VectorSurv, NWS, MAG HRN, USGS WHISPers,
+iNaturalist, the ADHS / 211 / Great AZ Tick Check mock backends).</li>
+  <li>The static site served via GitHub Pages.</li>
+</ul>
+
+<p>Out of scope:</p>
+
+<ul>
+  <li>Upstream agency APIs themselves (report those to the agency
+directly).</li>
+  <li>The unpkg / openfreemap / OpenStreetMap tile servers (report
+upstream).</li>
+  <li>Issues that require physical access to a user device or social
+engineering of a known committer.</li>
+</ul>
+
+<h2 id="threat-model">Threat model</h2>
+
+<p>These are the five threat classes the repo is designed against, with
+the mitigations already in place and the gaps that remain.</p>
+
+<h3 id="1-re-identification-of-suppressed-observations">1. Re-identification of suppressed observations</h3>
+
+<p><strong>Threat.</strong> An analyst or external party with access to a dashboard
+or aggregated feed reverse-engineers individual line data — most
+acutely for observations on tribal land or for low-incidence
+pathogens (hantavirus, plague) where a single cell can identify a
+household.</p>
+
+<p><strong>Mitigations in place.</strong></p>
+
+<ul>
+  <li>Row-level tribal-data suppression is enforced inside the Validation
+Agent (<code class="language-plaintext highlighter-rouge">agents/src/onehealth_agents/validation.py</code>) at <em>write
+time</em>, before any row reaches the kg.</li>
+  <li><code class="language-plaintext highlighter-rouge">consent_profile</code> defaults to <code class="language-plaintext highlighter-rouge">suppress</code> for every new <code class="language-plaintext highlighter-rouge">tribe.*</code>
+node until an MOU attaches an opt-in (see
+<a href="/epihack-2026/GOVERNANCE.html">GOVERNANCE.md</a>).</li>
+  <li>Cluster detection operates at ZCTA-week (VBD) or ZCTA-2h (Heat)
+buckets with explicit <code class="language-plaintext highlighter-rouge">k</code> and <code class="language-plaintext highlighter-rouge">theta</code> floors; see
+<a href="/epihack-2026/plan/CLUSTER-CALIBRATION.html"><code class="language-plaintext highlighter-rouge">plan/CLUSTER-CALIBRATION.md</code></a>.</li>
+  <li>Dashboards apply tribal suppression <em>before</em> aggregation so cell
+counts cannot be back-computed from neighbouring cells.</li>
+  <li>The mobile <strong>MongoDB sink stores the same coarse fields as DuckLake</strong>
+(ZIP or 1 km grid only) and digests for free-text/claim tokens — the
+re-identification surface is identical across channels because
+coarsening and suppression run <em>before</em> the sink is chosen.</li>
+</ul>
+
+<h3 id="2-mcp-server-credential-leakage">2. MCP-server credential leakage</h3>
+
+<p><strong>Threat.</strong> An API key, agency token, or OAuth refresh credential
+for VectorSurv / Twilio / a private agency endpoint is leaked via a
+log, an <code class="language-plaintext highlighter-rouge">agent_run</code> row, a stack trace, a public bug report, or a
+committed <code class="language-plaintext highlighter-rouge">.env</code>.</p>
+
+<p><strong>Mitigations in place.</strong></p>
+
+<ul>
+  <li>All MCP servers read credentials from <code class="language-plaintext highlighter-rouge">os.environ</code>. No tokens in
+source. Each server’s <code class="language-plaintext highlighter-rouge">.env.example</code> lists the required vars.</li>
+  <li><code class="language-plaintext highlighter-rouge">.env</code> files are <code class="language-plaintext highlighter-rouge">.gitignore</code>d (see <code class="language-plaintext highlighter-rouge">.gitignore</code> at the repo root).</li>
+  <li><code class="language-plaintext highlighter-rouge">agent_run</code> audit rows store input/output <strong>SHA-256 digests</strong>, not
+raw payloads or headers.</li>
+  <li>Credentials are per-process and per-MCP-server, not shared across
+the orchestrator.</li>
+  <li>The MongoDB sink reads <code class="language-plaintext highlighter-rouge">MONGODB_URI</code> from the environment
+(vault-managed at deploy time); when it is unset the writer falls back
+to an in-memory <code class="language-plaintext highlighter-rouge">mongomock</code> client, so dev and tests need no real
+credential. Self-hosted MongoDB is bound to <code class="language-plaintext highlighter-rouge">127.0.0.1</code> with
+authorization enabled and an app user created from the vault password.</li>
+</ul>
+
+<h3 id="3-malicious-agency-token-reuse">3. Malicious agency-token reuse</h3>
+
+<p><strong>Threat.</strong> A legitimate agency-side credential is reused outside its
+intended scope — for example, an ADHS token used to write into a
+tribal-jurisdiction observation, or a CHW field-app token used to
+read data outside that CHW’s caseload.</p>
+
+<p><strong>Mitigations in place.</strong></p>
+
+<ul>
+  <li>The Validation Agent is the single write-enforcement point and
+checks <code class="language-plaintext highlighter-rouge">consent_profile</code> on every write regardless of caller
+identity — and it runs <em>before</em> the per-channel sink (DuckLake or
+MongoDB) is selected, so neither channel can bypass it.</li>
+  <li>The <code class="language-plaintext highlighter-rouge">knowledge-graph-mcp</code> SQL escape-hatch (<code class="language-plaintext highlighter-rouge">kg_sql</code>) is <strong>SELECT-only</strong>:
+the server parses the SQL and rejects any non-SELECT keyword
+before execution. Do not weaken this filter.</li>
+  <li>Agent-to-MCP calls are prefix-scoped (<code class="language-plaintext highlighter-rouge">vectorsurv_*</code> only reaches
+vectorsurv-mcp, etc.), so a misconfigured route cannot leak across
+servers.</li>
+</ul>
+
+<h3 id="4-prompt-injection-of-agency-side-dashboards">4. Prompt-injection of agency-side dashboards</h3>
+
+<p><strong>Threat.</strong> A user-controlled field on an observation (free-text
+symptom note, species hint, address) contains LLM prompt-injection
+content that, when summarised on an agency dashboard or by the
+Triage Agent, causes the LLM to disclose data, change its triage
+class, or call a different MCP tool.</p>
+
+<p><strong>Mitigations in place.</strong></p>
+
+<ul>
+  <li>The <strong>Triage Agent uses deterministic enumeration</strong> — the LLM can
+only choose from a small fixed set of triage classes (see
+<a href="/epihack-2026/plan/03-agentic-architecture.html"><code class="language-plaintext highlighter-rouge">plan/03-agentic-architecture.md</code></a>);
+free-form triage output is rejected by the orchestrator before
+reaching downstream agents. This is the single most important
+injection mitigation in the stack.</li>
+  <li>Heat scoring uses the pinned <code class="language-plaintext highlighter-rouge">HEAT_SCORE_TABLE</code> (also in plan/03),
+not free-form LLM scoring.</li>
+  <li>Dashboard summaries (<code class="language-plaintext highlighter-rouge">dashboard/</code>, <code class="language-plaintext highlighter-rouge">today/</code>) render only
+pre-aggregated fields from the kg, not raw observation text.</li>
+  <li>All free-text fields are stored as <code class="language-plaintext highlighter-rouge">value_text</code> and shown only with
+HTML-escaping in vanilla DOM updates (no <code class="language-plaintext highlighter-rouge">innerHTML</code> shortcuts).</li>
+</ul>
+
+<h3 id="5-cluster-detection-false-positives-causing-reactive-over-response">5. Cluster-detection false positives causing reactive over-response</h3>
+
+<p><strong>Threat.</strong> A miscalibrated detector fires on noise, triggering an
+emergency response (cooling-center surge dispatch, mosquito-control
+intervention, public alert) that disrupts services without medical
+justification — and erodes agency trust in the system.</p>
+
+<p><strong>Mitigations in place.</strong></p>
+
+<ul>
+  <li>Two-tier detector (deterministic Poisson scan + Bayesian
+refinement) with both count floors (<code class="language-plaintext highlighter-rouge">k</code>) and posterior thresholds.
+See <a href="/epihack-2026/plan/CLUSTER-CALIBRATION.html"><code class="language-plaintext highlighter-rouge">plan/CLUSTER-CALIBRATION.md</code></a>.</li>
+  <li>Calibrated against 14 historical AZ outbreaks with explicit known
+misses documented; <strong>zero false alerts</strong> across 4,114 simulated
+null agency-weeks.</li>
+  <li>Every <code class="language-plaintext highlighter-rouge">ClusterAlert</code> carries audit fields (<code class="language-plaintext highlighter-rouge">tier1_score</code>,
+<code class="language-plaintext highlighter-rouge">tier2_posterior</code>, <code class="language-plaintext highlighter-rouge">rule_tripped</code>, <code class="language-plaintext highlighter-rouge">historical_match</code>) so an
+analyst can decompose every fire.</li>
+  <li>VBD and Heat scored separately; a heat wave does not raise the bar
+for a coincident VBD cluster.</li>
+</ul>
+
+<h2 id="known-security-gaps">Known security gaps</h2>
+
+<p>We document gaps because hiding them does not make them go away. If
+you can close any of these, please open a PR.</p>
+
+<ul>
+  <li><strong>Single-case high-CFR alert layer missing.</strong> The current detector
+cannot catch single-index-case outbreaks of high-case-fatality
+pathogens (plague, hantavirus, viral haemorrhagic fevers). The
+<code class="language-plaintext highlighter-rouge">coconino_plague_2025</code> historical case is the canonical example.
+<em>Mitigation gap:</em> no automated escalation today for <code class="language-plaintext highlighter-rouge">Y. pestis</code>,
+<code class="language-plaintext highlighter-rouge">Sin Nombre</code>, or similar pathogens at <code class="language-plaintext highlighter-rouge">n=1</code>. Planned for Phase 4.</li>
+  <li><strong>Calibration with single seed.</strong> Cluster-detection metrics in
+<code class="language-plaintext highlighter-rouge">plan/CLUSTER-CALIBRATION.md</code> come from a single fixed RNG seed.
+A statistically robust calibration should sweep ~100 seeds.</li>
+  <li><strong>No private vulnerability-disclosure channel published.</strong> The
+address above is a placeholder; the maintainers will replace it at
+v1.0 handoff with a published <code class="language-plaintext highlighter-rouge">security@</code> mailbox and a GitHub
+Security Advisory configuration.</li>
+  <li><strong>Mock backends not authenticated.</strong> The mock backends for ADHS,
+211 Arizona, MAG supply, Great AZ Tick Check, and the SMS gateway
+ship with no auth — they are explicitly marked “mock-only” and
+must be replaced with authenticated clients before any production
+rollout. Reviewers will reject PRs that route real observations
+through a mock backend without an env-var override.</li>
+  <li><strong>No CSP on the static site.</strong> <code class="language-plaintext highlighter-rouge">index.html</code> and the per-section
+pages load MapLibre and Cytoscape from unpkg without a Content
+Security Policy. A future PR should add a CSP header (via Jekyll
+<code class="language-plaintext highlighter-rouge">_includes</code>) restricting script sources to unpkg + self.</li>
+  <li><strong>No SBOM published.</strong> We list third-party dependencies in
+<a href="/epihack-2026/NOTICE"><code class="language-plaintext highlighter-rouge">NOTICE</code></a> but do not yet ship a CycloneDX SBOM. Planned.</li>
+  <li><strong><code class="language-plaintext highlighter-rouge">agent_run</code> digest collisions.</strong> SHA-256 of canonicalized JSON
+prevents accidental disclosure but does not prevent a
+determined attacker who has the raw observation from confirming a
+match. This is the intended threat model (audit, not
+encryption-at-rest) but worth being explicit about.</li>
+  <li><strong>Wearable readings are mock-only today.</strong> The <code class="language-plaintext highlighter-rouge">wearable-mcp</code>
+server is mock-by-default. The production privacy model
+(on-device-only with explicit per-metric consent) is in the README
+but not yet enforced at the wire level.</li>
+  <li><strong>Tribal-data suppression has no formal audit.</strong> Plan-02 requires a
+quarterly tabletop review; we have not yet scheduled the first
+one. ITCA-TEC notification on tribal-touching reports is policy,
+not yet automation.</li>
+  <li><strong>Server-side EXIF check is a placeholder.</strong> On the write-path branch
+the server-side <code class="language-plaintext highlighter-rouge">_photo_has_exif_gps</code> defence-in-depth check
+(<code class="language-plaintext highlighter-rouge">agents/.../api/routes/reports.py</code>) currently returns <code class="language-plaintext highlighter-rouge">False</code>; the
+<strong>client-side strip</strong> (<code class="language-plaintext highlighter-rouge">app/src/lib/exif-stripper.ts</code>) is the only
+active control today. The server-side check and the full
+Triage/Enrichment agent chain land in a later phase
+(plan/07, plan/09); until then the contract’s <code class="language-plaintext highlighter-rouge">photo_exif_gps_present</code>
+(422) rejection is specified but not yet enforced at the wire.</li>
+  <li><strong>Mobile→DuckLake sync is eventually consistent.</strong> Mobile-channel
+reports persist to MongoDB immediately but reach DuckLake — and thus
+the agents, MCP analytics, and cluster detection — only on the next
+<code class="language-plaintext highlighter-rouge">mongo_to_ducklake</code> tick. Cluster signals from mobile-only reports
+therefore lag by the timer interval. The job is idempotent on
+<code class="language-plaintext highlighter-rouge">observation_id</code>, so re-runs are safe; a change-stream consumer is the
+lower-latency upgrade path.</li>
+  <li><strong>Offline queue retains report JSON on-device.</strong> The app’s offline
+retry queue (<code class="language-plaintext highlighter-rouge">app/src/lib/offline-queue.ts</code>) parks the
+already-coarsened, EXIF-free report payload in the device’s
+<code class="language-plaintext highlighter-rouge">localStorage</code> until it flushes on reconnect, and queued payloads
+survive app restarts. That payload includes any free-text <code class="language-plaintext highlighter-rouge">notes</code> in
+plaintext (the server digests them only on receipt); photos are not
+queued. On a shared or compromised device the cache is readable until
+the report lands.</li>
+  <li><strong>MongoDB write-path is new.</strong> Production deployments must set a real
+<code class="language-plaintext highlighter-rouge">MONGODB_URI</code> (vault-managed); the in-memory <code class="language-plaintext highlighter-rouge">mongomock</code> fallback
+persists nothing across restarts and must never back a live deployment.</li>
+</ul>
+
+<h2 id="disclosure-timeline">Disclosure timeline</h2>
+
+<ol>
+  <li><strong>T+0:</strong> report received.</li>
+  <li><strong>T+10 business days:</strong> initial acknowledgement, severity
+assessment, scope decision (in-scope / out-of-scope).</li>
+  <li><strong>T+30 days:</strong> patch in draft PR or workaround documented.</li>
+  <li><strong>T+90 days:</strong> coordinated public disclosure (GitHub Security
+Advisory + a <code class="language-plaintext highlighter-rouge">CHANGELOG.md</code> entry).</li>
+</ol>
+
+<p>We will credit reporters in the advisory and the changelog unless
+asked otherwise.</p>
+
+
+  <footer>
+    Source: Ending Pandemics Academy &middot; University of Arizona Mel &amp;
+    Enid Zuckerman College of Public Health &middot; Global Health Institute.
+  </footer>
+</body>
+</html>

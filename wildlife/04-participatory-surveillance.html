@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Q4 — How can wildlife diseases be better tracked using Participatory Surveillance?</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      max-width: 1100px;
+      margin: 2rem auto;
+      padding: 0 1.25rem;
+      color: #1a1a1a;
+      line-height: 1.55;
+    }
+    nav.crumbs { font-size: .9rem; color: #555; margin-bottom: 1rem; }
+    nav.crumbs a { color: #1F3A93; text-decoration: none; }
+    h1 { border-bottom: 3px solid #1F3A93; padding-bottom: .35rem; }
+    h2 { margin-top: 2.25rem; color: #1F3A93; }
+    h3 { margin-top: 1.25rem; }
+    table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: .95rem; }
+    th, td { border: 1px solid #ddd; padding: .5rem .75rem; text-align: left; vertical-align: top; }
+    th { background: #f0f3f8; }
+    blockquote {
+      border-left: 4px solid #1F3A93;
+      background: #f4f6fb;
+      margin: 1rem 0;
+      padding: .75rem 1rem;
+    }
+    code { background: #f1f3f7; padding: 1px 5px; border-radius: 3px; font-size: .9em; }
+    pre code { display: block; padding: .75rem 1rem; overflow-x: auto; }
+    footer { margin-top: 4rem; padding-top: 1rem; border-top: 1px solid #ddd; color: #666; font-size: .85rem; }
+    a { color: #1F3A93; }
+  </style>
+</head>
+<body>
+  <nav class="crumbs">
+    <a href="/epihack-2026/">EpiHack AZ 2026</a>
+  </nav>
+
+  <h1 id="q4--how-can-wildlife-diseases-be-better-tracked-using-participatory-surveillance">Q4 — How can wildlife diseases be better tracked using Participatory Surveillance?</h1>
+
+<blockquote>
+  <p><strong>How can wildlife diseases be better tracked using Participatory
+Surveillance?</strong></p>
+</blockquote>
+
+<p>A draft design that applies the
+<a href="/epihack-2026/figures/04-designing-launching-participatory-surveillance.html">12-step lifecycle</a>
+and the <a href="/epihack-2026/figures/05-design-worksheet-template.html">worksheet template</a>
+to wildlife and vector-borne disease in Arizona.</p>
+
+<h2 id="1-purpose">1. Purpose</h2>
+
+<p>Capture community reports of (a) sick or dead wildlife, (b) unusual vector
+abundance or biting activity, and (c) suspected zoonotic exposures, and
+fuse them with <strong>AZGFD</strong> wildlife-health data, <strong>ADHS</strong> zoonotic case
+data, and <strong>NEON</strong> longitudinal ecological data to shorten the
+<em>Detect → Verify</em> interval for spillover events.</p>
+
+<h2 id="2-target-populations">2. Target populations</h2>
+
+<ul>
+  <li>Hunters, anglers, trappers (already report to AZGFD).</li>
+  <li>Hikers, birders, photographers (iNaturalist / eBird overlap).</li>
+  <li>Ranchers and hobby farmers at the urban-wildlife interface
+(see also the <a href="/epihack-2026/worksheets/02-desert-wildlife-interface.html">Desert Wildlife Interface design</a>).</li>
+  <li>Tribal community members and tribal natural-resource staff.</li>
+  <li>Public-land managers (NPS, USFS, BLM, AZ State Parks).</li>
+  <li>Veterinarians and wildlife rehabilitators.</li>
+</ul>
+
+<h2 id="3-what-we-give-back-bi-directionality">3. What we give back (bi-directionality)</h2>
+
+<ul>
+  <li>Real-time map of confirmed wildlife mortality and arbovirus activity
+in the user’s county (privacy-preserving — aggregated to ZCTA or
+county).</li>
+  <li>“Is this a reportable species/disease?” decision support.</li>
+  <li>Push notifications when a signal in the user’s area crosses an
+agency-defined threshold.</li>
+  <li>Educational content tailored to species and pathogen.</li>
+</ul>
+
+<h2 id="4-parameters-delta-vs-minimum-dataset">4. Parameters (delta vs. Minimum Dataset)</h2>
+
+<p><strong>Keep:</strong> date of incident, geographical coordinates, species, number of
+sick/dead animals, photo, contact-with-animal exposure parameters.</p>
+
+<p><strong>Add for this focus:</strong></p>
+<ul>
+  <li>Species confidence (self-reported / photo-verified / lab-confirmed).</li>
+  <li>Behavior at time of observation (e.g. ataxia, blindness, no flight
+response) — useful for CWD, rabies, avian influenza screening.</li>
+  <li>Carcass condition (fresh / scavenged / decomposed) — affects lab
+utility.</li>
+  <li>Vector activity at site (mosquitoes biting now? tick on observer?).</li>
+  <li>Land-cover context (riparian, prairie-dog colony, peri-urban).</li>
+</ul>
+
+<p><strong>De-emphasize:</strong> human clinical-symptom parameters (handled in human
+surveillance designs).</p>
+
+<h2 id="5-access">5. Access</h2>
+
+<ul>
+  <li>iOS / Android app with offline capture and photo upload.</li>
+  <li>SMS short code for low-connectivity rural and tribal areas.</li>
+  <li>1-800 voice line that routes to AZGFD’s existing report channel.</li>
+  <li>Web form for power users (rehabbers, vets, agency staff).</li>
+  <li>Multi-lingual UI (Spanish, Navajo / Diné Bizaad, Tohono O’odham).</li>
+</ul>
+
+<h2 id="6-frequency">6. Frequency</h2>
+
+<p>“See something, report something.” No required cadence — but a monthly
+nudge to active reporters keeps engagement.</p>
+
+<h2 id="7-time-per-report">7. Time per report</h2>
+
+<p>~2 minutes for a photo + tap-through; up to 10 minutes for a structured
+mortality investigation by a power user.</p>
+
+<h2 id="8-key-partners">8. Key partners</h2>
+
+<ul>
+  <li><strong>Arizona Game and Fish Department</strong> — wildlife data authority and
+enforcement; the existing report-a-mortality channel.</li>
+  <li><strong>Arizona Department of Health Services</strong> — zoonotic disease and
+arbovirus authority; lab.</li>
+  <li><strong>NEON</strong> — standardized longitudinal vector/rodent baseline for the
+Desert Southwest domain.</li>
+  <li>County vector-control programs (Maricopa, Pima, Yuma, Coconino,
+Pinal).</li>
+  <li>University of Arizona (Mel &amp; Enid Zuckerman College of Public Health;
+School of Natural Resources and the Environment; College of
+Veterinary Medicine).</li>
+  <li>USDA APHIS Wildlife Services.</li>
+  <li>Tribal natural-resource departments.</li>
+  <li>iNaturalist / eBird (data partners for species ID).</li>
+</ul>
+
+<h2 id="9-validation">9. Validation</h2>
+
+<ul>
+  <li>Photo + geolocation cross-check against species range.</li>
+  <li>Cluster detection: flag spatial-temporal anomalies for AZGFD or ADHS
+review.</li>
+  <li>Trusted-reporter weighting (vets, rehabbers, agency staff get higher
+initial confidence).</li>
+  <li>Lab confirmation feedback loop closes the report.</li>
+</ul>
+
+<h2 id="10-elevator-pitch">10. Elevator pitch</h2>
+
+<blockquote>
+  <p>Arizona’s wildlife and vector surveillance lives in silos — AZGFD
+watches game, ADHS watches arboviruses, NEON watches the ecology, and
+the people closest to the land have nowhere to send what they see. We
+are building a participatory-surveillance front door for wildlife and
+vector-borne disease in Arizona that lets hunters, hikers, ranchers,
+tribal members, and rehabbers report sick or dead wildlife and unusual
+vector activity in two minutes, routes the report to the right
+agency, and gives the community back a live map of what is happening
+in their county. Built on the One Health Minimum Dataset and a
+DuckLake knowledge graph that fuses agency, research, and community
+data.</p>
+</blockquote>
+
+<h2 id="see-also">See also</h2>
+
+<ul>
+  <li><a href="/epihack-2026/wildlife/resources.html">Resources — NEON, ADHS, AZGFD</a></li>
+  <li><a href="/epihack-2026/figures/04-designing-launching-participatory-surveillance.html">Designing &amp; Launching Participatory Surveillance (Figure 4)</a></li>
+  <li><a href="/epihack-2026/figures/02-minimum-key-data-parameters.html">Minimum Set of Key Data Parameters (Figure 2)</a></li>
+</ul>
+
+
+  <footer>
+    Source: Ending Pandemics Academy &middot; University of Arizona Mel &amp;
+    Enid Zuckerman College of Public Health &middot; Global Health Institute.
+  </footer>
+</body>
+</html>

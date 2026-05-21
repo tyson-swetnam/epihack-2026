@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Evaluation Harness</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      max-width: 1100px;
+      margin: 2rem auto;
+      padding: 0 1.25rem;
+      color: #1a1a1a;
+      line-height: 1.55;
+    }
+    nav.crumbs { font-size: .9rem; color: #555; margin-bottom: 1rem; }
+    nav.crumbs a { color: #1F3A93; text-decoration: none; }
+    h1 { border-bottom: 3px solid #1F3A93; padding-bottom: .35rem; }
+    h2 { margin-top: 2.25rem; color: #1F3A93; }
+    h3 { margin-top: 1.25rem; }
+    table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: .95rem; }
+    th, td { border: 1px solid #ddd; padding: .5rem .75rem; text-align: left; vertical-align: top; }
+    th { background: #f0f3f8; }
+    blockquote {
+      border-left: 4px solid #1F3A93;
+      background: #f4f6fb;
+      margin: 1rem 0;
+      padding: .75rem 1rem;
+    }
+    code { background: #f1f3f7; padding: 1px 5px; border-radius: 3px; font-size: .9em; }
+    pre code { display: block; padding: .75rem 1rem; overflow-x: auto; }
+    footer { margin-top: 4rem; padding-top: 1rem; border-top: 1px solid #ddd; color: #666; font-size: .85rem; }
+    a { color: #1F3A93; }
+  </style>
+</head>
+<body>
+  <nav class="crumbs">
+    <a href="/epihack-2026/">EpiHack AZ 2026</a>
+  </nav>
+
+  <h1 id="evaluation-harness">Evaluation Harness</h1>
+
+<p>This note describes the Phase-4 evaluation harness from
+<a href="/epihack-2026/plan/05-roadmap.html"><code class="language-plaintext highlighter-rouge">plan/05-roadmap.md</code></a>: how the OneHealth eight-agent
+pipeline is scored against the
+<a href="../figures/03-outbreak-timeliness-metrics.html">Figure-3 timeliness milestones</a>,
+how the 2024 historical-counterfactual baseline is constructed, and how
+to read the per-agency, per-vertical scorecard the harness emits.</p>
+
+<p>The implementation lives in
+<a href="../agents/src/onehealth_agents/evaluation.py"><code class="language-plaintext highlighter-rouge">agents/src/onehealth_agents/evaluation.py</code></a>
+with offline tests at
+<a href="../agents/tests/test_evaluation.py"><code class="language-plaintext highlighter-rouge">agents/tests/test_evaluation.py</code></a>
+and the pre-extracted baselines under
+<a href="/epihack-2026/evaluation/baseline-2024.json"><code class="language-plaintext highlighter-rouge">evaluation/baseline-2024.json</code></a>.</p>
+
+<h2 id="methodology">Methodology</h2>
+
+<h3 id="1-agent-runs-are-the-milestone-clock">1. Agent runs are the milestone clock</h3>
+
+<p>The orchestrator writes one row to <code class="language-plaintext highlighter-rouge">kg.agent_run</code> per agent invocation
+(<code class="language-plaintext highlighter-rouge">schema/deep/audit.sql</code>). The accompanying view
+<code class="language-plaintext highlighter-rouge">kg.v_observation_timeliness</code> pivots those rows into the five
+Figure-3 milestones per observation:</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Agent (<code class="language-plaintext highlighter-rouge">agent_name</code>)</th>
+      <th>Figure-3 milestone</th>
+      <th>Column in the view</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">intake</code></td>
+      <td>Detect</td>
+      <td><code class="language-plaintext highlighter-rouge">detect_at</code></td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">validation</code></td>
+      <td>Notify</td>
+      <td><code class="language-plaintext highlighter-rouge">notify_at</code></td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">triage</code></td>
+      <td>Verify</td>
+      <td><code class="language-plaintext highlighter-rouge">verify_at_provisional</code></td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">enrichment</code></td>
+      <td>Lab</td>
+      <td><code class="language-plaintext highlighter-rouge">lab_at_provisional</code></td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">notification</code></td>
+      <td>Respond</td>
+      <td><code class="language-plaintext highlighter-rouge">respond_at</code></td>
+    </tr>
+  </tbody>
+</table>
+
+<p>The Verify and Lab mappings are marked <strong>provisional</strong> in the audit
+SQL header because the canonical Figure-3 milestones for those steps
+are owned by human authorities (ADHS field investigation, ADHS
+diagnostic lab). The system-side timestamps are a proxy that
+downstream evaluation should later overwrite or join with the
+human-confirmed timestamp.</p>
+
+<h3 id="2-intervals-are-computed-per-vertical-agency">2. Intervals are computed per (vertical, agency)</h3>
+
+<p>For every observation in the configured window we compute the five
+adjacent-milestone intervals (Detect→Notify, Notify→Verify,
+Verify→Lab, Lab→Respond) plus the end-to-end Detect→Respond
+interval. We then group observations by <code class="language-plaintext highlighter-rouge">(vertical, agency)</code> and
+report:</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">n</code> – number of observations contributing to each interval;</li>
+  <li><code class="language-plaintext highlighter-rouge">median</code> – robust against the heavy right tail every real audit
+log has;</li>
+  <li><code class="language-plaintext highlighter-rouge">p25</code> / <code class="language-plaintext highlighter-rouge">p75</code> / <code class="language-plaintext highlighter-rouge">iqr</code> – linear-method percentiles, pure-stdlib
+(no numpy dependency);</li>
+  <li><code class="language-plaintext highlighter-rouge">baseline_min</code> – the 2024 counterfactual median for the same pair
+(see “Baseline construction” below);</li>
+  <li><code class="language-plaintext highlighter-rouge">pct_change_vs_baseline</code> – <code class="language-plaintext highlighter-rouge">(median - baseline) / baseline * 100</code>
+(negative = faster than baseline);</li>
+  <li><code class="language-plaintext highlighter-rouge">pct_shorter_vs_baseline</code> – positive-is-good restatement that
+matches the plan-05-roadmap success-criterion phrasing.</li>
+</ul>
+
+<h3 id="3-the-phase-3-success-criterion-verdict">3. The Phase-3 success-criterion verdict</h3>
+
+<p><code class="language-plaintext highlighter-rouge">plan/05-roadmap.md</code> Phase 3 reads:</p>
+
+<blockquote>
+  <p>During the heat season and the WNV season, the median Detect →
+Notify interval for reports flowing through the app is at least
+<strong>30% shorter</strong> than the 2024 baseline for the same counties.</p>
+</blockquote>
+
+<p>The harness encodes this as a <code class="language-plaintext highlighter-rouge">Phase3Verdict</code> per <code class="language-plaintext highlighter-rouge">(vertical,
+agency)</code> cell. The cell <strong>passes</strong> when
+<code class="language-plaintext highlighter-rouge">pct_shorter_vs_baseline ≥ 30</code>. It <strong>fails</strong> when the pipeline is
+slower, when there is no in-window observation, or when no
+baseline exists for that (vertical, agency).</p>
+
+<h2 id="baseline-construction">Baseline construction</h2>
+
+<p>The 2024 counterfactual baselines live in
+<a href="/epihack-2026/evaluation/baseline-2024.json"><code class="language-plaintext highlighter-rouge">evaluation/baseline-2024.json</code></a>.
+They are <strong>pre-extracted by hand from
+<a href="/epihack-2026/schema/deep/outbreaks.sql"><code class="language-plaintext highlighter-rouge">schema/deep/outbreaks.sql</code></a></strong> rather
+than parsed at runtime, because the seed encodes dates with mixed
+precision (year-only, month-only, exact-day) and the json file is
+the place to make that precision explicit.</p>
+
+<p>The two 2024 outbreaks the seed encodes are:</p>
+
+<ol>
+  <li>
+    <p><strong><code class="language-plaintext highlighter-rouge">outbreak.az_hantavirus_2024</code></strong> – VBD. <code class="language-plaintext highlighter-rouge">start_date '2024-01'</code>,
+<code class="language-plaintext highlighter-rouge">notify_date '2024-07-08'</code> (the ADHS HAN advisory). We use
+January 15 as the Detect proxy (midpoint of the month-only start
+date) and July 8 as the Notify timestamp; the implied
+Detect → Notify interval is ~175 days (251,280 minutes). 11
+cases, 6 deaths combined with the 2023 cluster.</p>
+  </li>
+  <li>
+    <p><strong><code class="language-plaintext highlighter-rouge">outbreak.az_heat_2024</code></strong> – Heat. <code class="language-plaintext highlighter-rouge">start_date '2024-04'</code>, no
+explicit notify or respond dates in the seed (the season is the
+intervention). We use April 15 as the Detect proxy, April 20 as
+the Notify proxy (~5 days post-season-onset, when MCDPH heat
+surveillance typically declares the first cluster), and April 22
+for Respond / Public Comm. 602 deaths in Maricopa County across
+70 days at or above 110 °F.</p>
+  </li>
+</ol>
+
+<p>Each cell in <code class="language-plaintext highlighter-rouge">per_vertical_per_agency_baseline</code> is attributed to the
+agency that reported the outbreak (<code class="language-plaintext highlighter-rouge">reportedBy</code> edges in
+<code class="language-plaintext highlighter-rouge">schema/deep/outbreaks.sql</code>). Cells where the milestone is missing
+from the published record carry <code class="language-plaintext highlighter-rouge">null</code> – the evaluator treats
+<code class="language-plaintext highlighter-rouge">null</code> as “no comparison possible” rather than zero, so a <code class="language-plaintext highlighter-rouge">null</code>
+baseline yields a <code class="language-plaintext highlighter-rouge">% shorter = n/a</code> cell in the scorecard.</p>
+
+<h2 id="scorecard-structure">Scorecard structure</h2>
+
+<p>A rendered scorecard is divided into three sections:</p>
+
+<ol>
+  <li><strong>Header</strong> – window, verticals, agencies, baseline year + source
+path, generation timestamp, total observations.</li>
+  <li><strong>Phase-3 success criterion table</strong> – one row per <code class="language-plaintext highlighter-rouge">(agency,
+vertical)</code> cell with the Detect → Notify median, the baseline,
+the percent-shorter, and a PASS/FAIL verdict.</li>
+  <li><strong>Per-agency, per-vertical interval scorecards</strong> – one
+sub-section per cell with all five milestone-pair intervals.</li>
+</ol>
+
+<p>The exact rendering is produced by <code class="language-plaintext highlighter-rouge">render_markdown(report)</code> and is
+also available as JSON via <code class="language-plaintext highlighter-rouge">--format json</code> on the CLI.</p>
+
+<h2 id="example-scorecard">Example scorecard</h2>
+
+<p>The synthetic example below shows the layout. Numbers are from
+five Heat observations routed to MCDPH and three VBD observations
+routed to ADHS during a hypothetical 2026-05-01 → 2026-09-30 window.</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code># OneHealth Pipeline -- Figure-3 Timeliness Scorecard
+
+**Window:** 2026-05-01 → 2026-09-30
+**Verticals:** vbd, heat
+**Agencies:** resource.mcdph_heat, resource.adhs
+**Historical baseline year:** 2024
+**Total observations in window:** 8
+
+## Phase-3 success criterion (Detect → Notify ≥ 30% shorter vs 2024)
+
+| Agency              | Vertical | Median (pipeline) | Baseline (2024) | % shorter | Verdict |
+|---------------------|----------|------------------:|----------------:|----------:|:-------:|
+| resource.mcdph_heat | heat     | 6.0 min           | 5.0 d           | 99.9%     | PASS    |
+| resource.adhs       | vbd      | 3.0 d             | 174.5 d         | 98.3%     | PASS    |
+| resource.adhs       | heat     | n/a               | n/a             | n/a       | FAIL    |
+| resource.mcdph_heat | vbd      | n/a               | n/a             | n/a       | FAIL    |
+
+## Per-agency, per-vertical interval scorecards
+
+### resource.mcdph_heat -- heat
+_n_ = 5 observations
+
+| Pair               | n | Median | IQR (p25-p75)    | Baseline | Δ vs base | % shorter |
+|--------------------|--:|-------:|------------------:|---------:|----------:|----------:|
+| detect_to_notify   | 5 | 6.0 min | 5.0 min - 7.0 min | 5.0 d   | -99.9%    | 99.9%     |
+| notify_to_verify   | 5 | 3.0 min | 3.0 min - 3.0 min | n/a     | n/a       | n/a       |
+| verify_to_lab      | 0 | n/a     | n/a               | n/a     | n/a       | n/a       |
+| lab_to_respond     | 0 | n/a     | n/a               | 2.0 d   | n/a       | n/a       |
+| detect_to_respond  | 5 | 13.0 min| 12.0 min - 15.0 m | 7.0 d   | -99.9%    | 99.9%     |
+</code></pre></div></div>
+
+<p>The two FAIL rows are not regressions – they are cells where the
+configured agency had <strong>no in-window observations of that
+vertical</strong>. The Phase-3 verdict honestly distinguishes “no data”
+from “data, but slower than baseline” via the <code class="language-plaintext highlighter-rouge">reason</code> field on the
+<code class="language-plaintext highlighter-rouge">Phase3Verdict</code> model.</p>
+
+<h2 id="cli-usage">CLI usage</h2>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>$ python -m onehealth_agents.evaluation \
+    --start 2026-05-01 \
+    --end 2026-09-30 \
+    --vertical vbd --vertical heat \
+    --agency resource.mcdph_heat --agency resource.adhs \
+    --format md
+</code></pre></div></div>
+
+<p><code class="language-plaintext highlighter-rouge">--format json</code> emits the same <code class="language-plaintext highlighter-rouge">EvaluationReport</code> as machine-readable
+JSON (pydantic <code class="language-plaintext highlighter-rouge">model_dump_json</code>). <code class="language-plaintext highlighter-rouge">--ducklake-uri</code> (or the
+<code class="language-plaintext highlighter-rouge">KG_DUCKLAKE_URI</code> env var) points at the production DuckLake URI; if
+unset and no <code class="language-plaintext highlighter-rouge">--baseline-path</code> override is supplied, the harness
+runs purely on the on-disk baseline and reports 0 observations.</p>
+
+<h2 id="known-limitations">Known limitations</h2>
+
+<p>These are surfaced explicitly so a reviewer reading the scorecard
+knows what <em>not</em> to over-interpret.</p>
+
+<ul>
+  <li>
+    <p><strong>Agent-run audit data isn’t real surveillance data.</strong> Every
+milestone here is timestamped by an agent invocation, not by a
+field epidemiologist’s case-confirmation. A 6-minute Detect →
+Notify in the scorecard means the orchestrator wrote both rows
+6 minutes apart – it does not mean ADHS <em>acted on</em> the report
+6 minutes after the user submitted it. The system-side numbers
+are an upper bound on how fast the human workflow can possibly be
+given the same intake stream.</p>
+  </li>
+  <li>
+    <p><strong>The Detect milestone shifts with human-vs-machine review.</strong> The
+audit-SQL header explicitly marks Verify and Lab as PROVISIONAL.
+The same applies to Detect for any vertical where the canonical
+Detect milestone is “symptom onset” rather than “report
+received”. Heat is the cleanest fit (CHW check-in ~ symptom
+onset); VBD tick reports are typically days-to-weeks behind
+symptom onset, so the apparent Detect-to-Notify speedup in the
+scorecard is partly an artifact of starting the clock late.</p>
+  </li>
+  <li>
+    <p><strong>Tribal-data suppression caps some intervals.</strong> Per Plan 02’s
+data-sovereignty rules, observations from tribal lands may be
+county-level aggregated or fully suppressed. That structurally
+lowers the <code class="language-plaintext highlighter-rouge">n</code> in any cell that includes those geographies, and
+in extreme cases can leave a scorecard row with <code class="language-plaintext highlighter-rouge">n=0</code> even
+though the underlying community is generating real reports. The
+RMSF tribal outbreak is the canonical case study – see
+<a href="/epihack-2026/plan/CLUSTER-CALIBRATION.html"><code class="language-plaintext highlighter-rouge">plan/CLUSTER-CALIBRATION.md</code></a> for the
+same trade-off on the detection side.</p>
+  </li>
+  <li>
+    <p><strong>Baseline precision is mixed.</strong> The 2024 hantavirus Detect proxy
+is mid-January (the seed has month-only precision). The 2024 heat
+Notify proxy is estimated. The baselines are useful as
+order-of-magnitude counterfactuals, not as ground truth.
+When a more precise published record (MMWR follow-up, AAR) becomes
+available, the json baseline should be regenerated against it.</p>
+  </li>
+  <li>
+    <p><strong>Per-pair baselines for Verify / Lab / Notify→Verify intervals
+are mostly null.</strong> Published outbreak records rarely note the
+field-investigation or lab-confirmation timestamps separately, so
+most non-Detect→Notify cells in the baseline are <code class="language-plaintext highlighter-rouge">null</code>. The
+scorecard renders those cells as <code class="language-plaintext highlighter-rouge">n/a</code>, signalling “no
+counterfactual to compare against”.</p>
+  </li>
+</ul>
+
+<h2 id="reproducing-locally">Reproducing locally</h2>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>cd agents
+uv sync --extra dev
+uv pip install duckdb            # optional; only needed for the live SQL path
+uv run pytest tests/test_evaluation.py -v
+uv run python -m onehealth_agents.evaluation --start 2026-05-01 --end 2026-09-30
+</code></pre></div></div>
+
+<p>The tests are pure-stdlib and run in under a second. The DuckLake-bound
+code path is smoke-tested by <code class="language-plaintext highlighter-rouge">tests/test_audit.py</code> (the
+<code class="language-plaintext highlighter-rouge">v_observation_timeliness</code> view round-trip), so end-to-end coverage is
+maintained without coupling the evaluation tests to a database.</p>
+
+
+  <footer>
+    Source: Ending Pandemics Academy &middot; University of Arizona Mel &amp;
+    Enid Zuckerman College of Public Health &middot; Global Health Institute.
+  </footer>
+</body>
+</html>

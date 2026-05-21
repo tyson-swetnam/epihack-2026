@@ -1,0 +1,23 @@
+[Unit]
+Description=AZ One Health Sentinel — sync MongoDB mobile reports into DuckLake
+After=network-online.target mongod.service postgresql.service onehealth-api.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User={{ onehealth_user }}
+Group={{ onehealth_group }}
+WorkingDirectory={{ onehealth_repo_path }}/agents
+EnvironmentFile=/etc/onehealth-api.env
+# DuckDB needs a writable HOME for its extension cache (ProtectHome hides /home).
+Environment=HOME={{ ducklake_duckdb_home }}
+ExecStart={{ onehealth_repo_path }}/agents/.venv/bin/python -m onehealth_agents.sync.mongo_to_ducklake
+# Same sandboxing posture as the API.
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths={{ onehealth_repo_path }} {{ ducklake_data_path }} {{ ducklake_duckdb_home }}
+PrivateTmp=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true

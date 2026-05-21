@@ -1,0 +1,16 @@
+# Copy to inventory.yml and edit. Hosts marked under `onehealth` get
+# every role; if you want to split the API and the app across two
+# boxes, create more groups and adjust playbook.yml.
+all:
+  children:
+    onehealth:
+      hosts:
+        sentinel-1:
+          # Set these to match your VM.
+          ansible_host: 198.51.100.10           # public IP or hostname
+          ansible_user: ubuntu                  # initial sudo user
+          ansible_python_interpreter: /usr/bin/python3
+      vars:
+        # The fully-qualified domain name the app + API are served at.
+        # Used by nginx for vhost matching and Let's Encrypt.
+        onehealth_fqdn: sentinel.example.org

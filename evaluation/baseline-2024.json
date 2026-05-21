@@ -1,0 +1,107 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "title": "2024 Arizona historical outbreak baselines for Figure-3 timeliness evaluation",
+  "source": "schema/deep/outbreaks.sql (commit-current as of 2026-05-19)",
+  "note": "Pre-extracted by hand from the SQL seed because parsing the seed at runtime is fragile (string-typed dates with mixed precision). Re-derive whenever schema/deep/outbreaks.sql changes. The interval medians below are the 2024 counter-factual the Phase-3 plan/05-roadmap.md success criterion judges the agent pipeline against.",
+  "year": 2024,
+  "outbreaks": [
+    {
+      "slug": "outbreak.az_hantavirus_2024",
+      "vertical": "vbd",
+      "label": "2024 Arizona Hantavirus Spike",
+      "primary_geography": "Apache, Coconino, Navajo, Maricopa, Pima counties",
+      "agencies": ["resource.adhs", "resource.coconino_hhs"],
+      "milestone_dates": {
+        "detect": "2024-01-15",
+        "notify": "2024-07-08",
+        "public_comm": "2024-07-08"
+      },
+      "milestone_precision": {
+        "detect": "month-only (start_date '2024-01' in SQL; midpoint of January used)",
+        "notify": "exact (HAN advisory 2024-07-08)",
+        "public_comm": "exact (HAN advisory)"
+      },
+      "intervals_minutes": {
+        "detect_to_notify": 251280,
+        "notify_to_public_comm": 0
+      },
+      "counts": {
+        "total_cases": 11,
+        "total_deaths_2023_2024_combined": 6
+      },
+      "reference": "ADHS HAN advisory 2024-07-08; first Pima County HPS case ever recorded."
+    },
+    {
+      "slug": "outbreak.az_heat_2024",
+      "vertical": "heat",
+      "label": "2024 Arizona Record Heat Season",
+      "primary_geography": "Statewide; Maricopa County core",
+      "agencies": ["resource.mcdph_heat", "resource.adhs_heat", "resource.phoenix_ohrm"],
+      "milestone_dates": {
+        "detect": "2024-04-15",
+        "notify": "2024-04-20",
+        "respond": "2024-04-22",
+        "public_comm": "2024-04-22"
+      },
+      "milestone_precision": {
+        "detect": "month-only (start_date '2024-04'; mid-April used as Detect proxy = first heat-attributable ED visit cluster of the season)",
+        "notify": "estimated (~5 days post-Detect; MCDPH heat surveillance typically declares season-onset within a week of the first cluster)",
+        "respond": "estimated (cooling-center activation; Maricopa County 2024 report)",
+        "public_comm": "estimated (MCDPH heat dashboard published at same time as Respond)"
+      },
+      "intervals_minutes": {
+        "detect_to_notify": 7200,
+        "notify_to_respond": 2880,
+        "respond_to_public_comm": 0
+      },
+      "counts": {
+        "total_deaths_maricopa": 602,
+        "days_110plus_phoenix": 70,
+        "consecutive_100_days": 113
+      },
+      "reference": "MCDPH 2024 Heat-Associated Deaths Report (Mar 2025); NWS Phoenix climate summaries."
+    }
+  ],
+  "per_vertical_per_agency_baseline": {
+    "vbd": {
+      "resource.adhs": {
+        "detect_to_notify_min": 251280,
+        "notify_to_verify_min": null,
+        "verify_to_lab_min": null,
+        "lab_to_respond_min": null,
+        "detect_to_respond_min": null,
+        "n_outbreaks": 1,
+        "notes": "Hantavirus 2024; verify/lab/respond intervals not in published record."
+      },
+      "resource.coconino_hhs": {
+        "detect_to_notify_min": 251280,
+        "notify_to_verify_min": null,
+        "verify_to_lab_min": null,
+        "lab_to_respond_min": null,
+        "detect_to_respond_min": null,
+        "n_outbreaks": 1,
+        "notes": "Same hantavirus 2024 baseline; Coconino is the index-case county."
+      }
+    },
+    "heat": {
+      "resource.mcdph_heat": {
+        "detect_to_notify_min": 7200,
+        "notify_to_verify_min": null,
+        "verify_to_lab_min": null,
+        "lab_to_respond_min": 2880,
+        "detect_to_respond_min": 10080,
+        "n_outbreaks": 1,
+        "notes": "Heat season 2024; intervals are estimates from MCDPH report timing."
+      },
+      "resource.adhs_heat": {
+        "detect_to_notify_min": 7200,
+        "notify_to_verify_min": null,
+        "verify_to_lab_min": null,
+        "lab_to_respond_min": 2880,
+        "detect_to_respond_min": 10080,
+        "n_outbreaks": 1,
+        "notes": "Same 2024 heat baseline; ADHS is the state-level partner."
+      }
+    }
+  }
+}

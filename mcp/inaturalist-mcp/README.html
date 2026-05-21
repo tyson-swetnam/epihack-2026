@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>iNaturalist MCP server</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      max-width: 1100px;
+      margin: 2rem auto;
+      padding: 0 1.25rem;
+      color: #1a1a1a;
+      line-height: 1.55;
+    }
+    nav.crumbs { font-size: .9rem; color: #555; margin-bottom: 1rem; }
+    nav.crumbs a { color: #1F3A93; text-decoration: none; }
+    h1 { border-bottom: 3px solid #1F3A93; padding-bottom: .35rem; }
+    h2 { margin-top: 2.25rem; color: #1F3A93; }
+    h3 { margin-top: 1.25rem; }
+    table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: .95rem; }
+    th, td { border: 1px solid #ddd; padding: .5rem .75rem; text-align: left; vertical-align: top; }
+    th { background: #f0f3f8; }
+    blockquote {
+      border-left: 4px solid #1F3A93;
+      background: #f4f6fb;
+      margin: 1rem 0;
+      padding: .75rem 1rem;
+    }
+    code { background: #f1f3f7; padding: 1px 5px; border-radius: 3px; font-size: .9em; }
+    pre code { display: block; padding: .75rem 1rem; overflow-x: auto; }
+    footer { margin-top: 4rem; padding-top: 1rem; border-top: 1px solid #ddd; color: #666; font-size: .85rem; }
+    a { color: #1F3A93; }
+  </style>
+</head>
+<body>
+  <nav class="crumbs">
+    <a href="/epihack-2026/">EpiHack AZ 2026</a>
+  </nav>
+
+  <h1 id="inaturalist-mcp--model-context-protocol-server-for-inaturalist"><code class="language-plaintext highlighter-rouge">inaturalist-mcp</code> — Model Context Protocol server for iNaturalist</h1>
+
+<p>A <a href="https://modelcontextprotocol.io/">Model Context Protocol</a> server
+that wraps the <a href="https://www.inaturalist.org/">iNaturalist</a> public API
+as a set of tools an LLM (Claude Desktop, Claude Code, Claude API
+agents, or any other MCP client) can call.</p>
+
+<p>Built for the EpiHack Arizona 2026 <a href="../../wildlife/index.html">Wildlife &amp; Vector-Borne Diseases
+focus group</a>.</p>
+
+<blockquote>
+  <p><strong>Why iNaturalist?</strong> iNaturalist is the world’s largest open
+biodiversity-observations dataset — every record is a photo with a
+timestamp, GPS, and a community-verified species ID, released under
+permissive CC licenses. For One Health surveillance in Arizona it
+gives us a real-time citizen-science feed of tick, mosquito, flea,
+and wildlife-reservoir sightings that complements the
+structured-submission programs (the Walker lab’s
+<a href="../great-az-tick-check-mcp/"><code class="language-plaintext highlighter-rouge">great-az-tick-check-mcp</code></a>, AZGFD
+wildlife mortality, VectorSurv trap data). When a hiker photographs
+a tick on their dog in Cochise County, the photo shows up in
+iNaturalist days before the physical specimen reaches the lab.</p>
+</blockquote>
+
+<h2 id="what-it-does">What it does</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>MCP tool</th>
+      <th>What it does</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">inat_observations_bbox</code></td>
+      <td>Public observations inside a <code class="language-plaintext highlighter-rouge">(min_lon, min_lat, max_lon, max_lat)</code> box, filtered by taxon + days + quality grade.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">inat_observations_near</code></td>
+      <td>Convenience wrapper for <code class="language-plaintext highlighter-rouge">(lat, lon, radius_km)</code> — bbox + haversine sort by distance.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">inat_observations_by_taxon</code></td>
+      <td>Observations of a specific <code class="language-plaintext highlighter-rouge">taxon_id</code> in a <code class="language-plaintext highlighter-rouge">place_id</code> (default: AZ, place_id=53).</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">inat_taxon_lookup</code></td>
+      <td>Resolve a name (<code class="language-plaintext highlighter-rouge">"deer mouse"</code>) or numeric ID to a taxon record.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">inat_species_summary_az</code></td>
+      <td>Counts by month and by AZ county-equivalent place for a taxon.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">inat_tick_observations_az</code></td>
+      <td>Convenience: research-grade tick observations in AZ — the citizen-science cross-check for <code class="language-plaintext highlighter-rouge">great-az-tick-check-mcp</code>.</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>Plus two MCP <strong>resources</strong>:</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">inat://tick-genera-az</code> — AZ-relevant tick genera + species with
+iNaturalist taxon IDs (quick reference; skip the lookup
+round-trip).</li>
+  <li><code class="language-plaintext highlighter-rouge">inat://rate-limits</code> — documented iNaturalist API rate-limit
+policy and how this server honours it.</li>
+</ul>
+
+<h2 id="why-this-matters-for-epihack">Why this matters for EpiHack</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>Scenario</th>
+      <th>What this MCP adds</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Hiker mails in a tick (<code class="language-plaintext highlighter-rouge">plan/04-data-flows.md</code> Scenario A)</td>
+      <td>The Walker lab gets the specimen; iNaturalist gives a <em>near-real-time photo stream</em> of other ticks observed in the same area in the same week. The Triage Agent can show <em>“4 other brown-dog-tick photos within 25 km in the last 30 days”</em> on the submission confirmation screen.</td>
+    </tr>
+    <tr>
+      <td>AZGFD wildlife mortality (Scenario B)</td>
+      <td>When an agency reports a die-off of prairie dogs in Apache County, this MCP gives the historical iNaturalist baseline of <em>Cynomys gunnisoni</em> sightings in the same place.</td>
+    </tr>
+    <tr>
+      <td>Knowledge-graph backfill</td>
+      <td>Every observation row carries an <code class="language-plaintext highlighter-rouge">observation_id</code> + <code class="language-plaintext highlighter-rouge">url</code>; the Knowledge Update Agent can dereference both back to the canonical iNaturalist record.</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2 id="user-agent-requirement">User-Agent requirement</h2>
+
+<p>The iNaturalist API <strong>requires every client to identify itself with
+a meaningful User-Agent header</strong>
+(<a href="https://www.inaturalist.org/pages/api+recommended+practices">API recommended practices</a>).
+Anonymous traffic gets throttled or blocked, which would poison the
+shared rate-limit budget for the whole EpiHack stack.</p>
+
+<p>So this server:</p>
+
+<ol>
+  <li><strong>Refuses to start</strong> if <code class="language-plaintext highlighter-rouge">INAT_USER_AGENT</code> is unset (the
+<code class="language-plaintext highlighter-rouge">__main__</code> entry point exits with code 2 and a clear error).</li>
+  <li><strong>Sets the header on every outbound request</strong> from the
+<code class="language-plaintext highlighter-rouge">INaturalistClient</code>.</li>
+</ol>
+
+<p>Pick a UA that includes a project name, a version, and a contact:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>INAT_USER_AGENT='epihack-az-2026/0.1 (contact: ops@example.org)'
+</code></pre></div></div>
+
+<h2 id="rate-limits">Rate limits</h2>
+
+<p>Sourced from
+<a href="https://api.inaturalist.org/v1/docs/"><code class="language-plaintext highlighter-rouge">api.inaturalist.org/v1/docs/</code></a>
+and the
+<a href="https://www.inaturalist.org/pages/api+recommended+practices">iNaturalist API recommended practices</a>
+page:</p>
+
+<ul>
+  <li><strong>~100 requests per minute</strong> per IP (iNat asks clients to stay
+well below this).</li>
+  <li><strong>~10,000 requests per day</strong> per IP.</li>
+  <li>Maximum <strong>per-page = 200</strong> observations; deeper paging beyond
+10,000 results requires id-based cursors (<code class="language-plaintext highlighter-rouge">id_above</code> +
+<code class="language-plaintext highlighter-rouge">order_by=id</code>).</li>
+  <li>429 responses include a <strong><code class="language-plaintext highlighter-rouge">Retry-After</code></strong> header — the client
+sleeps for that many seconds (capped at 60s) and retries once.</li>
+</ul>
+
+<p>For the full server-side policy text, query the
+<code class="language-plaintext highlighter-rouge">inat://rate-limits</code> resource.</p>
+
+<h2 id="place--taxon-ids">Place + taxon IDs</h2>
+
+<p>iNaturalist uses stable numeric IDs for both places and taxa. The
+defaults shipped here:</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Key</th>
+      <th>Default ID</th>
+      <th>Source</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Arizona (US state)</td>
+      <td><strong>53</strong></td>
+      <td>confirm at <a href="https://api.inaturalist.org/v1/places/53">https://api.inaturalist.org/v1/places/53</a></td>
+    </tr>
+    <tr>
+      <td>Ticks (order Ixodida)</td>
+      <td>47119</td>
+      <td>confirm at <a href="https://www.inaturalist.org/taxa/47119">https://www.inaturalist.org/taxa/47119</a></td>
+    </tr>
+    <tr>
+      <td>Mosquitoes (family Culicidae)</td>
+      <td>84738</td>
+      <td>confirm at <a href="https://www.inaturalist.org/taxa/84738">https://www.inaturalist.org/taxa/84738</a></td>
+    </tr>
+    <tr>
+      <td>Fleas (order Siphonaptera)</td>
+      <td>84377</td>
+      <td>confirm at <a href="https://www.inaturalist.org/taxa/84377">https://www.inaturalist.org/taxa/84377</a></td>
+    </tr>
+    <tr>
+      <td>Rodents (order Rodentia)</td>
+      <td>43698</td>
+      <td>confirm at <a href="https://www.inaturalist.org/taxa/43698">https://www.inaturalist.org/taxa/43698</a></td>
+    </tr>
+    <tr>
+      <td><em>Rhipicephalus sanguineus</em> (brown dog tick)</td>
+      <td>84219</td>
+      <td> </td>
+    </tr>
+    <tr>
+      <td><em>Dermacentor andersoni</em> (Rocky Mountain wood tick)</td>
+      <td>126099</td>
+      <td> </td>
+    </tr>
+    <tr>
+      <td><em>Dermacentor variabilis</em> (American dog tick)</td>
+      <td>84223</td>
+      <td> </td>
+    </tr>
+    <tr>
+      <td><em>Ixodes pacificus</em> (Western black-legged tick)</td>
+      <td>62366</td>
+      <td> </td>
+    </tr>
+    <tr>
+      <td><em>Peromyscus maniculatus</em> (deer mouse — hantavirus)</td>
+      <td>46559</td>
+      <td> </td>
+    </tr>
+    <tr>
+      <td><em>Cynomys gunnisoni</em> (Gunnison’s prairie dog — plague)</td>
+      <td>46211</td>
+      <td> </td>
+    </tr>
+    <tr>
+      <td><em>Otospermophilus variegatus</em> (rock squirrel — plague)</td>
+      <td>73704</td>
+      <td> </td>
+    </tr>
+    <tr>
+      <td><em>Sylvilagus audubonii</em> (desert cottontail — tularemia)</td>
+      <td>43130</td>
+      <td> </td>
+    </tr>
+  </tbody>
+</table>
+
+<p><strong>Every ID is env-overridable</strong> (<code class="language-plaintext highlighter-rouge">INAT_AZ_PLACE_ID</code>, <code class="language-plaintext highlighter-rouge">INAT_TAXON_*</code>).
+A contributor who finds a drifted ID can patch the env without a
+code change. The <code class="language-plaintext highlighter-rouge">inat_taxon_lookup</code> tool is the authoritative
+runtime check.</p>
+
+<h2 id="mock-by-default-fallback">Mock-by-default fallback</h2>
+
+<p>This server is <strong>mock-by-default</strong> in the same sense as
+<a href="../great-az-tick-check-mcp/"><code class="language-plaintext highlighter-rouge">great-az-tick-check-mcp</code></a>: the build
+sandbox runs all tests without network access, against a canned
+dataset of ~20 synthetic AZ observations covering ticks,
+mosquitoes, fleas, deer mice, prairie dogs, rock squirrels, and
+cottontails (see
+<a href="/epihack-2026/mcp/inaturalist-mcp/src/inaturalist_mcp/canned_data.py"><code class="language-plaintext highlighter-rouge">src/inaturalist_mcp/canned_data.py</code></a>).</p>
+
+<p>Behaviour:</p>
+
+<ul>
+  <li>Set <code class="language-plaintext highlighter-rouge">INAT_OFFLINE=1</code> to force the canned-data path (no HTTP
+requests will be made).</li>
+  <li>On any <code class="language-plaintext highlighter-rouge">httpx.ConnectError</code> / <code class="language-plaintext highlighter-rouge">ReadError</code>, the client
+<strong>transparently falls back to the canned dataset</strong> and tags the
+response with <code class="language-plaintext highlighter-rouge">source: "canned"</code> so the calling LLM knows which
+it got. Live responses carry <code class="language-plaintext highlighter-rouge">source: "live"</code>.</li>
+</ul>
+
+<h2 id="cross-reference">Cross-reference</h2>
+
+<p>This server is the citizen-science complement to the structured
+<a href="../great-az-tick-check-mcp/"><code class="language-plaintext highlighter-rouge">great-az-tick-check-mcp</code></a>:</p>
+
+<ul>
+  <li><strong><code class="language-plaintext highlighter-rouge">great-az-tick-check-mcp</code></strong> = mail in a physical tick to the
+Walker lab; deterministic species ID + PCR pathogen screen.</li>
+  <li><strong><code class="language-plaintext highlighter-rouge">inaturalist-mcp</code></strong> = scrape the public photo stream for the
+same taxa in the same place + time window.</li>
+</ul>
+
+<p>The two together let the Triage Agent answer <em>“is this tick the
+species I think it is?”</em> with both a definitive lab path (mail it
+in) and a citizen-science prior (here are 4 other people’s photos
+of the same species in the same county in the last month).</p>
+
+<h2 id="inaturalist-open-data-ethos">iNaturalist open-data ethos</h2>
+
+<p>iNaturalist observations are released under
+<a href="https://www.inaturalist.org/pages/help#cc">Creative Commons licenses</a>
+(the most permissive default is <code class="language-plaintext highlighter-rouge">CC BY-NC</code>; observers can pick more
+or less permissive). The platform is a joint initiative of the
+California Academy of Sciences and the National Geographic Society.</p>
+
+<p>Visit <a href="https://www.inaturalist.org/">https://www.inaturalist.org/</a> for the full project, the
+<a href="https://www.gbif.org/dataset/50c9509d-22c7-4a22-a47d-8c48425ef4a7">GBIF data portal</a>
+for the research-grade research-grade exports, and
+<a href="https://www.inaturalist.org/pages/api+recommended+practices">https://www.inaturalist.org/pages/api+recommended+practices</a> for
+the API rules-of-the-road.</p>
+
+<p>If you’re publishing analysis built on iNaturalist data, credit
+individual observers (the <code class="language-plaintext highlighter-rouge">user_login</code> field on each row) per the
+license attached to the photo.</p>
+
+<h2 id="install--run">Install &amp; run</h2>
+
+<h3 id="as-a-claude-desktop-mcp-server">As a Claude Desktop MCP server</h3>
+
+<ol>
+  <li>Install <a href="https://docs.astral.sh/uv/"><code class="language-plaintext highlighter-rouge">uv</code></a> if you don’t have it.</li>
+  <li>Drop the snippet in <a href="/epihack-2026/mcp/inaturalist-mcp/examples/claude_desktop_config.json"><code class="language-plaintext highlighter-rouge">examples/claude_desktop_config.json</code></a>
+into your Claude Desktop config (<code class="language-plaintext highlighter-rouge">~/Library/Application Support/Claude/claude_desktop_config.json</code>
+on macOS, <code class="language-plaintext highlighter-rouge">%APPDATA%\Claude\claude_desktop_config.json</code> on Windows).</li>
+  <li>Replace the path with the absolute path to this directory.</li>
+  <li>Fill in <code class="language-plaintext highlighter-rouge">INAT_USER_AGENT</code> — the server refuses to start without it.</li>
+  <li>Restart Claude Desktop.</li>
+</ol>
+
+<h3 id="standalone">Standalone</h3>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">cd </span>mcp/inaturalist-mcp
+uv <span class="nb">sync
+</span><span class="nv">INAT_USER_AGENT</span><span class="o">=</span><span class="s1">'epihack-az-2026/0.1 (contact: ops@example.org)'</span> <span class="se">\</span>
+  uv run inaturalist-mcp                                          <span class="c"># stdio (default)</span>
+<span class="nv">MCP_TRANSPORT</span><span class="o">=</span>streamable-http <span class="se">\</span>
+<span class="nv">INAT_USER_AGENT</span><span class="o">=</span><span class="s1">'epihack-az-2026/0.1 (contact: ops@example.org)'</span> <span class="se">\</span>
+  uv run inaturalist-mcp                                          <span class="c"># HTTP</span>
+</code></pre></div></div>
+
+<h3 id="tests">Tests</h3>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">cd </span>mcp/inaturalist-mcp
+uv run pytest
+</code></pre></div></div>
+
+<p>All tests are offline; no live API access required.</p>
+
+<h2 id="license">License</h2>
+
+<p>MIT, alongside the rest of <code class="language-plaintext highlighter-rouge">epihack-2026</code>.</p>
+
+
+  <footer>
+    Source: Ending Pandemics Academy &middot; University of Arizona Mel &amp;
+    Enid Zuckerman College of Public Health &middot; Global Health Institute.
+  </footer>
+</body>
+</html>

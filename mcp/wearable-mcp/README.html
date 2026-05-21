@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Wearable MCP server</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      max-width: 1100px;
+      margin: 2rem auto;
+      padding: 0 1.25rem;
+      color: #1a1a1a;
+      line-height: 1.55;
+    }
+    nav.crumbs { font-size: .9rem; color: #555; margin-bottom: 1rem; }
+    nav.crumbs a { color: #1F3A93; text-decoration: none; }
+    h1 { border-bottom: 3px solid #1F3A93; padding-bottom: .35rem; }
+    h2 { margin-top: 2.25rem; color: #1F3A93; }
+    h3 { margin-top: 1.25rem; }
+    table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: .95rem; }
+    th, td { border: 1px solid #ddd; padding: .5rem .75rem; text-align: left; vertical-align: top; }
+    th { background: #f0f3f8; }
+    blockquote {
+      border-left: 4px solid #1F3A93;
+      background: #f4f6fb;
+      margin: 1rem 0;
+      padding: .75rem 1rem;
+    }
+    code { background: #f1f3f7; padding: 1px 5px; border-radius: 3px; font-size: .9em; }
+    pre code { display: block; padding: .75rem 1rem; overflow-x: auto; }
+    footer { margin-top: 4rem; padding-top: 1rem; border-top: 1px solid #ddd; color: #666; font-size: .85rem; }
+    a { color: #1F3A93; }
+  </style>
+</head>
+<body>
+  <nav class="crumbs">
+    <a href="/epihack-2026/">EpiHack AZ 2026</a>
+  </nav>
+
+  <h1 id="wearable-mcp--model-context-protocol-server-for-wearable-readings"><code class="language-plaintext highlighter-rouge">wearable-mcp</code> — Model Context Protocol server for wearable readings</h1>
+
+<p>A <a href="https://modelcontextprotocol.io/">Model Context Protocol</a> server that
+exposes user-consented wearable readings (heart rate, skin temperature,
+HRV SDNN, 24-hour step count, body temperature) to LLM clients (Claude
+Desktop, Claude Code, the Sentinel Triage Agent, etc.).</p>
+
+<p>Built for the EpiHack Arizona 2026 <strong>Heat focus group</strong> as part of
+Phase 4 of the <a href="../../plan/05-roadmap.html#phase-4--statewide--evaluation-month-912">roadmap</a>.</p>
+
+<h2 id="privacy-stance-read-this-first">Privacy stance (read this first)</h2>
+
+<p>This MCP server <strong>never</strong> talks to Apple HealthKit or Android Health
+Connect directly. Those data sources require on-device user consent
+and stay on the user’s device. Instead, the server is a <em>consumer</em> of
+the on-device store that <a href="../../app/shared/wearable.js"><code class="language-plaintext highlighter-rouge">app/shared/wearable.js</code></a>
+populates after the user grants permission through the
+<code class="language-plaintext highlighter-rouge">webkit.messageHandlers.health</code> bridge (iOS) or
+<code class="language-plaintext highlighter-rouge">navigator.healthConnect</code> (Android). The MCP-side picture is therefore
+read-only and downstream of consent.</p>
+
+<p>Until that on-device store exists (it’s a Phase-4 ship), the server
+runs <strong>mock-by-default</strong>: every tool returns canned readings drawn
+from <code class="language-plaintext highlighter-rouge">wearable_mcp.mock_data</code> so the demo + tests work without a real
+device. Set <code class="language-plaintext highlighter-rouge">WEARABLE_BACKEND_URL</code> to point at a real consented-store
+proxy when one is available.</p>
+
+<h2 id="what-it-does">What it does</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>MCP tool</th>
+      <th>Returns</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">wearable_recent_readings</code></td>
+      <td>List of normalised readings for one LOINC code since a given ISO timestamp.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">wearable_summary_24h</code></td>
+      <td>min / max / mean / count for the last 24 h.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">wearable_alert_check</code></td>
+      <td>Which of a small rules-spec fire on the current data (tachycardia, etc.).</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">wearable_supported_metrics</code></td>
+      <td>The LOINC codes this build supports, plus human-readable name + unit.</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>Plus two MCP <strong>resources</strong>:</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">wearable://loinc-codes</code> — text reference matching the LOINC entries
+in <code class="language-plaintext highlighter-rouge">schema/deep/followups.sql</code>.</li>
+  <li><code class="language-plaintext highlighter-rouge">wearable://privacy-stance</code> — the explicit text version of the
+paragraph above.</li>
+</ul>
+
+<h2 id="supported-metrics-loinc">Supported metrics (LOINC)</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>LOINC</th>
+      <th>Name</th>
+      <th>Unit</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">8867-4</code></td>
+      <td>Heart rate</td>
+      <td>bpm</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">8310-5</code></td>
+      <td>Body temperature</td>
+      <td>degC</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">8328-7</code></td>
+      <td>Skin temperature</td>
+      <td>degC</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">80404-7</code></td>
+      <td>Heart rate variability SDNN</td>
+      <td>ms</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">41950-7</code></td>
+      <td>Steps in 24h</td>
+      <td>steps</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2 id="why-this-matters-for-epihack">Why this matters for EpiHack</h2>
+
+<p>When the Triage Agent is reasoning about a heat self-report it can
+ask, in plain language, “is this user currently meeting a tachycardia
+threshold?” and get a structured deterministic answer from
+<code class="language-plaintext highlighter-rouge">wearable_alert_check</code>, without ever touching the user’s raw stream
+or leaving the consent boundary the wearable shim already established.</p>
+
+<h2 id="run">Run</h2>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>uv run <span class="nt">--from</span> <span class="nb">.</span> wearable-mcp
+</code></pre></div></div>
+
+
+  <footer>
+    Source: Ending Pandemics Academy &middot; University of Arizona Mel &amp;
+    Enid Zuckerman College of Public Health &middot; Global Health Institute.
+  </footer>
+</body>
+</html>

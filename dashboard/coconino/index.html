@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Coconino HHS — plague, hantavirus, Grand Canyon NPS</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="theme-color" content="#6A1B9A" />
+<link rel="stylesheet" href="../shared/style.css" />
+</head>
+<body data-agency="coconino" data-mock-base="../mock">
+
+<header class="dash-header">
+  <div>
+    <div class="crumbs">
+      <a href="../../index.html">EpiHack AZ 2026</a> &middot;
+      <a href="../index.html">agency dashboard</a>
+    </div>
+    <h1>Coconino HHS — plague / hantavirus / NPS coordination <span class="agency-tag">Coconino County + GRCA</span></h1>
+  </div>
+  <div id="auth-stub"></div>
+</header>
+
+<div class="printable-banner">
+  <h1>Coconino HHS — printable</h1>
+  <p>Generated <span id="print-date"></span></p>
+</div>
+
+<main class="container">
+
+  <p class="muted small">
+    Coconino's working list of zoonotic clusters plus the
+    coordination row with Grand Canyon National Park visitor heat
+    illness. The Scenario D hantavirus cluster is co-flagged here with
+    ADHS. See
+    <a href="../../plan/04-data-flows.html#scenario-d--agency-side-cluster-review">Scenario D</a>
+    for the canonical walk-through.
+  </p>
+
+  <h2>Status <span class="sub">last 24h / 7d / 30d</span></h2>
+  <div class="status-row">
+    <div class="status-tile"><span class="label">New alerts &middot; 24h</span><span class="value">2</span></div>
+    <div class="status-tile"><span class="label">New alerts &middot; 7d</span><span class="value">5</span></div>
+    <div class="status-tile"><span class="label">New alerts &middot; 30d</span><span class="value">11</span></div>
+    <div class="status-tile"><span class="label">Open zoonotic events</span><span class="value">3</span></div>
+  </div>
+
+  <h2>Cluster feed <span class="sub">Coconino-scoped</span></h2>
+  <ul class="cluster-feed" id="cluster-feed"></ul>
+
+  <h2>Map <span class="sub">Coconino-bound observations</span></h2>
+  <div class="map-shell" id="map-shell"></div>
+
+  <h2>Case counts <span class="sub">hantavirus + plague + heat illness</span></h2>
+  <div class="analyst-table-wrap">
+    <table class="analyst-table" id="case-table">
+      <caption>Reportable / surveillance signals in Coconino County, 2026 to date</caption>
+      <thead>
+        <tr>
+          <th>Signal</th>
+          <th>Source</th>
+          <th class="num">Counts this week</th>
+          <th class="num">YTD</th>
+          <th>Trend (8 wk)</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <h2>Open the underlying observations</h2>
+  <button id="show-sql" class="btn secondary">Show SQL preview</button>
+  <div id="sql-mount"></div>
+
+  <div class="future-box">
+    <strong>Future work — Verify outbreak (Scenario D step 6).</strong>
+    Coconino HHS's working pattern is to triage the cluster with ADHS
+    VBZD over a shared call, then dispatch a field investigation. The
+    dispatch event is itself a <em>Verify</em> milestone that writes
+    back to the knowledge graph; it ships as a separate write workflow
+    outside this read-only dashboard.
+  </div>
+
+  <p class="crosslinks">
+    Cross-references:
+    <a href="../adhs/index.html">ADHS</a>
+    <a href="../azgfd/index.html">AZGFD</a>
+    <a href="../../map/index.html">map</a>
+    <a href="../../wildlife/02-zoonotic-surveillance.html">zoonotic surveillance</a>
+    <a href="../../plan/04-data-flows.html#scenario-d--agency-side-cluster-review">Scenario D</a>
+  </p>
+</main>
+
+<footer class="dash-footer">
+  Source: Coconino County Health &amp; Human Services &middot; ADHS &middot;
+  NPS Grand Canyon National Park &middot; USGS WHISPers.
+</footer>
+
+<script type="module">
+  import { mountAuthStub } from '../shared/auth-stub.js';
+  import { mountClusterFeed } from '../shared/cluster-feed.js';
+  import { mountMapEmbed } from '../shared/map-embed.js';
+  import { renderSparkline } from '../shared/sparkline.js';
+  import { fetchMock, renderSqlPreview } from '../shared/kg-client.js';
+
+  mountAuthStub(document.getElementById('auth-stub'), 'coconino');
+  document.getElementById('print-date').textContent = new Date().toISOString().slice(0, 10);
+
+  mountClusterFeed(document.getElementById('cluster-feed'), {
+    audience: 'coconino',
+    limit: 5
+  });
+
+  // Map: Coconino-scoped cluster + wildlife events
+  Promise.all([
+    fetchMock('cluster-feed.json'),
+    fetchMock('wildlife-events.json')
+  ]).then(([clusters, wildlife]) => {
+    const features = [];
+    (clusters.clusters || [])
+      .filter(c => !c.audiences || c.audiences.indexOf('coconino') >= 0)
+      .forEach(c => features.push({
+        type: 'Feature',
+        geometry: { type: 'Point', coordinates: [c.lon, c.lat] },
+        properties: {
+          title: c.title,
+          label: c.title,
+          severity: c.severity,
+          pathogen: c.pathogen,
+          county: c.county,
+          detected_at: c.detected_at,
+          kg_node_id: c.kg_node_id
+        }
+      }));
+    (wildlife.events || [])
+      .filter(e => e.county === 'Coconino')
+      .forEach(e => features.push({
+        type: 'Feature',
+        geometry: { type: 'Point', coordinates: [e.lon, e.lat] },
+        properties: {
+          title: e.label,
+          label: e.label,
+          severity: e.severity || 'info',
+          pathogen: (e.diagnosis && e.diagnosis[0]) || '',
+          county: e.county,
+          detected_at: e.start_date,
+          kg_node_id: e.kg_node_id
+        }
+      }));
+    mountMapEmbed(document.getElementById('map-shell'), {
+      geojson: { type: 'FeatureCollection', features },
+      colorBy: 'severity'
+    });
+  });
+
+  // Case-counts table: a small, hand-shaped set of Coconino signals.
+  const rows = [
+    { signal: 'Hantavirus-compatible (CHW)',     source: 'app/heat self-report', week: 1, ytd: 4, weekly: [0,0,0,1,0,1,1,1] },
+    { signal: 'Plague (Yersinia pestis, prairie dogs)', source: 'WHISPers',     week: 0, ytd: 2, weekly: [0,0,1,0,0,1,0,0] },
+    { signal: 'Plague (citizen-science carcasses)', source: 'iNaturalist',     week: 1, ytd: 3, weekly: [0,0,0,1,0,1,0,1] },
+    { signal: 'Grand Canyon NPS heat transports',  source: 'NPS',              week: 3, ytd: 9, weekly: [0,0,0,1,1,2,2,3] },
+    { signal: 'WNV human cases',                   source: 'ADHS',             week: 0, ytd: 0, weekly: [0,0,0,0,0,0,0,0] }
+  ];
+  const tbody = document.querySelector('#case-table tbody');
+  rows.forEach(r => {
+    const tr = document.createElement('tr');
+    tr.innerHTML =
+      `<td>${r.signal}</td>` +
+      `<td>${r.source}</td>` +
+      `<td class="num">${r.week}</td>` +
+      `<td class="num">${r.ytd}</td>` +
+      `<td class="spark"></td>`;
+    tbody.appendChild(tr);
+    tr.querySelector('td.spark').appendChild(renderSparkline(r.weekly, {
+      title: `${r.signal} — weekly trend`
+    }));
+  });
+
+  document.getElementById('show-sql').addEventListener('click', () => {
+    const sql =
+`-- Co-located WHISPers wildlife mortality events alongside
+-- Coconino community check-ins (the Scenario D query, verbatim).
+SELECT w.label, w.description, p.value_text AS event_date
+FROM   kg.node w
+JOIN   kg.property p ON p.node_id = w.node_id AND p.key = 'event_date'
+WHERE  w.node_type = 'whispers_event'
+  AND  w.node_id IN (
+    SELECT object_id FROM kg.edge
+    WHERE subject_id IN (SELECT node_id FROM cluster_observations)
+      AND predicate = 'colocatedWith'
+  );
+
+-- Recent NEON small-mammal data near the cluster
+SELECT * FROM kg.v_datasets_apis
+WHERE  resource_id = 'program.neon_srer'
+  AND  informs_questions LIKE '%hantavirus%';`;
+    renderSqlPreview(document.getElementById('sql-mount'), sql,
+      'Scenario D queries — co-located WHISPers + NEON');
+  });
+</script>
+
+</body>
+</html>

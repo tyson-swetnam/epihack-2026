@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>211 Arizona MCP server</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      max-width: 1100px;
+      margin: 2rem auto;
+      padding: 0 1.25rem;
+      color: #1a1a1a;
+      line-height: 1.55;
+    }
+    nav.crumbs { font-size: .9rem; color: #555; margin-bottom: 1rem; }
+    nav.crumbs a { color: #1F3A93; text-decoration: none; }
+    h1 { border-bottom: 3px solid #1F3A93; padding-bottom: .35rem; }
+    h2 { margin-top: 2.25rem; color: #1F3A93; }
+    h3 { margin-top: 1.25rem; }
+    table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: .95rem; }
+    th, td { border: 1px solid #ddd; padding: .5rem .75rem; text-align: left; vertical-align: top; }
+    th { background: #f0f3f8; }
+    blockquote {
+      border-left: 4px solid #1F3A93;
+      background: #f4f6fb;
+      margin: 1rem 0;
+      padding: .75rem 1rem;
+    }
+    code { background: #f1f3f7; padding: 1px 5px; border-radius: 3px; font-size: .9em; }
+    pre code { display: block; padding: .75rem 1rem; overflow-x: auto; }
+    footer { margin-top: 4rem; padding-top: 1rem; border-top: 1px solid #ddd; color: #666; font-size: .85rem; }
+    a { color: #1F3A93; }
+  </style>
+</head>
+<body>
+  <nav class="crumbs">
+    <a href="/epihack-2026/">EpiHack AZ 2026</a>
+  </nav>
+
+  <h1 id="211-az-mcp--model-context-protocol-server-for-211-arizona"><code class="language-plaintext highlighter-rouge">211-az-mcp</code> — Model Context Protocol server for 211 Arizona</h1>
+
+<p>A <a href="https://modelcontextprotocol.io/">Model Context Protocol</a> server that
+exposes <a href="https://211arizona.org/">211 Arizona</a> — operated by
+<a href="https://solariinc.org/">Solari Crisis &amp; Human Services</a> — as a set of
+tools an LLM (Claude Desktop, Claude Code, Claude API agents, or any
+other MCP client) can call.</p>
+
+<p>Built for the EpiHack Arizona 2026 <a href="../../heat/index.html">Heat focus
+group</a>. Powers the Heat-vertical
+<a href="../../plan/04-data-flows.html">Scenario C</a> (unsheltered heat check-in
+on a Magenta-HeatRisk day) in cooperation with <code class="language-plaintext highlighter-rouge">nws-heatrisk-mcp</code> and
+<code class="language-plaintext highlighter-rouge">mag-hrn-mcp</code>.</p>
+
+<blockquote>
+  <p><strong>Mock-by-default.</strong> 211 Arizona / Solari Crisis &amp; Human Services
+does <strong>not</strong> publish a public REST API at the time of writing. This
+server ships a canned in-memory backend so the end-to-end agent
+flows in <a href="../../plan/04-data-flows.html"><code class="language-plaintext highlighter-rouge">plan/04-data-flows.md</code></a>
+run offline. When a real API arrives, point <code class="language-plaintext highlighter-rouge">AZ211_BACKEND_URL</code> at
+it and the client will swap transparently (see
+<a href="#swapping-to-a-real-backend">Swapping to a real backend</a> below).</p>
+
+  <p>Reference for the canned content:
+<a href="https://211arizona.org/crisis/heat-relief/">https://211arizona.org/crisis/heat-relief/</a>.</p>
+</blockquote>
+
+<h2 id="what-it-does">What it does</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>MCP tool</th>
+      <th>What it returns</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">az211_transport_to_cooling_center</code></td>
+      <td>Mock ride-dispatch confirmation with a stable <code class="language-plaintext highlighter-rouge">dispatch_id</code>, ETA, provider, and a callback phone number. Tagged <code class="language-plaintext highlighter-rouge">source: "mock"</code>.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">az211_get_dispatch</code></td>
+      <td>Look up a previously-created dispatch by ID (chained call).</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">az211_utility_assistance_nearby</code></td>
+      <td>Community-action / LIHEAP providers near the caller, filterable by <code class="language-plaintext highlighter-rouge">kind</code> (electric / gas / water / weatherization / emergency_ac_repair). 7 canned providers across Maricopa, Pima, Coconino, Yuma, and Navajo / Apache counties.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">az211_crisis_referrals</code></td>
+      <td>Phone / hours / languages by topic (<code class="language-plaintext highlighter-rouge">heat</code>, <code class="language-plaintext highlighter-rouge">housing</code>, <code class="language-plaintext highlighter-rouge">food</code>, <code class="language-plaintext highlighter-rouge">behavioral_health</code>, or <code class="language-plaintext highlighter-rouge">all</code>).</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">az211_cooling_center_referral_nearby</code></td>
+      <td>Nearby cooling centers (canned). In production this cross-calls <code class="language-plaintext highlighter-rouge">mag-hrn-mcp.search_centers</code> for the authoritative Maricopa County registry.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">az211_lines</code></td>
+      <td>Structured phone-line directory: main 2-1-1 / 1-877-211-8661, 988 Suicide &amp; Crisis Lifeline, Solari Crisis Response Network, Veterans Crisis Line, ASL video relay.</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>Plus two MCP <strong>resources</strong>:</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>MCP resource</th>
+      <th>Payload</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">az211://hours</code></td>
+      <td>Full operator hours by season (year-round + heat-season expansion May 1 – Sept 30).</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">az211://languages</code></td>
+      <td>Languages supported, including indigenous-language pathways (Navajo / Diné bizaad, O’odham, Apache, Hopi) routed through partner organisations (ITCA-TEC, Navajo Epidemiology Center, IHS).</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2 id="why-this-matters-for-epihack">Why this matters for EpiHack</h2>
+
+<p>211 Arizona is the <strong>statewide non-clinical heat-relief on-ramp</strong>:
+live operators in English and Spanish, expanded hours during the
+May 1 – September 30 heat season, with connect points to cooling
+centers, transportation to centers, utility-bill assistance,
+weatherization, and emergency AC-repair referrals. It is also the
+voice channel most likely to be reachable for callers with no
+internet or no smartphone — the same population most exposed to
+heat mortality (see
+<a href="../../heat/04-vulnerable-populations.html">Heat Q4</a> and the
+“anonymity matters” insight on the Unhoused card in
+<a href="../../notes/world-cafe/q4-heat.html">World Café Q4 — Heat</a>).</p>
+
+<p>Exposing it as an MCP server lets an agent:</p>
+
+<ul>
+  <li>Convert a CHW field observation (Scenario C in
+<a href="../../plan/04-data-flows.html">plan 04</a>) into an actual dispatch
+in one tool call, with a stable <code class="language-plaintext highlighter-rouge">dispatch_id</code> the rest of the
+agent run can chain off.</li>
+  <li>Look up utility-assistance providers near a caller without leaving
+the conversation.</li>
+  <li>Render a “what languages can we help you in?” panel from a single
+MCP resource fetch — including indigenous-language access via
+the right tribal partner, not via the LLM guessing.</li>
+</ul>
+
+<h2 id="mock-backend">Mock backend</h2>
+
+<p>The mock backend lives in
+<a href="/epihack-2026/mcp/211-az-mcp/src/az211_mcp/mock_data.py"><code class="language-plaintext highlighter-rouge">src/az211_mcp/mock_data.py</code></a> and
+<a href="/epihack-2026/mcp/211-az-mcp/src/az211_mcp/client.py"><code class="language-plaintext highlighter-rouge">src/az211_mcp/client.py</code></a>.</p>
+
+<ul>
+  <li><strong>Dispatches</strong> are held in a process-local <code class="language-plaintext highlighter-rouge">dict</code> keyed by
+<code class="language-plaintext highlighter-rouge">dispatch_id</code>. Two tool calls inside one LLM session share the
+same client instance, so a <code class="language-plaintext highlighter-rouge">transport_to_cooling_center</code> call
+followed by a <code class="language-plaintext highlighter-rouge">get_dispatch</code> lookup returns consistent state.</li>
+  <li><strong>Dispatch IDs</strong> use <code class="language-plaintext highlighter-rouge">secrets.token_hex(6)</code> — 12 hex chars, no
+extra dependency, collision-free for any realistic session.</li>
+  <li><strong>Postal-code → county routing</strong> is a coarse prefix table
+covering the counties named in the canned dataset; unknown ZIPs
+fall back to Maricopa so demos never empty.</li>
+  <li><strong>Every record is tagged <code class="language-plaintext highlighter-rouge">source: "mock"</code></strong> so an audit log or
+the knowledge-graph receipt can tell which calls came from real
+vs. canned data.</li>
+</ul>
+
+<h2 id="swapping-to-a-real-backend">Swapping to a real backend</h2>
+
+<p>When 211 Arizona ships an API, set <code class="language-plaintext highlighter-rouge">AZ211_BACKEND_URL</code> (and optionally
+<code class="language-plaintext highlighter-rouge">AZ211_API_KEY</code>) in env. The client will pick the <code class="language-plaintext highlighter-rouge">HttpBackend</code>
+instead of the mock; today that backend raises
+<code class="language-plaintext highlighter-rouge">NotImplementedError</code> on every method so a misconfiguration is loud.
+Update
+<a href="/epihack-2026/mcp/211-az-mcp/src/az211_mcp/client.py"><code class="language-plaintext highlighter-rouge">src/az211_mcp/client.py::HttpBackend</code></a>
+to match the live wire format — none of the FastMCP tools or
+resources need to change.</p>
+
+<h2 id="operating-partner--data-sovereignty-notes">Operating partner &amp; data-sovereignty notes</h2>
+
+<ul>
+  <li><strong>Operator:</strong> <a href="https://solariinc.org/">Solari Crisis &amp; Human Services</a>,
+the statewide crisis line behind both 988 and 211 in Arizona.</li>
+  <li><strong>Tribal access:</strong> indigenous-language calls are warm-transferred to
+<a href="https://itcaonline.com/">ITCA-TEC</a>,
+<a href="https://nec.navajo-nsn.gov/">Navajo Epidemiology Center</a>, and IHS
+Area facilities. Tribal data lives behind tribal sovereignty and
+does not flow back through this MCP server.</li>
+  <li><strong>No PII leaves the MCP boundary.</strong> The MCP server returns dispatch
+metadata (provider, ETA, callback phone) and resource directories
+only — it does not echo back caller PII to the LLM (see
+<a href="../../plan/02-mcp-integration.html"><code class="language-plaintext highlighter-rouge">plan/02-mcp-integration.md</code></a>
+auth + data-sovereignty notes).</li>
+</ul>
+
+<h2 id="install--run">Install &amp; run</h2>
+
+<h3 id="as-a-claude-desktop-mcp-server">As a Claude Desktop MCP server</h3>
+
+<ol>
+  <li>Install <a href="https://docs.astral.sh/uv/"><code class="language-plaintext highlighter-rouge">uv</code></a> if you don’t have it.</li>
+  <li>Drop the snippet in
+<a href="/epihack-2026/mcp/211-az-mcp/examples/claude_desktop_config.json"><code class="language-plaintext highlighter-rouge">examples/claude_desktop_config.json</code></a>
+into your Claude Desktop config
+(<code class="language-plaintext highlighter-rouge">~/Library/Application Support/Claude/claude_desktop_config.json</code>
+on macOS,
+<code class="language-plaintext highlighter-rouge">%APPDATA%\Claude\claude_desktop_config.json</code> on Windows).</li>
+  <li>Replace the path with the absolute path to this directory.</li>
+  <li>Restart Claude Desktop. The server starts in mock mode with no
+credentials required.</li>
+</ol>
+
+<h3 id="standalone">Standalone</h3>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">cd </span>mcp/211-az-mcp
+uv <span class="nb">sync
+</span>uv run az211-mcp                          <span class="c"># stdio (default)</span>
+<span class="nv">MCP_TRANSPORT</span><span class="o">=</span>streamable-http uv run az211-mcp  <span class="c"># HTTP</span>
+</code></pre></div></div>
+
+<h3 id="tests">Tests</h3>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">cd </span>mcp/211-az-mcp
+uv run pytest
+</code></pre></div></div>
+
+<p>All tests are offline — no <code class="language-plaintext highlighter-rouge">AZ211_BACKEND_URL</code> required.</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">tests/test_dispatch_chain.py</code> — verifies the mock-dispatch
+<code class="language-plaintext highlighter-rouge">dispatch_id</code> is stable and retrievable in a chained call, and
+that records carry <code class="language-plaintext highlighter-rouge">source: "mock"</code>.</li>
+  <li><code class="language-plaintext highlighter-rouge">tests/test_referrals.py</code> — postal-code → county routing, <code class="language-plaintext highlighter-rouge">kind</code>
+filter on utility assistance, <code class="language-plaintext highlighter-rouge">topic</code> filter on crisis referrals,
+<code class="language-plaintext highlighter-rouge">urgency</code> → radius on cooling-center lookup.</li>
+  <li><code class="language-plaintext highlighter-rouge">tests/test_languages.py</code> — direct English + Spanish operator
+coverage, interpreter-service entry, and the indigenous-language
+partner pathways (Navajo / Diné, O’odham, Apache, Hopi).</li>
+</ul>
+
+<h2 id="cross-references">Cross-references</h2>
+
+<ul>
+  <li><a href="../../plan/02-mcp-integration.html"><code class="language-plaintext highlighter-rouge">plan/02-mcp-integration.md</code></a>
+— server inventory and the multi-MCP cooling-center join.</li>
+  <li><a href="../../plan/04-data-flows.html"><code class="language-plaintext highlighter-rouge">plan/04-data-flows.md</code></a>, Scenario
+C — the unsheltered heat check-in this server is designed to
+power, end-to-end.</li>
+  <li><a href="/epihack-2026/heat/resources.html"><code class="language-plaintext highlighter-rouge">heat/resources.md</code></a> — 211 Arizona’s
+heat-relief services in context.</li>
+  <li><a href="../../heat/04-vulnerable-populations.html"><code class="language-plaintext highlighter-rouge">heat/04-vulnerable-populations.md</code></a>
+— why a voice / no-smartphone channel matters for the highest-
+burden cohort.</li>
+  <li><a href="../../notes/world-cafe/q4-heat.html"><code class="language-plaintext highlighter-rouge">notes/world-cafe/q4-heat.md</code></a>
+— the “anonymity matters” insight from the Unhoused card that
+informs the dispatch flow’s PII-minimisation.</li>
+</ul>
+
+<h2 id="license">License</h2>
+
+<p>MIT, alongside the rest of <code class="language-plaintext highlighter-rouge">epihack-2026</code>.</p>
+
+
+  <footer>
+    Source: Ending Pandemics Academy &middot; University of Arizona Mel &amp;
+    Enid Zuckerman College of Public Health &middot; Global Health Institute.
+  </footer>
+</body>
+</html>

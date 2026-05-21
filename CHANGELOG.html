@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Changelog</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      max-width: 1100px;
+      margin: 2rem auto;
+      padding: 0 1.25rem;
+      color: #1a1a1a;
+      line-height: 1.55;
+    }
+    nav.crumbs { font-size: .9rem; color: #555; margin-bottom: 1rem; }
+    nav.crumbs a { color: #1F3A93; text-decoration: none; }
+    h1 { border-bottom: 3px solid #1F3A93; padding-bottom: .35rem; }
+    h2 { margin-top: 2.25rem; color: #1F3A93; }
+    h3 { margin-top: 1.25rem; }
+    table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: .95rem; }
+    th, td { border: 1px solid #ddd; padding: .5rem .75rem; text-align: left; vertical-align: top; }
+    th { background: #f0f3f8; }
+    blockquote {
+      border-left: 4px solid #1F3A93;
+      background: #f4f6fb;
+      margin: 1rem 0;
+      padding: .75rem 1rem;
+    }
+    code { background: #f1f3f7; padding: 1px 5px; border-radius: 3px; font-size: .9em; }
+    pre code { display: block; padding: .75rem 1rem; overflow-x: auto; }
+    footer { margin-top: 4rem; padding-top: 1rem; border-top: 1px solid #ddd; color: #666; font-size: .85rem; }
+    a { color: #1F3A93; }
+  </style>
+</head>
+<body>
+  <nav class="crumbs">
+    <a href="/epihack-2026/">EpiHack AZ 2026</a>
+  </nav>
+
+  <h1 id="changelog">Changelog</h1>
+
+<p>All notable changes to the EpiHack Arizona 2026 repository, grouped
+by the five roadmap phases in
+<a href="/epihack-2026/plan/05-roadmap.html"><code class="language-plaintext highlighter-rouge">plan/05-roadmap.md</code></a>. PR numbers correspond
+to <a href="https://github.com/tyson-swetnam/epihack-2026/pulls">https://github.com/tyson-swetnam/epihack-2026/pulls</a>.</p>
+
+<p>This changelog tracks the rollups that actually landed on <code class="language-plaintext highlighter-rouge">main</code>;
+some PRs (notably the omnibus PR #8) span multiple phases and are
+listed under each phase whose deliverables they contain.</p>
+
+<h2 id="phase-0--hackathon-mvp-week-02">Phase 0 — Hackathon MVP (week 0–2)</h2>
+
+<p>Scope: figures + knowledge-graph foundation, one vertical (VBD), one
+happy path (mail-in tick), three MCPs, one agent pipeline.</p>
+
+<ul>
+  <li><strong>PR #1</strong> — Add EpiHack Arizona 2026 reference figures (Figures
+1-4) as structured Markdown with RDF-style triples, plus the
+initial <code class="language-plaintext highlighter-rouge">schema/knowledge_graph.sql</code> property-graph seed.</li>
+  <li><strong>PR #2</strong> — Add the Wildlife &amp; Vector-Borne Diseases focus-group
+section (<code class="language-plaintext highlighter-rouge">wildlife/</code>) with four guiding questions and a 30+
+resource catalog.</li>
+  <li><strong>PR #3</strong> — Add the MapLibre GL map and Cytoscape pathogen
+knowledge-graph viewer (<code class="language-plaintext highlighter-rouge">map/</code>, <code class="language-plaintext highlighter-rouge">graph/</code>).</li>
+  <li><strong>PR #4</strong> — Land focus groups, the deep AZ data catalog (counties /
+tribes / pathogens / outbreaks / datasets / standards / mcp_servers
+seeds), the interactive map + graph viewers, and the first
+<code class="language-plaintext highlighter-rouge">vectorsurv-mcp</code> (7 tools).</li>
+  <li><strong>PR #5</strong> — Make <code class="language-plaintext highlighter-rouge">vectorsurv-mcp</code> endpoint paths env-overridable
+(<code class="language-plaintext highlighter-rouge">VECTORSURV_PATH_*</code>) so a path drift can be patched without a code
+change.</li>
+  <li><strong>PR #6</strong> — Align <code class="language-plaintext highlighter-rouge">vectorsurv-mcp</code> with the live OpenAPI spec
+v1.0.44 (Mongoose-style <code class="language-plaintext highlighter-rouge">query[...]</code> operators, <code class="language-plaintext highlighter-rouge">/v1/</code> prefix, new
+agency-region-intersect / region / test-target / pools-are-positive
+/ case-count tools — 13 tools total). Snapshot the spec under
+<code class="language-plaintext highlighter-rouge">mcp/vectorsurv-mcp/openapi/</code>.</li>
+  <li><strong>PR #7</strong> — Mobile-responsive map and pathogen-graph viewers
+(flexbox + ≤800px breakpoint + collapsible panel, MapLibre touch
+tuning, Cytoscape pinch-zoom).</li>
+  <li><strong>PR #8 (Phase 0 slice)</strong> — Land the Phase 0 application MVP:
+<code class="language-plaintext highlighter-rouge">app/</code> tick mail-in flow end-to-end, <code class="language-plaintext highlighter-rouge">agents/</code> 8-agent pipeline
+(Intake → Geo-Enrichment → Validation → Triage → Enrichment →
+Notification → background Cluster Detection + Knowledge Update),
+<code class="language-plaintext highlighter-rouge">mcp/great-az-tick-check-mcp/</code> (5 tools), <code class="language-plaintext highlighter-rouge">mcp/knowledge-graph-mcp/</code>
+(12 tools + SQL escape-hatch), <code class="language-plaintext highlighter-rouge">schema/deep/application.sql</code>.</li>
+</ul>
+
+<h2 id="phase-1--heat-vertical-month-12">Phase 1 — Heat vertical (month 1–2)</h2>
+
+<p>Scope: add the Heat vertical and three more MCPs.</p>
+
+<ul>
+  <li><strong>PR #8 (Phase 1 slice)</strong> — <code class="language-plaintext highlighter-rouge">mcp/nws-heatrisk-mcp/</code> (7 tools — NWS
+API + WPC HeatRisk gridded product), <code class="language-plaintext highlighter-rouge">mcp/mag-hrn-mcp/</code> (5 tools —
+MAG Heat Relief Network with env-overridable ArcGIS Feature
+Service URL), <code class="language-plaintext highlighter-rouge">mcp/adhs-mcp/</code> (6 tools — canned ADHS heat-mortality
+    <ul>
+      <li>arbovirus + reportable conditions). Triage Agent’s Heat branch
+with the pinned <code class="language-plaintext highlighter-rouge">HEAT_SCORE_TABLE</code> and triage-class enumeration.
+Three new app flows: CHW heat check-in, anonymous heat self-report,
+“where can I cool off?”. Notification Agent SMS + Spanish bundle.
+Cluster Detection Agent (vertical-scoped, hourly during heat
+season).</li>
+    </ul>
+  </li>
+</ul>
+
+<h2 id="phase-2--tribal-partnerships--offline-month-36">Phase 2 — Tribal partnerships + offline (month 3–6)</h2>
+
+<p>Scope: tribal partner engagement, offline + low-bandwidth modes,
+linguistic surface, data-sovereignty guardrails. The data-sharing
+agreements themselves (MOU / DUA with ITCA-TEC) are external
+partnership work and are not on this changelog; the code-level
+slice is below.</p>
+
+<ul>
+  <li><strong>PR #8 (Phase 2 slice)</strong> — <code class="language-plaintext highlighter-rouge">mcp/whispers-mcp/</code> (6 tools — USGS
+wildlife mortality; canned events including 1993 Four Corners, 2022+
+HPAI, 2024-25 plague), <code class="language-plaintext highlighter-rouge">mcp/inaturalist-mcp/</code> (6 tools — AZ
+citizen-science observations, place_id 53), <code class="language-plaintext highlighter-rouge">mcp/211-az-mcp/</code> (6
+tools — referrals + transport dispatch with in-memory dispatch
+tracking), <code class="language-plaintext highlighter-rouge">mcp/sms-entry-mcp/</code> (6 tools — SMS-only intake with
+pure-function Twilio HMAC verification). PWA offline + sync queue
+via IndexedDB in <code class="language-plaintext highlighter-rouge">app/shared/sync.js</code> + service worker (<code class="language-plaintext highlighter-rouge">app/sw.js</code>)
+with three caching strategies and iOS Safari manual-retry fallback.
+Validation Agent row-level tribal-data suppression at write time.
+i18n bundles: English, Spanish (high-coverage), Diné Bizaad +
+Tohono O’odham placeholder bundles flagged for native-speaker
+review. <code class="language-plaintext highlighter-rouge">whispers-mcp</code> + <code class="language-plaintext highlighter-rouge">inaturalist-mcp</code> wired into the VBD
+enrichment branch.</li>
+</ul>
+
+<h2 id="phase-3--maricopa--coconino-pilot-month-69">Phase 3 — Maricopa + Coconino pilot (month 6–9)</h2>
+
+<p>Scope: real users, real reports, evaluation against Figure 3
+timeliness milestones.</p>
+
+<ul>
+  <li><strong>PR #8 (Phase 3 slice)</strong> — <code class="language-plaintext highlighter-rouge">dashboard/</code> four-audience analyst
+workspace for ADHS / MCDPH / AZGFD / Coconino HHS with status
+cards, cluster feed, lazy-loaded MapLibre embed, sparkline
+case-count tables, and a SQL preview round-tripping to
+<code class="language-plaintext highlighter-rouge">knowledge-graph-mcp</code>. <code class="language-plaintext highlighter-rouge">today/</code> public-facing aggregated dashboard
+with HeatRisk + 7-day strip, county-level WNV pool-positivity
+sparkline, recent wildlife signals, statewide five-number rollup;
+local AZ-bbox county detection so coordinates never leave the
+device. <code class="language-plaintext highlighter-rouge">schema/deep/audit.sql</code> plus
+<code class="language-plaintext highlighter-rouge">agents/src/onehealth_agents/audit.py</code> — <code class="language-plaintext highlighter-rouge">kg.agent_run</code> table
+(17 columns) and views <code class="language-plaintext highlighter-rouge">kg.v_observation_timeliness</code>,
+<code class="language-plaintext highlighter-rouge">kg.v_agent_run_cost</code>, <code class="language-plaintext highlighter-rouge">kg.v_agent_run_failures</code>. Per-million-token
+prices pinned for Haiku 4.5 / Sonnet 4.6 / Opus 4.7
+(env-overridable). Cluster-detection calibration: two-tier
+deterministic-Poisson + Bayesian Gamma-Poisson detector calibrated
+against 14 historical AZ outbreaks (<code class="language-plaintext highlighter-rouge">schema/deep/outbreaks.sql</code>);
+100% sensitivity on evaluable outbreaks, 0.0000 FP-rate per
+agency-week across 4,114 simulated null weeks
+(<code class="language-plaintext highlighter-rouge">plan/CLUSTER-CALIBRATION.md</code>). <code class="language-plaintext highlighter-rouge">mcp/wearable-mcp/</code> (4 tools —
+mock-only HealthKit / Health Connect adapter, on-device privacy
+posture).</li>
+</ul>
+
+<h2 id="phase-4--statewide--evaluation-month-912">Phase 4 — Statewide + evaluation (month 9–12)</h2>
+
+<p>Scope: open-source release + governance handoff. The 15-county
+rollout, the federated cluster-detection prototype with tribal
+partners, the wearable HealthKit / Health Connect production
+integration, and the independent annual evaluation report are
+external work tracked outside this repo.</p>
+
+<ul>
+  <li><strong>PR #8 (Phase 4 slice)</strong> — <code class="language-plaintext highlighter-rouge">mcp/wearable-mcp/</code> mock scaffold (4
+tools) so the wearable contract can be exercised end-to-end
+without a real device. SMS contract refinements
+(160-char body cap; PWA photo-blob persistence via IndexedDB).</li>
+  <li><strong>This release</strong> — open-source release prep: <code class="language-plaintext highlighter-rouge">LICENSE</code>,
+<code class="language-plaintext highlighter-rouge">CONTRIBUTING.md</code>, <code class="language-plaintext highlighter-rouge">GOVERNANCE.md</code> (standing review board: ADHS /
+AZGFD / ITCA-TEC / Maricopa Vector Control + tribal-partner veto +
+sunset clauses), <code class="language-plaintext highlighter-rouge">SECURITY.md</code> (five-class threat model +
+known-gaps register), <code class="language-plaintext highlighter-rouge">CHANGELOG.md</code>, <code class="language-plaintext highlighter-rouge">mcp/README.md</code> index, and
+the <code class="language-plaintext highlighter-rouge">NOTICE</code> attribution roll-up.</li>
+</ul>
+
+<h2 id="next">Next</h2>
+
+<p>Open items pulled from
+<a href="/epihack-2026/plan/EXECUTION-STATUS-PHASE-1-2.html"><code class="language-plaintext highlighter-rouge">plan/EXECUTION-STATUS-PHASE-1-2.md</code></a>
+and <a href="/epihack-2026/plan/CLUSTER-CALIBRATION.html"><code class="language-plaintext highlighter-rouge">plan/CLUSTER-CALIBRATION.md</code></a>.</p>
+
+<h3 id="phase-2--tribal-partnerships--offline">Phase 2 — tribal partnerships + offline</h3>
+
+<ul>
+  <li>MOU / DUA framework with ITCA-TEC (external partnership work).</li>
+  <li>Optional <code class="language-plaintext highlighter-rouge">navajo-ec-mcp</code> proxy, gated behind a signed tribal DUA —
+not built speculatively. Sunset clause encoded in
+<a href="/epihack-2026/GOVERNANCE.html"><code class="language-plaintext highlighter-rouge">GOVERNANCE.md</code></a>.</li>
+  <li>Indigenous-language UI translations for Diné Bizaad and Tohono
+O’odham (placeholder bundles + switcher are wired; native-speaker
+review is outside the agentic-build scope).</li>
+  <li>SMS-only entry point operationally connected to a Twilio short
+code (the <code class="language-plaintext highlighter-rouge">sms-entry-mcp</code> server is in place; the gateway flip
+from <code class="language-plaintext highlighter-rouge">SMS_MODE=mock</code> to <code class="language-plaintext highlighter-rouge">SMS_MODE=twilio</code> is pending agency
+procurement).</li>
+</ul>
+
+<h3 id="phase-3--maricopa--coconino-pilot">Phase 3 — Maricopa + Coconino pilot</h3>
+
+<ul>
+  <li>Aggregation-MCP wishlist surfaced by the analyst dashboard:
+<code class="language-plaintext highlighter-rouge">kg_observations_by_window</code>, <code class="language-plaintext highlighter-rouge">kg_cluster_scan</code>,
+<code class="language-plaintext highlighter-rouge">kg_milestone_intervals</code>, <code class="language-plaintext highlighter-rouge">kg_normalize_diagnosis</code>. These are
+read-only views over <code class="language-plaintext highlighter-rouge">kg.agent_run</code> + <code class="language-plaintext highlighter-rouge">kg.observation</code>.</li>
+  <li>Quarterly tribal-data suppression tabletop review — required by
+Plan 02 but not yet scheduled.</li>
+  <li>CHW + 211 satisfaction surveys for the success-criterion check.</li>
+</ul>
+
+<h3 id="phase-4--statewide--evaluation">Phase 4 — statewide + evaluation</h3>
+
+<ul>
+  <li>15-county rollout.</li>
+  <li>Federated cluster-detection prototype letting tribal partners
+contribute model gradients without releasing line data.</li>
+  <li>Wearable production integration (HealthKit + Health Connect —
+on-device-only, per-metric consent, replacing the <code class="language-plaintext highlighter-rouge">wearable-mcp</code>
+mock layer with a real device-side bridge).</li>
+  <li>Independent annual evaluation report scored against Figure 3
+milestones.</li>
+</ul>
+
+<h3 id="cluster-detection-follow-ups-from-plancluster-calibrationmd">Cluster-detection follow-ups (from <code class="language-plaintext highlighter-rouge">plan/CLUSTER-CALIBRATION.md</code>)</h3>
+
+<ul>
+  <li>Single-case high-CFR alert tier for <code class="language-plaintext highlighter-rouge">Y. pestis</code>, hantavirus, viral
+haemorrhagic fevers, anthrax — the 8 documented historical misses
+cannot be caught by a ZCTA-bucketed count scan by construction.</li>
+  <li>County- or <code class="language-plaintext highlighter-rouge">region.*</code>-level scan tier for chronic low-incidence
+pathogens and ZCTA-boundary-straddling cases.</li>
+  <li>Multi-seed calibration sweep (~100 seeds) to report mean / variance
+of sensitivity and lag, replacing the current single-seed numbers.</li>
+  <li>Pathogen-hint backfill from <code class="language-plaintext highlighter-rouge">mcp_pull</code> payloads so the
+historical-match back-reference does not fall back to nearest-in-
+time-and-space when the Triage Agent did not run.</li>
+</ul>
+
+<h3 id="security-follow-ups-from-securitymd">Security follow-ups (from <code class="language-plaintext highlighter-rouge">SECURITY.md</code>)</h3>
+
+<ul>
+  <li>Replace the placeholder vulnerability-disclosure address with a
+published <code class="language-plaintext highlighter-rouge">security@</code> mailbox and a GitHub Security Advisory
+configuration at v1.0 handoff.</li>
+  <li>Add a Content Security Policy to the static site (Jekyll
+<code class="language-plaintext highlighter-rouge">_includes</code>) restricting script sources to unpkg + self.</li>
+  <li>Publish a CycloneDX SBOM alongside <a href="/epihack-2026/NOTICE"><code class="language-plaintext highlighter-rouge">NOTICE</code></a>.</li>
+</ul>
+
+
+  <footer>
+    Source: Ending Pandemics Academy &middot; University of Arizona Mel &amp;
+    Enid Zuckerman College of Public Health &middot; Global Health Institute.
+  </footer>
+</body>
+</html>

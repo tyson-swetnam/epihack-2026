@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>MAG Heat Relief Network MCP server</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      max-width: 1100px;
+      margin: 2rem auto;
+      padding: 0 1.25rem;
+      color: #1a1a1a;
+      line-height: 1.55;
+    }
+    nav.crumbs { font-size: .9rem; color: #555; margin-bottom: 1rem; }
+    nav.crumbs a { color: #1F3A93; text-decoration: none; }
+    h1 { border-bottom: 3px solid #1F3A93; padding-bottom: .35rem; }
+    h2 { margin-top: 2.25rem; color: #1F3A93; }
+    h3 { margin-top: 1.25rem; }
+    table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: .95rem; }
+    th, td { border: 1px solid #ddd; padding: .5rem .75rem; text-align: left; vertical-align: top; }
+    th { background: #f0f3f8; }
+    blockquote {
+      border-left: 4px solid #1F3A93;
+      background: #f4f6fb;
+      margin: 1rem 0;
+      padding: .75rem 1rem;
+    }
+    code { background: #f1f3f7; padding: 1px 5px; border-radius: 3px; font-size: .9em; }
+    pre code { display: block; padding: .75rem 1rem; overflow-x: auto; }
+    footer { margin-top: 4rem; padding-top: 1rem; border-top: 1px solid #ddd; color: #666; font-size: .85rem; }
+    a { color: #1F3A93; }
+  </style>
+</head>
+<body>
+  <nav class="crumbs">
+    <a href="/epihack-2026/">EpiHack AZ 2026</a>
+  </nav>
+
+  <h1 id="mag-hrn-mcp--model-context-protocol-server-for-the-mag-heat-relief-network"><code class="language-plaintext highlighter-rouge">mag-hrn-mcp</code> — Model Context Protocol server for the MAG Heat Relief Network</h1>
+
+<p>A <a href="https://modelcontextprotocol.io/">Model Context Protocol</a> server that
+exposes the <a href="https://hrn.azmag.gov/">Maricopa Association of Governments <strong>Heat Relief
+Network</strong></a> — ~200+ cooling, hydration, respite,
+and donation-drop-off sites across the Phoenix metro that operate each
+year from <strong>May 1 through September 30</strong> — as a set of tools an LLM
+(Claude Desktop, Claude Code, Claude API agents, or any other MCP
+client) can call.</p>
+
+<p>Built for the EpiHack Arizona 2026 <a href="../../heat/index.html">Heat focus
+group</a>. Powers the Heat-vertical scenarios in
+<a href="../../plan/04-data-flows.html">plan 04</a>, in particular <strong>Scenario C</strong>
+(unsheltered heat check-in on a Magenta-HeatRisk day) — the
+<code class="language-plaintext highlighter-rouge">mag_search_centers(lat, lon, radius=2km, open_now=true,
+pets_ok=false)</code> call in step 7.</p>
+
+<blockquote>
+  <p><strong>Mock-by-default.</strong> This server ships with a small canned dataset of
+12 realistic Phoenix-metro sites (Burton Barr Central Library, Andre
+House of Hospitality, Mesa Main Library, Tempe Public Library, etc.)
+so the rest of the EpiHack stack can develop against it without
+hitting MAG infrastructure. Set <code class="language-plaintext highlighter-rouge">MAG_HRN_FEATURE_SERVICE_URL</code> in the
+environment to flip to the real MAG ArcGIS service (see
+<a href="#pointing-at-the-real-arcgis-service">Pointing at the real ArcGIS service</a>
+below).</p>
+</blockquote>
+
+<h2 id="what-it-does">What it does</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>MCP tool</th>
+      <th>What it returns</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">mag_search_centers</code></td>
+      <td>Centers within <code class="language-plaintext highlighter-rouge">radius_km</code> of <code class="language-plaintext highlighter-rouge">(lat, lon)</code>, filtered by <code class="language-plaintext highlighter-rouge">open_now</code>, <code class="language-plaintext highlighter-rouge">pets_ok</code>, and <code class="language-plaintext highlighter-rouge">services</code>. Each row: <code class="language-plaintext highlighter-rouge">{id, name, address, city, postal_code, lat, lon, services, hours_today, pets_ok, distance_km, kg_node_id}</code>.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">mag_center_detail</code></td>
+      <td>Full record for a center including hours-by-day, operator, notes, and a placeholder <code class="language-plaintext highlighter-rouge">kg_node_id</code>.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">mag_list_open_now</code></td>
+      <td>Snapshot of every center currently open (optionally pinned to a specific timestamp).</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">mag_supply_status</code></td>
+      <td><strong>MOCK</strong> supply / occupancy heads-up: <code class="language-plaintext highlighter-rouge">{water_status, seats_available, last_updated_iso, source}</code>. See <a href="../../plan/01-parameter-mapping.html">Heat-Q2</a>.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">mag_search_by_text</code></td>
+      <td>Free-text lookup (“library”, “church”, “donation”) with optional <code class="language-plaintext highlighter-rouge">[lat, lon]</code> distance-sort hint.</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>Plus two MCP <strong>resources</strong>:</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">mag://service-types</code> — reference text for <code class="language-plaintext highlighter-rouge">cooling | hydration | respite | donation</code> (the tight 4-value vocabulary the client normalizes onto).</li>
+  <li><code class="language-plaintext highlighter-rouge">mag://operating-window</code> — the May 1 – September 30 season convention and the off-season-returns-empty contract.</li>
+</ul>
+
+<h2 id="why-this-matters-for-epihack">Why this matters for EpiHack</h2>
+
+<p>The Heat Relief Network is the only network in the country, at this
+scale, that has stood up regional cooling/hydration coordination
+across municipal boundaries every summer for over a decade. Wrapping
+it as an MCP server lets an agent:</p>
+
+<ul>
+  <li>Answer “where can I cool off right now?” in one call
+(<code class="language-plaintext highlighter-rouge">mag_search_centers(lat, lon)</code>), bounded to the operating season.</li>
+  <li>Surface the Scenario-C transport hand-off to 211 Arizona
+(<code class="language-plaintext highlighter-rouge">mag_search_centers</code> → <code class="language-plaintext highlighter-rouge">211-az-mcp.transport_to_cooling_center</code>).</li>
+  <li>Pre-stage the supply-feed contract (<code class="language-plaintext highlighter-rouge">mag_supply_status</code>) so when MAG
+ships a real-time feed the rest of the stack already knows the
+shape — that’s <a href="../../plan/01-parameter-mapping.html">Heat-Q2 in plan/01</a>.</li>
+</ul>
+
+<h2 id="service-type-vocabulary">Service-type vocabulary</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>Value</th>
+      <th>Meaning</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">cooling</code></td>
+      <td>Indoor air-conditioned cooling center.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">hydration</code></td>
+      <td>Walk-up water-bottle distribution (may be outdoors).</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">respite</code></td>
+      <td>Cooling center where uninterrupted rest is permitted.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">donation</code></td>
+      <td>Drop-off site for public donations (not a relief site for those in need).</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>Real MAG ArcGIS rows arrive with various labels (<code class="language-plaintext highlighter-rouge">LocationType</code>,
+<code class="language-plaintext highlighter-rouge">Type</code>, <code class="language-plaintext highlighter-rouge">CenterType</code>, etc.); the client’s <code class="language-plaintext highlighter-rouge">_normalize_services</code> maps
+them onto these four values. One center can carry more than one type
+(a library is often <code class="language-plaintext highlighter-rouge">cooling</code> + <code class="language-plaintext highlighter-rouge">hydration</code>).</p>
+
+<h2 id="operating-window">Operating window</h2>
+
+<p>The HRN runs <strong>May 1 through September 30</strong> each year. Outside this
+window every tool returns an empty <code class="language-plaintext highlighter-rouge">centers</code> list and <code class="language-plaintext highlighter-rouge">off_season:
+true</code>. The 2026 launch date is
+<a href="https://ein.az.gov/2026-heat-relief-network-launches-may-1-protect-residents-during-extreme-heat">official</a>.
+Phoenix doesn’t observe DST, so all open-now math runs in MST (UTC-7).</p>
+
+<h2 id="mock-dataset">Mock dataset</h2>
+
+<p>The canned 12-site dataset covers Phoenix, Mesa, Tempe, Glendale,
+Scottsdale, Chandler, Surprise, and Goodyear — a reasonable cross-
+section of the real network’s geography. Site names, addresses, and
+coordinates are based on real, well-known locations so the multi-MCP
+join in Scenario C feels right; <strong>operating hours and supply notes are
+plausible but synthetic</strong> — defer to <a href="https://hrn.azmag.gov/">hrn.azmag.gov</a>
+for authoritative data.</p>
+
+<h2 id="pointing-at-the-real-arcgis-service">Pointing at the real ArcGIS service</h2>
+
+<p>Public probing of <code class="language-plaintext highlighter-rouge">geo.azmag.gov</code> (May 2026) shows the HRN’s ArcGIS
+service at:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>https://geo.azmag.gov/arcgis/rest/services/maps/Heat_Relief_Network/MapServer
+</code></pre></div></div>
+
+<p>with at least a “Respite Center” layer at ID 1; per-season layer
+indexes for cooling, hydration, and donation drop-off sit alongside.
+A <code class="language-plaintext highlighter-rouge">FeatureServer</code> flavour of the same service may also exist (MAG has
+historically published both). The exact URL drifts every season, so
+the client reads it from <code class="language-plaintext highlighter-rouge">MAG_HRN_FEATURE_SERVICE_URL</code>:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">export </span><span class="nv">MAG_HRN_FEATURE_SERVICE_URL</span><span class="o">=</span>https://geo.azmag.gov/arcgis/rest/services/maps/Heat_Relief_Network/MapServer
+<span class="nb">export </span><span class="nv">MAG_HRN_FEATURE_LAYER</span><span class="o">=</span>all   <span class="c"># walks every layer the service advertises</span>
+<span class="c"># Optional bearer token if a partner-only feed eventually requires one.</span>
+<span class="c"># export MAG_HRN_API_TOKEN=...</span>
+</code></pre></div></div>
+
+<p>The client’s <code class="language-plaintext highlighter-rouge">_ArcGISBackend</code>:</p>
+
+<ol>
+  <li>Hits <code class="language-plaintext highlighter-rouge">&lt;service_url&gt;?f=json</code> to enumerate layers when <code class="language-plaintext highlighter-rouge">MAG_HRN_FEATURE_LAYER=all</code>.</li>
+  <li>For each layer (or just the configured one), issues a single
+<code class="language-plaintext highlighter-rouge">GET &lt;service_url&gt;/&lt;layer&gt;/query?where=1=1&amp;outFields=*&amp;outSR=4326&amp;f=json</code>.</li>
+  <li>Maps each feature’s attributes through a tolerant alias map
+(<code class="language-plaintext highlighter-rouge">Name</code>/<code class="language-plaintext highlighter-rouge">SiteName</code>/<code class="language-plaintext highlighter-rouge">FACILITY</code>, <code class="language-plaintext highlighter-rouge">Address</code>/<code class="language-plaintext highlighter-rouge">ADDRESS1</code>/<code class="language-plaintext highlighter-rouge">Street</code>,
+<code class="language-plaintext highlighter-rouge">LocationType</code>/<code class="language-plaintext highlighter-rouge">Type</code>/<code class="language-plaintext highlighter-rouge">CenterType</code>, etc.) onto the canonical row
+shape the MCP tools return.</li>
+</ol>
+
+<p>If MAG renames attributes mid-season, extend the
+<code class="language-plaintext highlighter-rouge">_NAME_FIELDS</code> / <code class="language-plaintext highlighter-rouge">_ADDR_FIELDS</code> / <code class="language-plaintext highlighter-rouge">_TYPE_FIELDS</code> aliases in
+<a href="/epihack-2026/mcp/mag-hrn-mcp/src/mag_hrn_mcp/client.py"><code class="language-plaintext highlighter-rouge">client.py</code></a>.</p>
+
+<p>A <code class="language-plaintext highlighter-rouge">.env.example</code> template is included; copy to <code class="language-plaintext highlighter-rouge">.env</code> and source it.</p>
+
+<h2 id="the-mag_supply_status-mock--heat-q2">The <code class="language-plaintext highlighter-rouge">mag_supply_status</code> mock — Heat-Q2</h2>
+
+<p><code class="language-plaintext highlighter-rouge">mag_supply_status</code> is currently <strong>mock-only</strong>. MAG does not yet
+publish a real-time occupancy/supply feed, and that gap is the entire
+subject of <a href="../../plan/01-parameter-mapping.html">Heat-Q2 (Real-time resource sharing between cooling
+centers)</a>. The MCP tool exists
+now so the rest of the EpiHack stack can develop against the eventual
+feed’s <em>shape</em>:</p>
+
+<div class="language-jsonc highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="nl">"center_id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"mag.hrn.mock.0002"</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"found"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Andre House of Hospitality"</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"water_status"</span><span class="p">:</span><span class="w"> </span><span class="s2">"low"</span><span class="p">,</span><span class="w">          </span><span class="c1">// ok | low | out</span><span class="w">
+  </span><span class="nl">"seats_available"</span><span class="p">:</span><span class="w"> </span><span class="mi">7</span><span class="p">,</span><span class="w">           </span><span class="c1">// int or null</span><span class="w">
+  </span><span class="nl">"last_updated_iso"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2026-07-18T14:05:00"</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"source"</span><span class="p">:</span><span class="w"> </span><span class="s2">"mock"</span><span class="p">,</span><span class="w">               </span><span class="c1">// flips to "feed" once a real feed ships</span><span class="w">
+  </span><span class="nl">"note"</span><span class="p">:</span><span class="w"> </span><span class="s2">"MOCK feed. MAG does not yet publish a real-time supply feed; see plan/01-parameter-mapping.html Heat-Q2."</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre></div></div>
+
+<p>The mock derives its values deterministically from the center ID so
+multiple calls in the same session return stable values for a demo.</p>
+
+<h2 id="install--run">Install &amp; run</h2>
+
+<h3 id="as-a-claude-desktop-mcp-server">As a Claude Desktop MCP server</h3>
+
+<ol>
+  <li>Install <a href="https://docs.astral.sh/uv/"><code class="language-plaintext highlighter-rouge">uv</code></a> if you don’t have it.</li>
+  <li>Drop the snippet in
+<a href="/epihack-2026/mcp/mag-hrn-mcp/examples/claude_desktop_config.json"><code class="language-plaintext highlighter-rouge">examples/claude_desktop_config.json</code></a>
+into your Claude Desktop config
+(<code class="language-plaintext highlighter-rouge">~/Library/Application Support/Claude/claude_desktop_config.json</code>
+on macOS, <code class="language-plaintext highlighter-rouge">%APPDATA%\Claude\claude_desktop_config.json</code> on Windows).</li>
+  <li>Replace the path with the absolute path to this directory.</li>
+  <li>Leave <code class="language-plaintext highlighter-rouge">MAG_HRN_FEATURE_SERVICE_URL</code> empty to run in mock mode, or
+point it at the active MAG ArcGIS service for live data.</li>
+  <li>Restart Claude Desktop.</li>
+</ol>
+
+<h3 id="standalone">Standalone</h3>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">cd </span>mcp/mag-hrn-mcp
+uv <span class="nb">sync
+</span>uv run mag-hrn-mcp                                <span class="c"># stdio (default)</span>
+<span class="nv">MCP_TRANSPORT</span><span class="o">=</span>streamable-http uv run mag-hrn-mcp  <span class="c"># HTTP</span>
+</code></pre></div></div>
+
+<h3 id="tests">Tests</h3>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">cd </span>mcp/mag-hrn-mcp
+uv run pytest
+</code></pre></div></div>
+
+<p>The test suite is fully offline. It exercises the haversine math, the
+open-now / pets-ok / services filters, the free-text search, the
+off-season-returns-empty contract, and the mock supply-status response
+shape (<code class="language-plaintext highlighter-rouge">source: "mock"</code>).</p>
+
+<h2 id="license">License</h2>
+
+<p>MIT, alongside the rest of <code class="language-plaintext highlighter-rouge">epihack-2026</code>.</p>
+
+
+  <footer>
+    Source: Ending Pandemics Academy &middot; University of Arizona Mel &amp;
+    Enid Zuckerman College of Public Health &middot; Global Health Institute.
+  </footer>
+</body>
+</html>

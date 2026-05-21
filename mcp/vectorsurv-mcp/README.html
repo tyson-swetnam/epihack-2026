@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>VectorSurv MCP server</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      max-width: 1100px;
+      margin: 2rem auto;
+      padding: 0 1.25rem;
+      color: #1a1a1a;
+      line-height: 1.55;
+    }
+    nav.crumbs { font-size: .9rem; color: #555; margin-bottom: 1rem; }
+    nav.crumbs a { color: #1F3A93; text-decoration: none; }
+    h1 { border-bottom: 3px solid #1F3A93; padding-bottom: .35rem; }
+    h2 { margin-top: 2.25rem; color: #1F3A93; }
+    h3 { margin-top: 1.25rem; }
+    table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: .95rem; }
+    th, td { border: 1px solid #ddd; padding: .5rem .75rem; text-align: left; vertical-align: top; }
+    th { background: #f0f3f8; }
+    blockquote {
+      border-left: 4px solid #1F3A93;
+      background: #f4f6fb;
+      margin: 1rem 0;
+      padding: .75rem 1rem;
+    }
+    code { background: #f1f3f7; padding: 1px 5px; border-radius: 3px; font-size: .9em; }
+    pre code { display: block; padding: .75rem 1rem; overflow-x: auto; }
+    footer { margin-top: 4rem; padding-top: 1rem; border-top: 1px solid #ddd; color: #666; font-size: .85rem; }
+    a { color: #1F3A93; }
+  </style>
+</head>
+<body>
+  <nav class="crumbs">
+    <a href="/epihack-2026/">EpiHack AZ 2026</a>
+  </nav>
+
+  <h1 id="vectorsurv-mcp--model-context-protocol-server-for-vectorsurv"><code class="language-plaintext highlighter-rouge">vectorsurv-mcp</code> — Model Context Protocol server for VectorSurv</h1>
+
+<p>A <a href="https://modelcontextprotocol.io/">Model Context Protocol</a> server that
+exposes the <a href="https://vectorsurv.org/">VectorSurv</a> vector-borne disease
+surveillance API as a set of tools an LLM (Claude Desktop, Claude Code,
+Claude API agents, or any other MCP client) can call.</p>
+
+<p>Built for the EpiHack Arizona 2026 <a href="../../wildlife/index.html">Wildlife &amp; Vector-Borne Diseases
+focus group</a>.</p>
+
+<blockquote>
+  <p><strong>Spec-aligned (v1.0.44).</strong> All paths, query parameters, and
+authentication flow are verified against the OpenAPI spec at
+<a href="https://api.vectorsurv.org/openapi">https://api.vectorsurv.org/openapi</a>. A snapshot lives in
+<a href="./openapi/"><code class="language-plaintext highlighter-rouge">openapi/</code></a>; diff it against future fetches to detect
+drift.</p>
+</blockquote>
+
+<h2 id="what-it-does">What it does</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>MCP tool</th>
+      <th>Backed by</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">vectorsurv_version</code></td>
+      <td><code class="language-plaintext highlighter-rouge">GET /version</code></td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">vectorsurv_list_agencies</code></td>
+      <td><code class="language-plaintext highlighter-rouge">GET /v1/agency</code></td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">vectorsurv_agency_region_intersect</code></td>
+      <td><code class="language-plaintext highlighter-rouge">GET /v1/agency-region-intersect</code></td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">vectorsurv_list_regions</code></td>
+      <td><code class="language-plaintext highlighter-rouge">GET /v1/region</code></td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">vectorsurv_list_test_targets</code></td>
+      <td><code class="language-plaintext highlighter-rouge">GET /v1/test/target</code></td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">vectorsurv_list_sites</code></td>
+      <td><code class="language-plaintext highlighter-rouge">GET /v1/site</code></td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">vectorsurv_get_collections</code></td>
+      <td><code class="language-plaintext highlighter-rouge">GET /v1/arthropod/collection</code> (or <code class="language-plaintext highlighter-rouge">/v1/tick/collection</code>)</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">vectorsurv_get_pools</code></td>
+      <td><code class="language-plaintext highlighter-rouge">GET /v1/arthropod/pool</code> (with <code class="language-plaintext highlighter-rouge">type=mosquito|tick|nontick</code>)</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">vectorsurv_pools_are_positive</code></td>
+      <td><code class="language-plaintext highlighter-rouge">GET /v1/arthropod/pool/are-positive</code></td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">vectorsurv_get_case_counts</code></td>
+      <td><code class="language-plaintext highlighter-rouge">GET /v1/case-count</code></td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">vectorsurv_calculate_abundance</code></td>
+      <td>client-side: <code class="language-plaintext highlighter-rouge">Σ num_count / Σ trap_nights</code></td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">vectorsurv_calculate_infection_rate</code></td>
+      <td>client-side MIR or bc-MLE</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">vectorsurv_calculate_vector_index</code></td>
+      <td>client-side: abundance × IR</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>Plus two MCP <strong>resources</strong>: <code class="language-plaintext highlighter-rouge">vectorsurv://disease-acronyms</code> and
+<code class="language-plaintext highlighter-rouge">vectorsurv://query-syntax</code> (a Mongoose-style cheat-sheet).</p>
+
+<h2 id="why-this-matters-for-epihack">Why this matters for EpiHack</h2>
+
+<p>VectorSurv is the leading platform for mosquito and tick surveillance in
+the U.S. (Maricopa County Vector Control reports to it; California,
+Texas, and many other state and local programs use it as their backbone).
+Exposing it as an MCP server lets an LLM:</p>
+
+<ul>
+  <li>Answer ad-hoc surveillance questions in conversational form
+(<em>“What was the WNV vector index in agency 7 during biweek 18 of 2025?”</em>).</li>
+  <li>Find Arizona agencies in one call (<code class="language-plaintext highlighter-rouge">agency_region_intersect</code>),
+filter to their pools and collections, and compute the same metrics
+that VectorSurv Gateway shows in its UI.</li>
+  <li>Feed real surveillance data into the <a href="../../schema/">DuckLake knowledge
+graph</a> without writing R or Python glue.</li>
+</ul>
+
+<h2 id="authentication">Authentication</h2>
+
+<p>VectorSurv uses HTTP Bearer (JWT). The server obtains a token from
+<code class="language-plaintext highlighter-rouge">POST /login</code> with a JSON body and refreshes it before the one-hour
+expiry. Credentials come from environment:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">export </span><span class="nv">VECTORSURV_USERNAME</span><span class="o">=</span>your_gateway_username
+<span class="nb">export </span><span class="nv">VECTORSURV_PASSWORD</span><span class="o">=</span>your_gateway_password
+<span class="c"># Optional: point at sandbox or dev</span>
+<span class="nb">export </span><span class="nv">VECTORSURV_BASE_URL</span><span class="o">=</span>https://api.vectorsurv.org
+<span class="c"># Other endpoints documented in the spec:</span>
+<span class="c">#   https://sandbox.api.vectorsurv.org/</span>
+<span class="c">#   https://dev.api.vectorsurv.org/</span>
+</code></pre></div></div>
+
+<p>A <code class="language-plaintext highlighter-rouge">.env.example</code> template is included; copy to <code class="language-plaintext highlighter-rouge">.env</code> and source it.</p>
+
+<h2 id="query-syntax-notes">Query syntax notes</h2>
+
+<p>The API uses <strong>Mongoose-style operators</strong> in the query string. The
+client handles this transparently; if you’re inspecting requests:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>GET /v1/arthropod/pool
+  ?type=mosquito
+  &amp;query[collection_date][$gte]=2024-05-01
+  &amp;query[collection_date][$lte]=2024-09-30
+  &amp;query[agency]=55
+  &amp;populate[0]=test
+  &amp;populate[1]=species
+  &amp;page=1
+  &amp;pageSize=1000
+</code></pre></div></div>
+
+<p>Don’t pass flat <code class="language-plaintext highlighter-rouge">start_date=...</code> or <code class="language-plaintext highlighter-rouge">agency_ids=...</code> — the API doesn’t
+read them.</p>
+
+<h2 id="install--run">Install &amp; run</h2>
+
+<h3 id="as-a-claude-desktop-mcp-server">As a Claude Desktop MCP server</h3>
+
+<ol>
+  <li>Install <a href="https://docs.astral.sh/uv/"><code class="language-plaintext highlighter-rouge">uv</code></a> if you don’t have it.</li>
+  <li>Drop the snippet in <a href="/epihack-2026/mcp/vectorsurv-mcp/examples/claude_desktop_config.json"><code class="language-plaintext highlighter-rouge">examples/claude_desktop_config.json</code></a>
+into your Claude Desktop config (<code class="language-plaintext highlighter-rouge">~/Library/Application Support/Claude/claude_desktop_config.json</code>
+on macOS, <code class="language-plaintext highlighter-rouge">%APPDATA%\Claude\claude_desktop_config.json</code> on Windows).</li>
+  <li>Replace the path with the absolute path to this directory.</li>
+  <li>Fill in <code class="language-plaintext highlighter-rouge">VECTORSURV_USERNAME</code> and <code class="language-plaintext highlighter-rouge">VECTORSURV_PASSWORD</code>.</li>
+  <li>Restart Claude Desktop.</li>
+</ol>
+
+<h3 id="standalone">Standalone</h3>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">cd </span>mcp/vectorsurv-mcp
+uv <span class="nb">sync
+</span>uv run vectorsurv-mcp                 <span class="c"># stdio (default)</span>
+<span class="nv">MCP_TRANSPORT</span><span class="o">=</span>streamable-http uv run vectorsurv-mcp  <span class="c"># HTTP</span>
+</code></pre></div></div>
+
+<h3 id="tests">Tests</h3>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">cd </span>mcp/vectorsurv-mcp
+uv run pytest
+</code></pre></div></div>
+
+<p>Unit tests exercise the abundance / MIR / bc-MLE / vector-index math
+against synthetic data; they don’t require live credentials.</p>
+
+<h2 id="endpoint-overrides">Endpoint overrides</h2>
+
+<p>Every path is overridable via env, so the deployed server can be
+corrected without a code change if VectorSurv’s spec drifts:
+<code class="language-plaintext highlighter-rouge">VECTORSURV_PATH_LOGIN</code>, <code class="language-plaintext highlighter-rouge">_VERSION</code>, <code class="language-plaintext highlighter-rouge">_AGENCIES</code>, <code class="language-plaintext highlighter-rouge">_AGENCY_REGION</code>,
+<code class="language-plaintext highlighter-rouge">_SITES</code>, <code class="language-plaintext highlighter-rouge">_REGIONS</code>, <code class="language-plaintext highlighter-rouge">_REGION_TYPES</code>, <code class="language-plaintext highlighter-rouge">_ARTHRO_COLLECTION</code>,
+<code class="language-plaintext highlighter-rouge">_TICK_COLLECTION</code>, <code class="language-plaintext highlighter-rouge">_POOLS</code>, <code class="language-plaintext highlighter-rouge">_TICK_POOLS</code>, <code class="language-plaintext highlighter-rouge">_POOL_ARE_POSITIVE</code>,
+<code class="language-plaintext highlighter-rouge">_ABUNDANCE_FLAT</code>, <code class="language-plaintext highlighter-rouge">_CASE_COUNT</code>, <code class="language-plaintext highlighter-rouge">_TEST_TARGET</code>, <code class="language-plaintext highlighter-rouge">_TEST_METHOD</code>,
+<code class="language-plaintext highlighter-rouge">_TICK_CALC_ABUND</code>.</p>
+
+<h2 id="calculations">Calculations</h2>
+
+<ul>
+  <li><strong>Abundance</strong> — <code class="language-plaintext highlighter-rouge">Σ num_count / Σ trap_nights</code> per interval.</li>
+  <li><strong>MIR (Minimum Infection Rate)</strong> — <code class="language-plaintext highlighter-rouge">scale × positives / mosquitoes_tested</code>.</li>
+  <li><strong>bc-MLE</strong> — Hepworth bias-corrected MLE assuming roughly equal
+pool sizes. For heterogeneous pool sizes, prefer the
+<a href="https://cran.r-project.org/package=pooltestr"><code class="language-plaintext highlighter-rouge">pooltestr</code></a> R package
+or <code class="language-plaintext highlighter-rouge">PooledInfRate</code>. VectorSurv also has a server-side tick abundance
+calculation at <code class="language-plaintext highlighter-rouge">POST /v1/tick/calculation/abundance</code> (async job,
+poll for results) which the client can drive if you need their
+authoritative numbers.</li>
+  <li><strong>Vector Index</strong> — <code class="language-plaintext highlighter-rouge">abundance × infection_rate / scale</code>, per the
+<a href="https://vectorsurv.org/docs/tools/calculators/vector-index/">Maricopa County and VectorSurv definition</a>.</li>
+</ul>
+
+<h2 id="license">License</h2>
+
+<p>MIT, alongside the rest of <code class="language-plaintext highlighter-rouge">epihack-2026</code>.</p>
+
+
+  <footer>
+    Source: Ending Pandemics Academy &middot; University of Arizona Mel &amp;
+    Enid Zuckerman College of Public Health &middot; Global Health Institute.
+  </footer>
+</body>
+</html>

@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>AZ One Health Today — public aggregated dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      max-width: 1100px;
+      margin: 2rem auto;
+      padding: 0 1.25rem;
+      color: #1a1a1a;
+      line-height: 1.55;
+    }
+    nav.crumbs { font-size: .9rem; color: #555; margin-bottom: 1rem; }
+    nav.crumbs a { color: #1F3A93; text-decoration: none; }
+    h1 { border-bottom: 3px solid #1F3A93; padding-bottom: .35rem; }
+    h2 { margin-top: 2.25rem; color: #1F3A93; }
+    h3 { margin-top: 1.25rem; }
+    table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: .95rem; }
+    th, td { border: 1px solid #ddd; padding: .5rem .75rem; text-align: left; vertical-align: top; }
+    th { background: #f0f3f8; }
+    blockquote {
+      border-left: 4px solid #1F3A93;
+      background: #f4f6fb;
+      margin: 1rem 0;
+      padding: .75rem 1rem;
+    }
+    code { background: #f1f3f7; padding: 1px 5px; border-radius: 3px; font-size: .9em; }
+    pre code { display: block; padding: .75rem 1rem; overflow-x: auto; }
+    footer { margin-top: 4rem; padding-top: 1rem; border-top: 1px solid #ddd; color: #666; font-size: .85rem; }
+    a { color: #1F3A93; }
+  </style>
+</head>
+<body>
+  <nav class="crumbs">
+    <a href="/epihack-2026/">EpiHack AZ 2026</a>
+  </nav>
+
+  <h1 id="az-one-health-today">AZ One Health Today</h1>
+
+<p>The public-facing complement to the (Phase 3) agency dashboard. Same
+data substrate — the DuckLake knowledge graph and the MCP servers —
+<strong>aggregated and anonymised</strong> for a non-specialist audience.</p>
+
+<p>Tuned to answer one question on a phone:</p>
+
+<blockquote>
+  <p><em>What’s happening near me right now?</em></p>
+</blockquote>
+
+<p>Single page, seven panels:</p>
+
+<ol>
+  <li><strong>Hero</strong> — today’s date, the user’s county (auto-detected with a
+manual override), the headline number. Example:
+<em>“Magenta HeatRisk in Maricopa County today”</em> or
+<em>“WNV vector index up 3x in Maricopa this week”</em>.</li>
+  <li><strong>Heat</strong> — current <code class="language-plaintext highlighter-rouge">nws-heatrisk-mcp</code> tier + 7-day outlook + count
+of <code class="language-plaintext highlighter-rouge">mag-hrn-mcp</code> cooling centers within 5 km + deep-link to
+<code class="language-plaintext highlighter-rouge">app/heat/cool-off/</code>.</li>
+  <li><strong>Vector-borne disease</strong> — trailing 4-week WNV pool positivity for
+the focused county via
+<code class="language-plaintext highlighter-rouge">vectorsurv-mcp.vectorsurv_calculate_infection_rate</code>; active outbreaks
+from <code class="language-plaintext highlighter-rouge">whispers-mcp</code> + <code class="language-plaintext highlighter-rouge">knowledge-graph-mcp</code>; deep-link to
+<code class="language-plaintext highlighter-rouge">app/tick/</code>.</li>
+  <li><strong>Recent wildlife signals</strong> — last 10 days of <code class="language-plaintext highlighter-rouge">whispers-mcp</code> +
+<code class="language-plaintext highlighter-rouge">inaturalist-mcp</code> records relevant to vectors / reservoirs, shown
+as a list (always) plus a lazy-loaded MapLibre map (progressive
+enhancement).</li>
+  <li><strong>Statewide rollup</strong> — five-number snapshot (heat-emergency
+dispatches, WNV pools positive, hantavirus YTD, rabies YTD, plague
+YTD). Refreshes hourly.</li>
+  <li><strong>Action menu</strong> — three buttons: <em>Submit a tick</em> / <em>Heat check-in
+for a friend</em> / <em>See cooling centers near me</em>.</li>
+  <li><strong>How this works</strong> — short paragraph linking to <code class="language-plaintext highlighter-rouge">plan/</code>, <code class="language-plaintext highlighter-rouge">figures/</code>,
+and the MCP-server READMEs. <strong>No personal data ever appears on this
+page.</strong></li>
+</ol>
+
+<h2 id="stack">Stack</h2>
+
+<p>Plain HTML + ES-module JS + a small CSS file. <strong>No bundler. No
+framework.</strong> Same conventions as <code class="language-plaintext highlighter-rouge">app/</code>, <code class="language-plaintext highlighter-rouge">map/</code>, <code class="language-plaintext highlighter-rouge">graph/</code>.</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>today/
+  index.html             single page, all 7 panels
+  today.js               controller — wires geo + feeds + i18n
+  shared/
+    style.css            palette mirrors app/shared/style.css; 17 px base
+    feeds.js             fetch wrappers (mock by default, real with data-feeds-base)
+    geo-strip.js         navigator.geolocation -&gt; AZ county, manual override
+    sparkline.js         pure-SVG sparkline (canonical copy; dashboard/ can import it)
+    map-embed.js         lazy-loaded MapLibre wrapper for the wildlife layer
+  mock/
+    heatrisk.json        canned nws-heatrisk-mcp.nws_heatrisk_week
+    wnv-positivity.json  canned vectorsurv_calculate_infection_rate
+    wildlife-signals.json canned whispers + iNat blend
+    cooling-centers.json  canned mag-hrn-mcp.mag_search_centers
+    statewide-rollup.json canned 5-number snapshot
+</code></pre></div></div>
+
+<h2 id="privacy-stance">Privacy stance</h2>
+
+<p>This page is a <strong>public</strong> surface. The hard rule:</p>
+
+<blockquote>
+  <p>No personal data — no PII, no line-data, no row-level wildlife
+coordinates finer than ~1 km — ever appears here.</p>
+</blockquote>
+
+<p>We enforce it by construction:</p>
+
+<ul>
+  <li><strong>No login.</strong> No account creation. No analytics that send PII.</li>
+  <li><strong>No remote geocoder.</strong> County detection is local: the browser’s
+<code class="language-plaintext highlighter-rouge">navigator.geolocation.getCurrentPosition</code> returns a lat/lon that
+<em>stays on-device</em>. We match it against the 15 AZ-county bounding
+boxes baked into <code class="language-plaintext highlighter-rouge">shared/geo-strip.js</code>. The user’s coordinates are
+never sent to a server.</li>
+  <li><strong>Aggregation, never line-data.</strong> Every panel calls an aggregation
+feed (counts, rates, biweek totals). The agency-facing dashboard
+(Phase 3, separate) sees the line-data; this page does not.</li>
+  <li><strong>Coordinates are rounded.</strong> Wildlife observations are rounded to
+~1 km before they hit <code class="language-plaintext highlighter-rouge">today/mock/wildlife-signals.json</code> (and the
+same rounding applies to the live feed in production).</li>
+</ul>
+
+<h2 id="accessibility--ux">Accessibility + UX</h2>
+
+<ul>
+  <li>Mobile-first. Phones are the primary device for this audience.</li>
+  <li>Large tap targets (44 × 44 minimum) on every button, every link,
+every dropdown.</li>
+  <li>Semantic HTML, ARIA labels on every numeric card, status regions
+for the geo strip and the feed loaders.</li>
+  <li><code class="language-plaintext highlighter-rouge">prefers-reduced-motion</code> honoured on every animation (sparklines,
+skeleton shimmer, map fly-to).</li>
+  <li>17 px base font and high-contrast colours for outdoor reading.</li>
+  <li><strong>English + Spanish</strong> via the existing <code class="language-plaintext highlighter-rouge">app/shared/i18n.js</code> pattern
+(the page extends the central bundle with a small page-specific
+set of strings).</li>
+  <li><strong>Works without JavaScript</strong> for the first screen: a noscript block
+surfaces today’s Magenta HeatRisk text, a static three-row cooling
+-center list, and the action menu as plain <code class="language-plaintext highlighter-rouge">&lt;a&gt;</code> links. The
+interactive map and county-auto-detect are progressive enhancements.</li>
+</ul>
+
+<h2 id="wire-to-real-mcps">Wire to real MCPs</h2>
+
+<p>The page swaps in real data with one HTML attribute:</p>
+
+<div class="language-html highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nt">&lt;body</span> <span class="na">data-feeds-base=</span><span class="s">"https://sentinel.example.org/api"</span><span class="nt">&gt;</span>
+</code></pre></div></div>
+
+<p>Each feed module then fetches <code class="language-plaintext highlighter-rouge">${base}/today/&lt;key&gt;</code> (see
+<code class="language-plaintext highlighter-rouge">shared/feeds.js</code>). The expected shapes match the canned fixtures
+under <code class="language-plaintext highlighter-rouge">mock/</code>, which in turn match the MCP-tool outputs you can
+discover with <code class="language-plaintext highlighter-rouge">mcp/&lt;server&gt;/README.md</code>.</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Panel</th>
+      <th>Live source</th>
+      <th>Notes</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Hero / 7-day</td>
+      <td><code class="language-plaintext highlighter-rouge">nws-heatrisk-mcp.nws_heatrisk_week(lat,lon)</code> for the <em>county centroid</em> (not the user) so no PII leaves the page.</td>
+      <td>Page-local logic picks the headline.</td>
+    </tr>
+    <tr>
+      <td>Heat / centers</td>
+      <td><code class="language-plaintext highlighter-rouge">mag-hrn-mcp.mag_search_centers(lat=county_centroid, radius_km=5)</code>. Page reads only the count.</td>
+      <td>The deep-link to <code class="language-plaintext highlighter-rouge">app/heat/cool-off/</code> is where the user’s <em>own</em> lat/lon enters the system.</td>
+    </tr>
+    <tr>
+      <td>VBD</td>
+      <td><code class="language-plaintext highlighter-rouge">vectorsurv-mcp.vectorsurv_calculate_infection_rate(target="WNV", interval="Biweek", start_date=T-56d, end_date=T)</code> joined with <code class="language-plaintext highlighter-rouge">whispers-mcp.whispers_search_events</code> + <code class="language-plaintext highlighter-rouge">knowledge-graph-mcp.kg_node_lookup(outbreak.*)</code>.</td>
+      <td>The page asks for per-county and statewide tracks in a single rollup.</td>
+    </tr>
+    <tr>
+      <td>Wildlife</td>
+      <td><code class="language-plaintext highlighter-rouge">whispers-mcp.whispers_search_events(state="AZ", since=T-10d)</code> ∪ <code class="language-plaintext highlighter-rouge">inaturalist-mcp.inat_observations(place_id=53, since=T-10d)</code> for tick / mosquito / reservoir taxa.</td>
+      <td>Coordinates rounded to 1 km.</td>
+    </tr>
+    <tr>
+      <td>Rollup</td>
+      <td>small ad-hoc fan-out across <code class="language-plaintext highlighter-rouge">adhs-mcp</code> + <code class="language-plaintext highlighter-rouge">vectorsurv-mcp</code> + <code class="language-plaintext highlighter-rouge">211-az-mcp</code>.</td>
+      <td><strong>See below — a single aggregation MCP would simplify this.</strong></td>
+    </tr>
+  </tbody>
+</table>
+
+<h3 id="places-wed-want-a-richer-aggregation-mcp">Places we’d want a richer aggregation MCP</h3>
+
+<p>The current per-tool calls work, but for a public dashboard refreshing
+hourly we’d ideally have a <strong><code class="language-plaintext highlighter-rouge">today-rollup-mcp</code></strong> with one tool per
+panel:</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">today.heat_for_county(county_id) -&gt; { tier, advice, week, cooling_count_5km }</code></li>
+  <li><code class="language-plaintext highlighter-rouge">today.wnv_for_county(county_id) -&gt; { intervals[8], trend_multiple, statewide_intervals[8] }</code></li>
+  <li><code class="language-plaintext highlighter-rouge">today.wildlife_recent(state="AZ", days=10) -&gt; { items: [...], by_icon: {...} }</code></li>
+  <li><code class="language-plaintext highlighter-rouge">today.statewide_rollup() -&gt; { items: [{key, value, label, trend, sources}] }</code></li>
+</ul>
+
+<p>Each tool would precompute the rollup against a 1-hour cache (with
+the cadence visible to the client). The benefits:</p>
+
+<ol>
+  <li><strong>One round-trip per panel</strong> instead of three or four — the page
+stays responsive on slow cellular.</li>
+  <li><strong>One place to enforce the privacy ceiling</strong> (county-level
+aggregation, 1-km coordinate rounding, no outlier rows).</li>
+  <li><strong>One audit log</strong> (<code class="language-plaintext highlighter-rouge">agent_run</code> table from Phase 3 of the plan) per
+public-page render.</li>
+</ol>
+
+<p>For now we cover this with mock fixtures and the per-row queries; a
+small aggregation server is an early Phase-3 deliverable.</p>
+
+<h2 id="verification">Verification</h2>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">python -m http.server</code> from the repo root serves every file with
+HTTP 200. (The HTML, the CSS, and the JS modules all resolve
+relative paths cleanly.)</li>
+  <li><code class="language-plaintext highlighter-rouge">node --check</code> passes on every JS module under <code class="language-plaintext highlighter-rouge">shared/</code> plus
+<code class="language-plaintext highlighter-rouge">today.js</code>.</li>
+  <li><code class="language-plaintext highlighter-rouge">python -c "import html5lib, sys; html5lib.parse(open(sys.argv[1]), namespaceHTMLElements=False)" today/index.html</code>
+parses with no errors.</li>
+  <li>With <code class="language-plaintext highlighter-rouge">navigator.geolocation</code> disabled, the page stays on the
+<em>Arizona (statewide)</em> view; the statewide rollup, the action menu,
+and the heat panel all render.</li>
+</ul>
+
+<h2 id="cross-references">Cross-references</h2>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">app/</code> — the action menu deep-links to the four flow pages.</li>
+  <li><code class="language-plaintext highlighter-rouge">map/</code> — the deeper geospatial view (county polygons, tribal
+nations, agency HQs, outbreak history).</li>
+  <li><code class="language-plaintext highlighter-rouge">graph/</code> — the pathogen knowledge graph.</li>
+  <li><code class="language-plaintext highlighter-rouge">plan/</code> — the architecture and the Phase-3 placement of this page.</li>
+  <li><code class="language-plaintext highlighter-rouge">mcp/</code> — the per-source READMEs.</li>
+</ul>
+
+
+  <footer>
+    Source: Ending Pandemics Academy &middot; University of Arizona Mel &amp;
+    Enid Zuckerman College of Public Health &middot; Global Health Institute.
+  </footer>
+</body>
+</html>

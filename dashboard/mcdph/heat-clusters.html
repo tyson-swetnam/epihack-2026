@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>MCDPH — heat-cluster drill-down</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="theme-color" content="#E84A2B" />
+<link rel="stylesheet" href="../shared/style.css" />
+</head>
+<body data-agency="mcdph" data-mock-base="../mock">
+
+<header class="dash-header">
+  <div>
+    <div class="crumbs">
+      <a href="../../index.html">EpiHack AZ 2026</a> &middot;
+      <a href="../index.html">agency dashboard</a> &middot;
+      <a href="./index.html">MCDPH</a>
+    </div>
+    <h1>Heat clusters — spatial-temporal scan <span class="agency-tag">drill-down</span></h1>
+  </div>
+  <div id="auth-stub"></div>
+</header>
+
+<div class="printable-banner">
+  <h1>MCDPH heat-cluster drill-down (printable)</h1>
+  <p>Generated <span id="print-date"></span></p>
+</div>
+
+<main class="container">
+
+  <p class="muted small">
+    Hourly EARS-C3 + Kulldorff dual-scan on CHW heat-check-in
+    observations (last 7 days). When a ZCTA crosses 5 unsheltered
+    heat-exhaustion check-ins in 2 hours, the row goes from
+    <code>watch</code> to <code>urgent</code> and a heat-emergency
+    alert is paged to MCDPH (Phase-1 success criterion).
+  </p>
+
+  <h2>ZCTA clusters <span class="sub">last 7 days</span></h2>
+  <div class="analyst-table-wrap">
+    <table class="analyst-table" id="zcta-table">
+      <caption>Maricopa ZCTAs with heat check-in clusters; sorted by latest count</caption>
+      <thead>
+        <tr>
+          <th>ZCTA</th>
+          <th class="num">Check-ins (24h)</th>
+          <th class="num">Check-ins (7d)</th>
+          <th class="num">Unsheltered share</th>
+          <th>Severity</th>
+          <th>Trend (24 h, by-hour)</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <h2>Open the underlying observations</h2>
+  <button id="show-sql" class="btn secondary">Show SQL preview</button>
+  <div id="sql-mount"></div>
+
+  <p class="crosslinks">
+    Cross-references:
+    <a href="./index.html">MCDPH landing</a>
+    <a href="../adhs/heat-mortality.html">ADHS heat mortality</a>
+    <a href="../../app/legacy/heat/check-in/index.html">CHW heat flow</a>
+    <a href="../../plan/04-data-flows.html#scenario-c--unsheltered-resident-heat-checkin">Scenario C</a>
+  </p>
+</main>
+
+<footer class="dash-footer">
+  Source: MCDPH Heat Surveillance &middot; AZ One Health Sentinel CHW flow.
+</footer>
+
+<script type="module">
+  import { mountAuthStub } from '../shared/auth-stub.js';
+  import { renderSparkline } from '../shared/sparkline.js';
+  import { renderSqlPreview } from '../shared/kg-client.js';
+
+  mountAuthStub(document.getElementById('auth-stub'), 'mcdph');
+  document.getElementById('print-date').textContent = new Date().toISOString().slice(0, 10);
+
+  // Demo rows derived inline (no separate mock file needed; the
+  // pattern matches what the Cluster Detection Agent would emit).
+  const rows = [
+    { zcta: '85003', last_24h: 12, last_7d: 41, unsheltered_share: 0.78, severity: 'urgent',
+      hourly: [0,0,1,1,1,2,2,3,4,4,5,6,5,3,2,1,0,0,0,0,0,0,0,0] },
+    { zcta: '85007', last_24h: 7,  last_7d: 22, unsheltered_share: 0.55, severity: 'alert',
+      hourly: [0,0,0,1,1,1,2,2,2,2,1,1,1,1,1,0,0,0,0,0,0,0,0,0] },
+    { zcta: '85019', last_24h: 5,  last_7d: 18, unsheltered_share: 0.40, severity: 'alert',
+      hourly: [0,0,0,1,1,1,1,1,1,2,2,1,1,1,1,0,0,0,0,0,0,0,0,0] },
+    { zcta: '85033', last_24h: 4,  last_7d: 13, unsheltered_share: 0.33, severity: 'watch',
+      hourly: [0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0] },
+    { zcta: '85040', last_24h: 3,  last_7d: 9,  unsheltered_share: 0.45, severity: 'watch',
+      hourly: [0,0,0,0,0,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0] },
+    { zcta: '85008', last_24h: 2,  last_7d: 7,  unsheltered_share: 0.28, severity: 'info',
+      hourly: [0,0,0,0,0,0,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0] }
+  ];
+  rows.sort((a, b) => b.last_24h - a.last_24h);
+
+  const tbody = document.querySelector('#zcta-table tbody');
+  rows.forEach(r => {
+    const tr = document.createElement('tr');
+    tr.dataset.kgNodeId = `zcta.${r.zcta}`;
+    tr.innerHTML =
+      `<td>${r.zcta}</td>` +
+      `<td class="num">${r.last_24h}</td>` +
+      `<td class="num">${r.last_7d}</td>` +
+      `<td class="num">${(r.unsheltered_share * 100).toFixed(0)}%</td>` +
+      `<td><span class="badge" data-severity="${r.severity}">${r.severity.toUpperCase()}</span></td>` +
+      `<td class="spark"></td>`;
+    tbody.appendChild(tr);
+    tr.querySelector('td.spark').appendChild(renderSparkline(r.hourly, {
+      title: `ZCTA ${r.zcta} hourly check-ins`
+    }));
+  });
+
+  document.getElementById('show-sql').addEventListener('click', () => {
+    const sql =
+`-- ZCTA-by-hour heat-check-in scan, Maricopa County, last 7 days.
+-- Joins the observation node + its zcta property + the
+-- unsheltered flag carried as a structured exposure factor.
+WITH obs AS (
+  SELECT  n.node_id,
+          p_zcta.value_text         AS zcta,
+          CAST(p_dt.value_text AS TIMESTAMP) AS ts,
+          COALESCE(p_un.value_text, 'false') AS unsheltered
+  FROM    kg.node     n
+  JOIN    kg.property p_zcta ON p_zcta.node_id = n.node_id AND p_zcta.key = 'zcta'
+  JOIN    kg.property p_dt   ON p_dt.node_id   = n.node_id AND p_dt.key   = 'reported_at'
+  LEFT JOIN kg.property p_un  ON p_un.node_id  = n.node_id AND p_un.key   = 'unsheltered'
+  WHERE   n.node_type = 'observation'
+    AND   EXISTS (
+      SELECT 1 FROM kg.edge
+      WHERE subject_id = n.node_id
+        AND predicate  = 'occurredIn'
+        AND object_id  = 'county.maricopa'
+    )
+    AND   CAST(p_dt.value_text AS TIMESTAMP) >= NOW() - INTERVAL '7 DAYS'
+)
+SELECT  zcta,
+        COUNT(*) FILTER (WHERE ts >= NOW() - INTERVAL '24 HOURS') AS last_24h,
+        COUNT(*)                                                    AS last_7d,
+        ROUND(AVG(CASE WHEN unsheltered = 'true' THEN 1.0 ELSE 0 END), 2) AS unsheltered_share
+FROM    obs
+GROUP BY zcta
+HAVING  last_7d >= 5
+ORDER BY last_24h DESC;`;
+    renderSqlPreview(document.getElementById('sql-mount'), sql,
+      'Maricopa heat-check-in cluster scan');
+  });
+</script>
+
+</body>
+</html>

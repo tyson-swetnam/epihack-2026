@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Plan 05 — Roadmap</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      max-width: 1100px;
+      margin: 2rem auto;
+      padding: 0 1.25rem;
+      color: #1a1a1a;
+      line-height: 1.55;
+    }
+    nav.crumbs { font-size: .9rem; color: #555; margin-bottom: 1rem; }
+    nav.crumbs a { color: #1F3A93; text-decoration: none; }
+    h1 { border-bottom: 3px solid #1F3A93; padding-bottom: .35rem; }
+    h2 { margin-top: 2.25rem; color: #1F3A93; }
+    h3 { margin-top: 1.25rem; }
+    table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: .95rem; }
+    th, td { border: 1px solid #ddd; padding: .5rem .75rem; text-align: left; vertical-align: top; }
+    th { background: #f0f3f8; }
+    blockquote {
+      border-left: 4px solid #1F3A93;
+      background: #f4f6fb;
+      margin: 1rem 0;
+      padding: .75rem 1rem;
+    }
+    code { background: #f1f3f7; padding: 1px 5px; border-radius: 3px; font-size: .9em; }
+    pre code { display: block; padding: .75rem 1rem; overflow-x: auto; }
+    footer { margin-top: 4rem; padding-top: 1rem; border-top: 1px solid #ddd; color: #666; font-size: .85rem; }
+    a { color: #1F3A93; }
+  </style>
+</head>
+<body>
+  <nav class="crumbs">
+    <a href="/epihack-2026/">EpiHack AZ 2026</a>
+  </nav>
+
+  <h1 id="05--roadmap">05 — Roadmap</h1>
+
+<p>Five phases from hackathon MVP to a 12-month pilot evaluation. Each
+phase ships shippable artifacts and is judged by an explicit
+success criterion tied back to the
+<a href="../figures/03-outbreak-timeliness-metrics.html">Figure 3 timeliness milestones</a>.</p>
+
+<h2 id="phase-0--hackathon-mvp-week-02">Phase 0 — Hackathon MVP (week 0–2)</h2>
+
+<p><strong>Scope.</strong> One vertical (VBD), one happy path (mail-in tick), three
+MCPs, one agent pipeline.</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Ship</th>
+      <th>Owner</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">schema/deep/application.sql</code> — new node types: <code class="language-plaintext highlighter-rouge">observation</code>, <code class="language-plaintext highlighter-rouge">symptom</code>, <code class="language-plaintext highlighter-rouge">exposure_factor</code>, <code class="language-plaintext highlighter-rouge">consent_profile</code>, <code class="language-plaintext highlighter-rouge">wearable_metric</code></td>
+      <td>repo</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">mcp/great-az-tick-check-mcp/</code> — submission tracking + species feedback (mock if Walker lab API isn’t ready)</td>
+      <td>repo</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">mcp/knowledge-graph-mcp/</code> — read-only kg query over DuckLake (<code class="language-plaintext highlighter-rouge">regions_at_point</code>, <code class="language-plaintext highlighter-rouge">pathogen_by_vector</code>, <code class="language-plaintext highlighter-rouge">outbreak_check</code>)</td>
+      <td>repo</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">app/</code> — Next.js / React Native shell with the <strong>tick mail-in flow</strong> end-to-end</td>
+      <td>repo</td>
+    </tr>
+    <tr>
+      <td><strong>Agents:</strong> Intake, Geo-Enrichment, Validation, Triage (VBD only), Enrichment (vectorsurv + greatAZtickcheck + kg), Notification (in-app + email)</td>
+      <td>repo</td>
+    </tr>
+    <tr>
+      <td>Live integration with <code class="language-plaintext highlighter-rouge">vectorsurv-mcp</code> for nearby pool context</td>
+      <td>already shipped</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><strong>Success criterion.</strong> A user can mail in a tick using the app in
+under 3 minutes from open-to-confirmation, with a mailing label
+and a 14-day symptom watchlist generated. The observation lands
+in the kg with edges to pathogen, county, resource, and focus
+nodes. Detect milestone fires automatically.</p>
+
+<h2 id="phase-1--heat-vertical-month-12">Phase 1 — Heat vertical (month 1–2)</h2>
+
+<p><strong>Scope.</strong> Add the Heat vertical and three more MCPs.</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Ship</th>
+      <th> </th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">mcp/nws-heatrisk-mcp/</code> — daily HeatRisk + active alerts</td>
+      <td>new</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">mcp/mag-hrn-mcp/</code> — Heat Relief Network locations + (where available) supply / occupancy</td>
+      <td>new</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">mcp/adhs-mcp/</code> — read-only ADHS arbovirus + heat-mortality summaries</td>
+      <td>new</td>
+    </tr>
+    <tr>
+      <td>Triage Agent — Heat branch with the vulnerability-score model</td>
+      <td>extend</td>
+    </tr>
+    <tr>
+      <td>App — three new flows: <strong>CHW heat check-in</strong>, <strong>anonymous heat self-report</strong>, <strong>“where can I cool off?”</strong></td>
+      <td>extend</td>
+    </tr>
+    <tr>
+      <td>Notification Agent — SMS fallback + Spanish localization</td>
+      <td>extend</td>
+    </tr>
+    <tr>
+      <td>Cluster Detection Agent (vertical-scoped, hourly during heat season)</td>
+      <td>new</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><strong>Success criterion.</strong> A CHW with the field app can take an
+unsheltered check-in and dispatch transport to a cooling center in
+under 90 seconds. A clustering of 5 heat-exhaustion check-ins in
+one ZCTA / 2 h triggers a county heat-emergency alert to MCDPH.</p>
+
+<h2 id="phase-2--tribal-partnerships--offline-month-36">Phase 2 — Tribal partnerships + offline (month 3–6)</h2>
+
+<p><strong>Scope.</strong> Engage tribal partners, add offline + low-bandwidth modes,
+expand the linguistic surface, and harden data-sovereignty guardrails.</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Ship</th>
+      <th> </th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>MOU + DUA framework with ITCA-TEC</td>
+      <td>external</td>
+    </tr>
+    <tr>
+      <td>Optional <code class="language-plaintext highlighter-rouge">navajo-ec-mcp</code> proxy, gated by tribal DUA</td>
+      <td>new (gated)</td>
+    </tr>
+    <tr>
+      <td>Field app: full offline capture, sync-on-reconnect</td>
+      <td>extend</td>
+    </tr>
+    <tr>
+      <td>SMS-only flow for users with no smartphone (Twilio / agency short code)</td>
+      <td>new</td>
+    </tr>
+    <tr>
+      <td>Multi-lingual UI: Spanish, Diné Bizaad, Tohono O’odham (with native-speaker review)</td>
+      <td>extend</td>
+    </tr>
+    <tr>
+      <td>Validation Agent: row-level tribal-data suppression at write time</td>
+      <td>extend</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">whispers-mcp</code> and <code class="language-plaintext highlighter-rouge">inaturalist-mcp</code> for wildlife mortality + citizen-science context</td>
+      <td>new</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">211-az-mcp</code> for utility-assistance + transport referrals</td>
+      <td>new</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><strong>Success criterion.</strong> A pilot tribal community can use the app
+end-to-end in the local language without uploading any data to
+shared infrastructure unless explicitly opted in. Tribal-data
+suppression audit passes a tabletop review.</p>
+
+<h2 id="phase-3--maricopa--coconino-pilot-month-69">Phase 3 — Maricopa + Coconino pilot (month 6–9)</h2>
+
+<p><strong>Scope.</strong> Real users, real reports, evaluation against Figure 3
+timeliness milestones.</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Ship</th>
+      <th> </th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Agency dashboard for MCDPH, ADHS, AZGFD, Coconino HHS</td>
+      <td>new</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">agent_run</code> audit table + Figure-3-milestone joins</td>
+      <td>new</td>
+    </tr>
+    <tr>
+      <td>Cluster-detection thresholds calibrated to historical AZ data (1993 Four Corners, 2021 Maricopa WNV, 2023/2024 heat seasons, 2025 Coconino plague)</td>
+      <td>calibration</td>
+    </tr>
+    <tr>
+      <td>Public-facing aggregated dashboard (“AZ One Health Today”)</td>
+      <td>new</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">inaturalist-mcp</code> + AZGFD wildlife-mortality cross-references on every wildlife observation</td>
+      <td>extend</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><strong>Success criterion.</strong> During the heat season and the WNV season,
+the median <strong>Detect → Notify</strong> interval for reports flowing
+through the app is at least 30% shorter than the 2024 baseline
+for the same counties. CHW + 211 satisfaction surveys ≥ 4 / 5.</p>
+
+<h2 id="phase-4--statewide--evaluation-month-912">Phase 4 — Statewide + evaluation (month 9–12)</h2>
+
+<p><strong>Scope.</strong> Statewide expansion, federated learning with tribal
+partners, formal evaluation.</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Ship</th>
+      <th> </th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>15-county deployment</td>
+      <td>rollout</td>
+    </tr>
+    <tr>
+      <td>Federated cluster-detection that lets tribal partners contribute model gradients without releasing line data</td>
+      <td>new</td>
+    </tr>
+    <tr>
+      <td>Wearable integration: HealthKit + Health Connect skin-temp, HRV, sweat-rate (for Heat)</td>
+      <td>new</td>
+    </tr>
+    <tr>
+      <td>Annual evaluation report scored against Figure 3 milestones, with sector-by-sector intervals</td>
+      <td>external</td>
+    </tr>
+    <tr>
+      <td>Open-source release notes + governance handoff</td>
+      <td>external</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><strong>Success criterion.</strong> Independent evaluation against the Figure 3
+milestone framework shows measurable timeliness improvement for
+both verticals, with no significant disparities by county, tribal
+status, or demographic group.</p>
+
+<h2 id="cross-cutting-tracks">Cross-cutting tracks</h2>
+
+<p>These run across every phase.</p>
+
+<ul>
+  <li><strong>Governance.</strong> ADHS / AZGFD / ITCA-TEC / Maricopa Vector
+Control as the standing review board. All algorithmic changes
+pass through this group before deployment.</li>
+  <li><strong>Privacy &amp; consent.</strong> Quarterly audits of the
+<code class="language-plaintext highlighter-rouge">consent_profile</code> enforcement; immediate-revoke pathway for
+any user.</li>
+  <li><strong>Cost.</strong> Cap on per-report LLM spend, with cheap models on
+high-volume agents (Intake = Haiku) and expensive models only
+where stakes are highest (Triage on potentially severe cases =
+Opus / Sonnet).</li>
+  <li><strong>Bias monitoring.</strong> Disparity dashboards by demographic and
+geography reviewed monthly.</li>
+  <li><strong>Open data.</strong> Wherever upstream licensing allows, aggregated
+outputs are republished back into the open-data ecosystem
+(GBIF, HealthData.gov, the
+<a href="/epihack-2026/schema/deep/datasets_apis.sql"><code class="language-plaintext highlighter-rouge">schema/deep/datasets_apis.sql</code></a>
+catalog).</li>
+</ul>
+
+<h2 id="risk-register-top-five">Risk register (top five)</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>Risk</th>
+      <th>Mitigation</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Upstream API drift breaks an MCP integration</td>
+      <td>Versioned OpenAPI snapshots in each <code class="language-plaintext highlighter-rouge">mcp/&lt;name&gt;/openapi/</code>; nightly diff alerts; env-overridable paths so a fix is deploy-without-rebuild</td>
+    </tr>
+    <tr>
+      <td>VectorSurv credentials expire / rotate</td>
+      <td>MCP server runs token refresh; key rotation playbook documented in each <code class="language-plaintext highlighter-rouge">.env.example</code></td>
+    </tr>
+    <tr>
+      <td>Tribal partners object to a feature</td>
+      <td>Governance board has hard veto; tribal-data MOU is opt-in per tribe</td>
+    </tr>
+    <tr>
+      <td>LLM hallucinates a triage class</td>
+      <td>Triage Agent’s output is gated by a deterministic rule layer that maps {pathogen, vulnerability, current-MCP-readings} to a small enumerated class — LLM can only choose from the enumeration</td>
+    </tr>
+    <tr>
+      <td>Cost / token blow-up under heat-season load</td>
+      <td>Per-agent budgets in the orchestrator; Intake uses Haiku exclusively; aggressive caching of MCP responses</td>
+    </tr>
+  </tbody>
+</table>
+
+
+  <footer>
+    Source: Ending Pandemics Academy &middot; University of Arizona Mel &amp;
+    Enid Zuckerman College of Public Health &middot; Global Health Institute.
+  </footer>
+</body>
+</html>

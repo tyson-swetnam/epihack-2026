@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>AZ One Health Sentinel — Ansible deployment</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      max-width: 1100px;
+      margin: 2rem auto;
+      padding: 0 1.25rem;
+      color: #1a1a1a;
+      line-height: 1.55;
+    }
+    nav.crumbs { font-size: .9rem; color: #555; margin-bottom: 1rem; }
+    nav.crumbs a { color: #1F3A93; text-decoration: none; }
+    h1 { border-bottom: 3px solid #1F3A93; padding-bottom: .35rem; }
+    h2 { margin-top: 2.25rem; color: #1F3A93; }
+    h3 { margin-top: 1.25rem; }
+    table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: .95rem; }
+    th, td { border: 1px solid #ddd; padding: .5rem .75rem; text-align: left; vertical-align: top; }
+    th { background: #f0f3f8; }
+    blockquote {
+      border-left: 4px solid #1F3A93;
+      background: #f4f6fb;
+      margin: 1rem 0;
+      padding: .75rem 1rem;
+    }
+    code { background: #f1f3f7; padding: 1px 5px; border-radius: 3px; font-size: .9em; }
+    pre code { display: block; padding: .75rem 1rem; overflow-x: auto; }
+    footer { margin-top: 4rem; padding-top: 1rem; border-top: 1px solid #ddd; color: #666; font-size: .85rem; }
+    a { color: #1F3A93; }
+  </style>
+</head>
+<body>
+  <nav class="crumbs">
+    <a href="/epihack-2026/">EpiHack AZ 2026</a>
+  </nav>
+
+  <h1 id="ansible--ansible-playbook-for-az-one-health-sentinel"><code class="language-plaintext highlighter-rouge">ansible/</code> — Ansible playbook for AZ One Health Sentinel</h1>
+
+<p>One command turns a fresh Ubuntu 24.04 VM into a running deployment
+of Claude Code + every MCP server in <a href="../mcp/"><code class="language-plaintext highlighter-rouge">../mcp/</code></a> + the
+FastAPI backend + the Next.js reporting app + Postgres for the
+DuckLake catalog.</p>
+
+<p>For an overview (VM sizing, DNS, providers, operations runbook) see
+<a href="/epihack-2026/deploy/README.html"><code class="language-plaintext highlighter-rouge">../deploy/README.md</code></a>. This file covers the
+playbook itself.</p>
+
+<h2 id="run-it">Run it</h2>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">cd </span>ansible
+<span class="nb">cp </span>inventory.example.yml inventory.yml
+<span class="nb">cp </span>group_vars/all.vault.example.yml group_vars/all.vault.yml
+<span class="nv">$EDITOR</span> inventory.yml group_vars/all.vault.yml
+ansible-vault encrypt group_vars/all.vault.yml
+ansible-galaxy <span class="nb">install</span> <span class="nt">-r</span> requirements.yml
+ansible-playbook <span class="nt">-i</span> inventory.yml playbook.yml <span class="nt">--ask-vault-pass</span>
+</code></pre></div></div>
+
+<p>10–15 minutes later: a working deployment.</p>
+
+<h3 id="localhost-single-box-deployment">Localhost (single-box) deployment</h3>
+
+<p>To deploy onto the machine you’re sitting at (no remote VM), the
+<code class="language-plaintext highlighter-rouge">inventory.yml</code> here points at <code class="language-plaintext highlighter-rouge">127.0.0.1</code> with <code class="language-plaintext highlighter-rouge">ansible_connection: local</code>
+and overrides a few host vars. Two things differ from a remote run:</p>
+
+<ul>
+  <li><strong>Source is rsynced from the local working copy, not cloned from
+GitHub.</strong> Set <code class="language-plaintext highlighter-rouge">onehealth_repo_url</code> to a local path (e.g.
+<code class="language-plaintext highlighter-rouge">/home/you/epihack-2026</code>) as a <em>host</em> var; the <code class="language-plaintext highlighter-rouge">repo</code> role then rsyncs
+the working tree (uncommitted edits included) into
+<code class="language-plaintext highlighter-rouge">/srv/onehealth/epihack-2026</code>, excluding build artifacts. A <code class="language-plaintext highlighter-rouge">https://</code>
+or <code class="language-plaintext highlighter-rouge">git@</code> URL still triggers the git-clone path.</li>
+  <li><strong>Localhost overrides must be HOST vars, not group vars.</strong> The play
+auto-loads <code class="language-plaintext highlighter-rouge">group_vars/all.yml</code>; if you put overrides under a group’s
+inline <code class="language-plaintext highlighter-rouge">vars:</code> they rank <em>below</em> <code class="language-plaintext highlighter-rouge">group_vars/all</code> and get clobbered.
+Put <code class="language-plaintext highlighter-rouge">onehealth_fqdn</code>, <code class="language-plaintext highlighter-rouge">fastapi_auth_mock</code>, <code class="language-plaintext highlighter-rouge">app_api_base</code>, etc. under
+the host entry. (The play loads only <code class="language-plaintext highlighter-rouge">all.vault.yml</code> via <code class="language-plaintext highlighter-rouge">vars_files</code>,
+never <code class="language-plaintext highlighter-rouge">all.yml</code>, precisely so host overrides win.)</li>
+</ul>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># vault may be plaintext for a throwaway local box (skip --ask-vault-pass):</span>
+ansible-playbook <span class="nt">-i</span> inventory.yml playbook.yml
+</code></pre></div></div>
+
+<h2 id="layout">Layout</h2>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>ansible/
+  ansible.cfg               Inventory pointer + roles_path + vault prompt
+  inventory.example.yml     Host + ssh user; copy → inventory.yml
+  playbook.yml              The entry-point; one play, eleven roles in order
+  requirements.yml          Ansible Galaxy collections (community.postgresql, …)
+  group_vars/
+    all.yml                 Non-secret defaults — edit in place is fine
+    all.vault.example.yml   Secret template — copy + encrypt as all.vault.yml
+  roles/
+    common/                 base apt packages, deploy user, ufw, fail2ban, swap
+    node/                   Node.js 20 LTS via NodeSource
+    python/                 Python 3.12 + uv
+    postgres/               PostgreSQL 16 + onehealth DB + role
+    repo/                   put source at /srv/onehealth/epihack-2026 (git clone OR local rsync)
+    claude_code/            `npm i -g @anthropic-ai/claude-code` + ~/.claude/settings.json
+    mcp_servers/            `uv sync` each mcp/&lt;name&gt;-mcp/; write ~/.claude.json
+    ducklake/               seed the DuckLake catalog (Postgres + local Parquet) from schema/
+    fastapi/                uvicorn systemd unit for onehealth_agents.api:app
+    app/                    npm install + npm run gen:api + npm run build (static export)
+    nginx/                  reverse-proxy /api/ → :8000, serve /app/ → static export
+</code></pre></div></div>
+
+<h2 id="roles-in-order">Roles in order</h2>
+
+<p>The playbook runs roles sequentially because each step depends on
+the last. Ansible runs are idempotent — re-running the playbook
+after a <code class="language-plaintext highlighter-rouge">git pull</code> updates the repo, rebuilds the app, and restarts
+the services without touching anything else.</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>#</th>
+      <th>Role</th>
+      <th>Tags</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>1</td>
+      <td>common</td>
+      <td><code class="language-plaintext highlighter-rouge">common</code></td>
+    </tr>
+    <tr>
+      <td>2</td>
+      <td>node</td>
+      <td><code class="language-plaintext highlighter-rouge">node</code></td>
+    </tr>
+    <tr>
+      <td>3</td>
+      <td>python</td>
+      <td><code class="language-plaintext highlighter-rouge">python</code></td>
+    </tr>
+    <tr>
+      <td>4</td>
+      <td>postgres</td>
+      <td><code class="language-plaintext highlighter-rouge">postgres</code>, <code class="language-plaintext highlighter-rouge">db</code></td>
+    </tr>
+    <tr>
+      <td>5</td>
+      <td>repo</td>
+      <td><code class="language-plaintext highlighter-rouge">repo</code></td>
+    </tr>
+    <tr>
+      <td>6</td>
+      <td>claude_code</td>
+      <td><code class="language-plaintext highlighter-rouge">claude_code</code>, <code class="language-plaintext highlighter-rouge">claude</code></td>
+    </tr>
+    <tr>
+      <td>7</td>
+      <td>mcp_servers</td>
+      <td><code class="language-plaintext highlighter-rouge">mcp_servers</code>, <code class="language-plaintext highlighter-rouge">mcp</code></td>
+    </tr>
+    <tr>
+      <td>8</td>
+      <td>ducklake</td>
+      <td><code class="language-plaintext highlighter-rouge">ducklake</code>, <code class="language-plaintext highlighter-rouge">kg</code>, <code class="language-plaintext highlighter-rouge">db</code></td>
+    </tr>
+    <tr>
+      <td>9</td>
+      <td>fastapi</td>
+      <td><code class="language-plaintext highlighter-rouge">fastapi</code>, <code class="language-plaintext highlighter-rouge">api</code></td>
+    </tr>
+    <tr>
+      <td>10</td>
+      <td>app</td>
+      <td><code class="language-plaintext highlighter-rouge">app</code>, <code class="language-plaintext highlighter-rouge">frontend</code></td>
+    </tr>
+    <tr>
+      <td>11</td>
+      <td>nginx</td>
+      <td><code class="language-plaintext highlighter-rouge">nginx</code>, <code class="language-plaintext highlighter-rouge">web</code></td>
+    </tr>
+  </tbody>
+</table>
+
+<p>Tag a subset to run just one step, e.g.:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Just rebuild + redeploy the Next.js app after a code change:</span>
+ansible-playbook <span class="nt">-i</span> inventory.yml playbook.yml <span class="nt">--tags</span> repo,app
+
+<span class="c"># Just rotate the Anthropic API key:</span>
+ansible-playbook <span class="nt">-i</span> inventory.yml playbook.yml <span class="nt">--tags</span> claude_code
+</code></pre></div></div>
+
+<h2 id="vault">Vault</h2>
+
+<p><code class="language-plaintext highlighter-rouge">group_vars/all.vault.yml</code> carries every secret the playbook needs:</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">vault_anthropic_api_key</code> — for Claude Code on the VM</li>
+  <li><code class="language-plaintext highlighter-rouge">vault_postgres_password</code> — onehealth DB role</li>
+  <li><code class="language-plaintext highlighter-rouge">vault_supabase_jwt_secret</code> (or <code class="language-plaintext highlighter-rouge">vault_supabase_url</code>) — for the
+FastAPI backend’s JWT validation</li>
+  <li><code class="language-plaintext highlighter-rouge">vault_tls_email</code> — Let’s Encrypt registration email</li>
+  <li>Per-MCP-server credentials (VectorSurv username/password, etc.)</li>
+</ul>
+
+<p>The <code class="language-plaintext highlighter-rouge">.example</code> file ships every key with an empty value so a new
+deployer knows what to fill in. Encrypt the real file with
+<code class="language-plaintext highlighter-rouge">ansible-vault encrypt group_vars/all.vault.yml</code> before committing
+to a private fork.</p>
+
+<h2 id="testing-the-playbook">Testing the playbook</h2>
+
+<p>The fastest loop is a throwaway local VM (e.g. Multipass on macOS,
+Vagrant + libvirt on Linux, or a $5/month DigitalOcean droplet you
+destroy after each smoke test). Multipass example:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>multipass launch 24.04 <span class="nt">-n</span> onehealth-test <span class="nt">-c</span> 4 <span class="nt">-m</span> 8G <span class="nt">-d</span> 40G
+multipass info onehealth-test           <span class="c"># grab the IP</span>
+<span class="c"># add the IP to inventory.yml as ansible_host</span>
+ansible-playbook <span class="nt">-i</span> inventory.yml playbook.yml <span class="nt">--ask-vault-pass</span>
+multipass shell onehealth-test          <span class="c"># poke around</span>
+multipass delete onehealth-test <span class="o">&amp;&amp;</span> multipass purge
+</code></pre></div></div>
+
+<p>The playbook is <strong>not</strong> idempotent on the <em>first</em> run if it gets
+interrupted mid-way (e.g. SSH drops during <code class="language-plaintext highlighter-rouge">npm ci</code>). Just re-run
+and Ansible will pick up where it left off.</p>
+
+<h2 id="ducklake-knowledge-graph">DuckLake knowledge graph</h2>
+
+<p>The <code class="language-plaintext highlighter-rouge">ducklake</code> role (runs after <code class="language-plaintext highlighter-rouge">mcp_servers</code>, before <code class="language-plaintext highlighter-rouge">fastapi</code>) brings up
+the knowledge-graph lakehouse so user reports are logged durably with
+time-travel versioning:</p>
+
+<ul>
+  <li><strong>Catalog:</strong> a DuckLake catalog in the epihack Postgres DB
+(<code class="language-plaintext highlighter-rouge">ducklake:postgres:dbname=epihack ...</code>, the <code class="language-plaintext highlighter-rouge">ducklake_uri</code> var).</li>
+  <li><strong>Data:</strong> Parquet files under <code class="language-plaintext highlighter-rouge">ducklake_data_path</code>
+(<code class="language-plaintext highlighter-rouge">/srv/onehealth/ducklake-data</code>).</li>
+  <li><strong>Seeding:</strong> <code class="language-plaintext highlighter-rouge">roles/ducklake/files/bootstrap_ducklake.py</code> loads the
+<code class="language-plaintext highlighter-rouge">schema/*.sql</code> + <code class="language-plaintext highlighter-rouge">schema/deep/*.sql</code> into an in-memory DuckDB (which
+supports PK/FK), then <strong>CTAS-copies</strong> every table + view into DuckLake.
+This is required because DuckLake does <strong>not</strong> support PRIMARY KEY /
+UNIQUE / FK constraints or indexes — a plain <code class="language-plaintext highlighter-rouge">.read schema.sql</code> against
+DuckLake fails. The seed is idempotent (skips if <code class="language-plaintext highlighter-rouge">kg.node</code> is populated).</li>
+  <li><strong>Runtime readers/writers:</strong> <code class="language-plaintext highlighter-rouge">knowledge-graph-mcp</code> reads the catalog
+(<code class="language-plaintext highlighter-rouge">KG_DUCKLAKE_URI</code> in <code class="language-plaintext highlighter-rouge">~/.claude.json</code>); the FastAPI reports write-path
+(<code class="language-plaintext highlighter-rouge">agents/.../kg_writer.py</code>) and the audit sink write to it
+(<code class="language-plaintext highlighter-rouge">KG_DUCKLAKE_URI</code> + <code class="language-plaintext highlighter-rouge">KG_DUCKLAKE_DATA_PATH</code> in the API env). The API
+service needs <code class="language-plaintext highlighter-rouge">duckdb</code> (an <code class="language-plaintext highlighter-rouge">agents/</code> dependency) and a writable DuckDB
+extension home — the <code class="language-plaintext highlighter-rouge">fastapi</code> role sets <code class="language-plaintext highlighter-rouge">HOME=</code>
+in the unit, widens <code class="language-plaintext highlighter-rouge">ReadWritePaths</code>, and pre-installs the
+<code class="language-plaintext highlighter-rouge">ducklake</code>+<code class="language-plaintext highlighter-rouge">postgres</code> extensions for the API’s duckdb version.</li>
+</ul>
+
+<p>Verify time-travel after a deploy:</p>
+
+<div class="language-sql highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">-- in duckdb, attached as epihack:</span>
+<span class="k">SELECT</span> <span class="k">max</span><span class="p">(</span><span class="n">snapshot_id</span><span class="p">)</span> <span class="k">FROM</span> <span class="n">ducklake_snapshots</span><span class="p">(</span><span class="s1">'epihack'</span><span class="p">);</span>
+<span class="k">SELECT</span> <span class="k">count</span><span class="p">(</span><span class="o">*</span><span class="p">)</span> <span class="k">FROM</span> <span class="n">kg</span><span class="p">.</span><span class="n">node</span> <span class="k">AT</span> <span class="p">(</span><span class="k">VERSION</span> <span class="o">=&gt;</span> <span class="mi">22</span><span class="p">);</span>   <span class="c1">-- historical read</span>
+</code></pre></div></div>
+
+<h2 id="caveats">Caveats</h2>
+
+<ul>
+  <li><strong>Supabase project is external.</strong> The playbook configures the VM
+to <em>talk to</em> Supabase via the URL + JWT secret in the vault. It
+does not create the Supabase project, configure OAuth providers,
+or seed any tables. See <a href="/epihack-2026/plan/07-auth.html"><code class="language-plaintext highlighter-rouge">../plan/07-auth.md</code></a>
+for the manual Supabase setup steps.</li>
+  <li><strong>DuckLake is provisioned locally; object storage is optional.</strong> The
+<code class="language-plaintext highlighter-rouge">ducklake</code> role attaches a DuckLake catalog in the epihack Postgres DB
+and seeds the <code class="language-plaintext highlighter-rouge">schema/</code> knowledge graph into it, with the Parquet data
+files under `` (default
+<code class="language-plaintext highlighter-rouge">/srv/onehealth/ducklake-data</code>) on local disk — no S3 required. For a
+production multi-node lakehouse you can repoint the data path at
+S3 / R2 instead. See the <code class="language-plaintext highlighter-rouge">DuckLake</code> section below.</li>
+  <li><strong>OAuth callback domain.</strong> The Supabase Auth dashboard needs the
+VM’s public hostname in its allow-list before the OAuth dance
+works end-to-end. Add it after DNS resolves.</li>
+</ul>
+
+
+  <footer>
+    Source: Ending Pandemics Academy &middot; University of Arizona Mel &amp;
+    Enid Zuckerman College of Public Health &middot; Global Health Institute.
+  </footer>
+</body>
+</html>

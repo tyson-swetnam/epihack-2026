@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Plan 06 — One Health reporting app: anonymous-first intake</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      max-width: 1100px;
+      margin: 2rem auto;
+      padding: 0 1.25rem;
+      color: #1a1a1a;
+      line-height: 1.55;
+    }
+    nav.crumbs { font-size: .9rem; color: #555; margin-bottom: 1rem; }
+    nav.crumbs a { color: #1F3A93; text-decoration: none; }
+    h1 { border-bottom: 3px solid #1F3A93; padding-bottom: .35rem; }
+    h2 { margin-top: 2.25rem; color: #1F3A93; }
+    h3 { margin-top: 1.25rem; }
+    table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: .95rem; }
+    th, td { border: 1px solid #ddd; padding: .5rem .75rem; text-align: left; vertical-align: top; }
+    th { background: #f0f3f8; }
+    blockquote {
+      border-left: 4px solid #1F3A93;
+      background: #f4f6fb;
+      margin: 1rem 0;
+      padding: .75rem 1rem;
+    }
+    code { background: #f1f3f7; padding: 1px 5px; border-radius: 3px; font-size: .9em; }
+    pre code { display: block; padding: .75rem 1rem; overflow-x: auto; }
+    footer { margin-top: 4rem; padding-top: 1rem; border-top: 1px solid #ddd; color: #666; font-size: .85rem; }
+    a { color: #1F3A93; }
+  </style>
+</head>
+<body>
+  <nav class="crumbs">
+    <a href="/epihack-2026/">EpiHack AZ 2026</a>
+  </nav>
+
+  <h1 id="06--one-health-reporting-app-anonymous-first-intake">06 — One Health reporting app (anonymous-first intake)</h1>
+
+<p>A unified reporting surface for community members to submit
+<strong>Human</strong>, <strong>Animal</strong>, or <strong>Environmental</strong> events from a phone or
+laptop, with <strong>anonymity as the default</strong> and a progressive,
+opt-in profile that maps to the Figure 2 Minimum Set of Key Data
+Parameters once the user is ready.</p>
+
+<p>This extends the Phase 0 <a href="../app/index.html"><code class="language-plaintext highlighter-rouge">app/</code></a> prototype (tick
+mail-in + heat self-report) into the general intake surface the
+<a href="./03-agentic-architecture.html">plan/03 agentic architecture</a> was
+designed for. The pilot is a <strong>mobile-friendly web app on GitHub
+Pages</strong>; the full prototype targets the Apple App Store and Google
+Play.</p>
+
+<blockquote>
+  <p><strong>See also:</strong> <a href="./07-auth.html"><code class="language-plaintext highlighter-rouge">plan/07-auth.md</code></a> — the optional
+account system layered on top of this anonymous-first flow.
+Anonymous reporting is never gated by sign-in.</p>
+</blockquote>
+
+<h2 id="hard-rules">Hard rules</h2>
+
+<p>These are load-bearing — every decision below derives from them.</p>
+
+<ol>
+  <li><strong>Anonymity is the default for Animal and Environmental reports.</strong>
+Workplace whistleblower scenarios (broken sewage pipes, illegal
+burns, dead livestock) must be submittable with <strong>zero identifying
+information</strong> — no IP capture beyond what’s needed to coarsen a
+location, no device fingerprint, no account.</li>
+  <li><strong>Human reports are anonymous by default</strong> with an explicit
+opt-in path to share contact information with a clinician or
+211 dispatcher. The intake form must work end-to-end without
+that opt-in.</li>
+  <li><strong>The app NEVER renders a diagnosis</strong> from user-supplied symptoms
+or demographics. It MAY surface read-only public-health context
+(e.g. “WNV is active in your county this week” from
+<a href="../mcp/vectorsurv-mcp/"><code class="language-plaintext highlighter-rouge">vectorsurv-mcp</code></a>, or “CDC reports
+elevated influenza activity in HHS Region 9” from a future
+CDC MCP) <strong>alongside</strong> a report, but it must never connect the
+user’s specific symptoms to a specific disease classification.
+Triage Agent’s output is a routing decision (self-care ·
+clinician · 211 · agency notifier), not a diagnosis.</li>
+  <li><strong>Public-share resolution is coarse by construction.</strong> Any
+aggregated map, public dashboard, or third-party export uses
+<strong>ZIP code (≈ 5 km²)</strong> or <strong>1 km grid cell</strong>, whichever is
+coarser. Precise lat/lon is only retained in the encrypted
+row-level store and only released to a verified agency on an
+explicit per-report consent token (cf.
+<a href="/epihack-2026/schema/deep/application.sql"><code class="language-plaintext highlighter-rouge">schema/deep/application.sql</code></a>
+<code class="language-plaintext highlighter-rouge">consent_profile</code>).</li>
+  <li><strong>Photographs are stripped of EXIF GPS</strong> before any photo leaves
+the device for a health provider, agency, or public surface,
+<strong>unless</strong> the user has explicitly opted into location sharing
+on their profile. The strip happens client-side; the server
+never receives the original.</li>
+</ol>
+
+<h2 id="the-three-report-types">The three report types</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>Type</th>
+      <th>Default anonymity</th>
+      <th>Required fields</th>
+      <th>Optional fields</th>
+      <th>Vertical</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Human</strong> event (illness, heat distress, exposure)</td>
+      <td>Anonymous</td>
+      <td>event class (icons) · date · coarse location</td>
+      <td>symptoms (Figure 2 Human class) · contact · demographics</td>
+      <td>VBD · Heat</td>
+    </tr>
+    <tr>
+      <td><strong>Animal</strong> event (sick / dead / unusual wildlife or livestock)</td>
+      <td><strong>Fully anonymous</strong></td>
+      <td>event class (icons) · date · coarse location · species (or “unknown”)</td>
+      <td>photo · count · behavior notes</td>
+      <td>VBD</td>
+    </tr>
+    <tr>
+      <td><strong>Environmental</strong> event (sewage, burn, standing water, smoke, water-quality)</td>
+      <td><strong>Fully anonymous</strong></td>
+      <td>event class (icons) · date · coarse location</td>
+      <td>photo · severity (icon scale) · source notes</td>
+      <td>Both</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>The intake screen is <strong>three large tap-targets</strong> — one per type,
+each iconographic and language-independent. No required text input
+to file a report.</p>
+
+<h2 id="ui-principles">UI principles</h2>
+
+<ul>
+  <li><strong>Low / no text.</strong> Icons + photo + tap-targets. Text input is
+optional; voice transcription is on the roadmap. The bar to
+file a report must be lower than the bar to post on social
+media.</li>
+  <li><strong>Photo-first.</strong> Camera capture is one tap from the home
+screen. The dead-animal / sewage-pipe / burned-material use
+cases all start with a photo.</li>
+  <li><strong>Mobile-first viewport.</strong> Designed at 360 × 640. Must work
+one-handed. Must work with the screen reader. Must work in
+bright Arizona sun (high-contrast palette).</li>
+  <li><strong>Multilingual.</strong> EN + ES at pilot. Diné Bizaad and Tohono
+O’odham per <a href="./05-roadmap.html#phase-2--tribal-partnerships--offline-month-36">plan/05 Phase 2</a>.
+All UI strings live in <a href="../app/shared/i18n.js"><code class="language-plaintext highlighter-rouge">app/shared/i18n.js</code></a>.</li>
+  <li><strong>Offline-capable.</strong> Reports queue in IndexedDB and sync on
+reconnect — already implemented in
+<a href="../app/shared/sync.js"><code class="language-plaintext highlighter-rouge">app/shared/sync.js</code></a>; the new flows
+use the same primitive.</li>
+  <li><strong>No login required to submit.</strong> A profile is created lazily
+after the first submission, and only if the user wants one.</li>
+</ul>
+
+<h2 id="privacy-architecture">Privacy architecture</h2>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>┌──────────────────────────────────────────────────────────────┐
+│  Client (browser / mobile app)                              │
+│                                                              │
+│   • Photo capture → EXIF strip (client-side)                │
+│   • Browser geolocation OR IP → coarsen to ZIP/km           │
+│   • Report payload (no PII unless profile.share = true)     │
+└──────────────────────────────┬───────────────────────────────┘
+                               │  POST /api/intake
+                               ▼
+┌──────────────────────────────────────────────────────────────┐
+│  Intake Agent (plan/03)                                      │
+│                                                              │
+│   1. Validate consent_profile (anon | contact | full)        │
+│   2. Re-coarsen location server-side (defense in depth)      │
+│   3. Verify photo has no GPS tags (reject if present)        │
+│   4. Hash IP → coarse_geo_token (one-way, salted, rotated)   │
+│   5. Drop IP from the in-flight record                       │
+└──────────────────────────────┬───────────────────────────────┘
+                               ▼
+┌──────────────────────────────────────────────────────────────┐
+│  DuckLake — two zones                                        │
+│                                                              │
+│   precise.observation     (line-level, agency-only,          │
+│                            encrypted at rest, consent-gated) │
+│   public.observation      (coarsened to ZIP / km grid,       │
+│                            no PII, time-bucketed)            │
+└──────────────────────────────────────────────────────────────┘
+</code></pre></div></div>
+
+<h3 id="ip-based-location">IP-based location</h3>
+
+<p>The browser will share precise GPS only with explicit user
+permission. If the user declines, the server may use the request
+IP to estimate a region — <strong>but the IP itself is never stored</strong>.
+The Intake Agent immediately hashes the IP with a rotating salt
+to produce a <code class="language-plaintext highlighter-rouge">coarse_geo_token</code> (the same IP under the same salt
+produces the same token, enabling repeat-reporter de-duplication
+without ever retaining a re-identifiable address). The token is
+discarded after the salt rotates (daily).</p>
+
+<h3 id="exif-stripping">EXIF stripping</h3>
+
+<p>The photo upload widget runs the strip locally before the file
+leaves the device:</p>
+
+<ul>
+  <li>iOS / Android picker: a small JS utility (<code class="language-plaintext highlighter-rouge">exif-stripper.js</code>)
+re-encodes the JPEG without the EXIF block before upload.</li>
+  <li>Server-side check: the Intake Agent rejects any photo that
+still carries GPS tags. (Defense in depth — clients can be
+buggy or hostile.)</li>
+  <li>Audit trail: every photo has a <code class="language-plaintext highlighter-rouge">media_asset</code> row in the kg with
+<code class="language-plaintext highlighter-rouge">exif_stripped_at</code> and <code class="language-plaintext highlighter-rouge">original_had_gps</code> boolean. The boolean
+is preserved so the validation pipeline can spot pattern
+failures, but the original GPS is never written.</li>
+</ul>
+
+<h3 id="profile-creation">Profile creation</h3>
+
+<p>After the first report submits, a non-blocking interstitial
+offers profile creation. The profile follows the Figure 2
+Minimum Dataset and exposes per-field toggles:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>[ ] Share my home ZIP code with verified agencies
+[ ] Share my home address with verified agencies
+[ ] Let agencies contact me about reports I file
+[ ] Let agencies contact me about events near me
+[ ] Use my photo's GPS metadata when I file animal/environmental reports
+[ ] Use my photo's GPS metadata for human-event reports
+</code></pre></div></div>
+
+<p>Every toggle defaults to <strong>off</strong>. Each toggle is a
+<code class="language-plaintext highlighter-rouge">consent_profile</code> row scoped to a parameter class (cf.
+<a href="/epihack-2026/schema/deep/application.sql"><code class="language-plaintext highlighter-rouge">schema/deep/application.sql</code></a>).</p>
+
+<h2 id="risk-assessment-never-diagnose">Risk assessment: never diagnose</h2>
+
+<p>The Triage Agent’s contract is unchanged from
+<a href="./03-agentic-architecture.html#triage-agent">plan/03</a>, but the
+intake app’s UI must respect a stricter copy rule:</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Allowed copy</th>
+      <th>Forbidden copy</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>“WNV is active in Maricopa County this week — see ADHS surveillance.”</td>
+      <td>“You may have West Nile virus.”</td>
+    </tr>
+    <tr>
+      <td>“Heat advisory in effect through Friday — see NWS HeatRisk.”</td>
+      <td>“Your symptoms suggest heat exhaustion.”</td>
+    </tr>
+    <tr>
+      <td>“Veterinary lab nearby: AZ Veterinary Diagnostic Laboratory.”</td>
+      <td>“This appears to be rabies / hantavirus / plague.”</td>
+    </tr>
+    <tr>
+      <td>“Cooling centers near you (211 Arizona).”</td>
+      <td>“You are at high risk for heat stroke.”</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>The Notification Agent reuses
+<a href="../mcp/vectorsurv-mcp/"><code class="language-plaintext highlighter-rouge">mcp/vectorsurv-mcp/</code></a>,
+<a href="../mcp/whispers-mcp/"><code class="language-plaintext highlighter-rouge">mcp/whispers-mcp/</code></a>,
+<a href="../mcp/nws-heatrisk-mcp/"><code class="language-plaintext highlighter-rouge">mcp/nws-heatrisk-mcp/</code></a>,
+<a href="../mcp/adhs-mcp/"><code class="language-plaintext highlighter-rouge">mcp/adhs-mcp/</code></a>, and a future
+<code class="language-plaintext highlighter-rouge">cdc-mcp</code> to pull contextual public-health signals. The
+<strong>enrichment text always names the public source and never asserts a
+diagnosis</strong>. A regex-based output guard in the Notification Agent
+blocks any LLM-generated phrase that pattern-matches a clinical
+assertion (“you have …”, “you may have …”, “this is …”).</p>
+
+<h2 id="incentives-open">Incentives (open)</h2>
+
+<p>The bidirectional team identified user-incentive mechanisms as a
+core question for adoption — but the specifics from that session
+aren’t yet captured in the repo. <strong>This is the largest open
+question in this plan.</strong> Candidate mechanisms worth pricing /
+testing once we have the workshop list:</p>
+
+<ul>
+  <li>Real-time public-health context returned in-app (already in
+scope — fastest payoff).</li>
+  <li>Verified-volunteer badges (with no PII exposed externally).</li>
+  <li>ITCA-TEC / county-program partnerships that mail submission
+kits (e.g. <a href="https://extension.arizona.edu/programs/great-arizona-tick-check">Great AZ Tick Check</a>
+already runs this loop for ticks).</li>
+  <li>Civic gamification — county leaderboards by ZIP for
+observation count, lab-confirmation rate, follow-up rate.</li>
+  <li>“Heard you — here’s what happened” reply-back when a report
+contributes to a verified Detect event.</li>
+</ul>
+
+<p><strong>Action item.</strong> Capture the workshop incentive list verbatim
+(notes, photos of whiteboards, etc.) and price each candidate
+against (a) privacy risk, (b) gameability, (c) implementation
+cost, and (d) equity impact across the
+<a href="../heat/04-vulnerable-populations.html"><code class="language-plaintext highlighter-rouge">heat/04-vulnerable-populations</code></a>
+cohorts.</p>
+
+<h2 id="admin-analytics-dashboard">Admin analytics dashboard</h2>
+
+<p>Extends <a href="../dashboard/"><code class="language-plaintext highlighter-rouge">dashboard/</code></a>. The dashboard is web-based,
+laptop / desktop primary, but every view must remain usable at a
+mobile viewport (matching the responsive work already shipped on
+<a href="/epihack-2026/map/index.html"><code class="language-plaintext highlighter-rouge">map/</code></a> and <a href="/epihack-2026/graph/index.html"><code class="language-plaintext highlighter-rouge">graph/</code></a>).</p>
+
+<p>Required panels:</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Panel</th>
+      <th>Source</th>
+      <th>Audience</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Reports / day by type (Human / Animal / Environmental)</td>
+      <td>DuckLake <code class="language-plaintext highlighter-rouge">public.observation</code> time-bucketed</td>
+      <td>All</td>
+    </tr>
+    <tr>
+      <td>Cluster alerts (live, with Tier-A through Tier-E flags)</td>
+      <td><code class="language-plaintext highlighter-rouge">agents.cluster</code> outputs + <code class="language-plaintext highlighter-rouge">schema/deep/cluster_followups.sql</code></td>
+      <td>Agency epi</td>
+    </tr>
+    <tr>
+      <td>Report → Notify median interval (Figure 3)</td>
+      <td><code class="language-plaintext highlighter-rouge">schema/deep/audit.sql</code> timeliness view</td>
+      <td>Agency leadership</td>
+    </tr>
+    <tr>
+      <td>Demographic-disparity dashboard (where consented)</td>
+      <td><code class="language-plaintext highlighter-rouge">consent_profile</code>-filtered cohorts</td>
+      <td>Governance board</td>
+    </tr>
+    <tr>
+      <td>Photo gallery (EXIF-stripped, agency-only)</td>
+      <td><code class="language-plaintext highlighter-rouge">media_asset</code> rows with <code class="language-plaintext highlighter-rouge">consent_profile.share_photo = true</code></td>
+      <td>Agency epi</td>
+    </tr>
+    <tr>
+      <td>Repeat-reporter rate (without de-anonymising)</td>
+      <td><code class="language-plaintext highlighter-rouge">coarse_geo_token</code> aggregates</td>
+      <td>Governance board</td>
+    </tr>
+    <tr>
+      <td>Source-of-truth audit trail per report</td>
+      <td><code class="language-plaintext highlighter-rouge">schema/deep/audit.sql</code> agent-run log</td>
+      <td>Privacy auditor</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>All panels respect tribal-data row-level suppression
+(cf. <a href="./02-mcp-integration.html#auth--data-sovereignty-notes">plan/02 § Auth + data-sovereignty</a>).</p>
+
+<h2 id="ducklake--github-lfs">DuckLake + GitHub LFS</h2>
+
+<p>The pilot keeps DuckLake’s Postgres catalog + Parquet storage as
+the system of record, with three new operational guarantees:</p>
+
+<ol>
+  <li>
+    <p><strong>Time travel.</strong> Every cluster alert and every “Detect”
+timeline event references a DuckLake snapshot ID, so
+re-evaluation against the historical state is one query:</p>
+
+    <div class="language-sql highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">USE</span> <span class="n">epihack</span> <span class="k">AT</span> <span class="p">(</span><span class="n">SNAPSHOT</span> <span class="s1">'2026-05-19T08:00:00Z'</span><span class="p">);</span>
+</code></pre></div>    </div>
+  </li>
+  <li>
+    <p><strong>Snapshot cadence.</strong> Hourly snapshots during heat season and
+WNV season; daily otherwise. Snapshot metadata (Postgres
+catalog rows describing each snapshot’s manifest list) is
+committed to the repo so the <strong>lakehouse history is
+reproducible from a clone</strong>.</p>
+  </li>
+  <li>
+    <p><strong>GitHub LFS for the catalog backup + manifest snapshots.</strong>
+The Parquet data files themselves stay in object storage (S3
+/ R2 / local); but the DuckLake catalog dump (<code class="language-plaintext highlighter-rouge">pg_dump</code>) and
+the per-snapshot manifest JSON are versioned under
+<code class="language-plaintext highlighter-rouge">schema/snapshots/*.json.lfs</code> so a fresh clone can
+<code class="language-plaintext highlighter-rouge">git lfs pull &amp;&amp; ./scripts/restore-ducklake.sh</code> to bring a
+laptop up to the latest committed snapshot. Adds a hard upper
+bound on catalog size in the repo (LFS handles the binary
+weight), and gives us a free off-site backup via GitHub.</p>
+
+    <ul>
+      <li><code class="language-plaintext highlighter-rouge">.gitattributes</code> entry: <code class="language-plaintext highlighter-rouge">schema/snapshots/* filter=lfs diff=lfs merge=lfs -text</code></li>
+      <li>Restore script lives at <code class="language-plaintext highlighter-rouge">scripts/restore-ducklake.sh</code>
+(Phase 1 deliverable).</li>
+    </ul>
+  </li>
+</ol>
+
+<h2 id="stack">Stack</h2>
+
+<p>Locked-in decisions:</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Layer</th>
+      <th>Choice</th>
+      <th>Why</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Frontend</td>
+      <td><strong>Next.js 14 + React 18 + TypeScript</strong>, App Router, <code class="language-plaintext highlighter-rouge">output: 'export'</code></td>
+      <td>One React codebase for the web pilot; Capacitor wraps the same static export for native; TS gives us strict types generated from the OpenAPI spec. SSR is unused (GitHub Pages has no server) but the file-routing + RSC story are still net wins.</td>
+    </tr>
+    <tr>
+      <td>API contract</td>
+      <td><strong>OpenAPI 3.1</strong> at <a href="../api/openapi.yaml"><code class="language-plaintext highlighter-rouge">api/openapi.yaml</code></a></td>
+      <td>Source of truth for endpoint shapes. TS types generated via <code class="language-plaintext highlighter-rouge">openapi-typescript</code>; pydantic v2 models generated via <code class="language-plaintext highlighter-rouge">datamodel-code-generator</code> for the Python orchestrator at <code class="language-plaintext highlighter-rouge">agents/</code>.</td>
+    </tr>
+    <tr>
+      <td>Backend</td>
+      <td>FastAPI/uvicorn handlers in <code class="language-plaintext highlighter-rouge">agents/src/onehealth_agents/api/</code> (Phase 06.2)</td>
+      <td>Conforms to the OpenAPI spec; the agent chain from plan/03 runs behind <code class="language-plaintext highlighter-rouge">POST /v1/reports</code>.</td>
+    </tr>
+    <tr>
+      <td>Hosting (pilot)</td>
+      <td>GitHub Pages, static export via <code class="language-plaintext highlighter-rouge">.github/workflows/deploy-app.yml</code></td>
+      <td>No server needed; same workflow that already publishes the Jekyll docs.</td>
+    </tr>
+    <tr>
+      <td>Hosting (native)</td>
+      <td>Capacitor → TestFlight + Play Internal Track</td>
+      <td>Reuses 100% of the Next.js build; native plugins gate HealthKit / Health Connect / push.</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2 id="delivery-sequence">Delivery sequence</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>Phase</th>
+      <th>Surface</th>
+      <th>Status</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Pilot</strong></td>
+      <td>Next.js static export on GitHub Pages (<a href="../app/"><code class="language-plaintext highlighter-rouge">app/</code></a>)</td>
+      <td>scaffolded — this commit</td>
+    </tr>
+    <tr>
+      <td><strong>Prototype</strong></td>
+      <td>Capacitor wrapper around the Next.js export → TestFlight + Play Internal Track</td>
+      <td>new</td>
+    </tr>
+    <tr>
+      <td><strong>v1</strong></td>
+      <td>Native iOS (Swift / SwiftUI) + Android (Kotlin / Jetpack Compose) builds sharing a thin shared-logic core, OR Capacitor production build if no native-only feature is required</td>
+      <td>new — gated on the prototype’s UX findings</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>The Capacitor middle step lets us reuse 100% of the pilot’s Next.js
+output while gating the native-only features (HealthKit /
+Health Connect from <a href="./05-roadmap.html#phase-4--statewide--evaluation-month-912">plan/05 Phase 4</a>, camera APIs, push notifications) behind native plugins.</p>
+
+<p>The Phase-0/1 vanilla flows (tick mail-in, three heat flows) are
+preserved unchanged under <a href="../app/legacy/"><code class="language-plaintext highlighter-rouge">app/legacy/</code></a> until each
+is ported into the React app. Migration table lives in
+<a href="../app/README.html"><code class="language-plaintext highlighter-rouge">app/README.md</code></a>.</p>
+
+<h2 id="mapping-to-figure-2-minimum-dataset">Mapping to Figure 2 Minimum Dataset</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>Class</th>
+      <th>Anonymous report supplies</th>
+      <th>Profile-opt-in supplies</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>General</td>
+      <td>coarse geo (ZIP/km), date, report type</td>
+      <td>precise geo (if opted), household ID</td>
+    </tr>
+    <tr>
+      <td>Human</td>
+      <td>symptom-icon picks (if Human), event class</td>
+      <td>full Figure 2 Human class, demographics, contact</td>
+    </tr>
+    <tr>
+      <td>Severity</td>
+      <td>self-rated icon scale (😊 → 😖)</td>
+      <td>clinician-confirmed severity score</td>
+    </tr>
+    <tr>
+      <td>Exposure</td>
+      <td>exposure-icon picks (water, smoke, animal contact)</td>
+      <td>full Figure 2 Exposure class, duration, location-of-exposure</td>
+    </tr>
+    <tr>
+      <td>Auxiliary</td>
+      <td>photo (EXIF-stripped)</td>
+      <td>wearable readings (opt-in)</td>
+    </tr>
+    <tr>
+      <td>Environmental</td>
+      <td>(always live from MCPs)</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>Livestock</td>
+      <td>species icon, count, photo (Animal reports)</td>
+      <td>husbandry context (opt-in)</td>
+    </tr>
+    <tr>
+      <td>Wildlife</td>
+      <td>species icon, count, photo (Animal reports)</td>
+      <td>iNat / WHISPers cross-reference (opt-in)</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2 id="mapping-to-existing-agents">Mapping to existing agents</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>Agent</th>
+      <th>New responsibility</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><a href="./03-agentic-architecture.html#intake-agent">Intake</a></td>
+      <td>Three intake forms, EXIF strip enforcement, IP hashing, consent-profile gating</td>
+    </tr>
+    <tr>
+      <td><a href="./03-agentic-architecture.html#geo-enrichment-agent">Geo-Enrichment</a></td>
+      <td>Coarsen GPS / IP → ZIP / km cell at write time</td>
+    </tr>
+    <tr>
+      <td><a href="./03-agentic-architecture.html#validation-agent">Validation</a></td>
+      <td>Reject photos with surviving EXIF GPS; tribal-row suppression</td>
+    </tr>
+    <tr>
+      <td><a href="./03-agentic-architecture.html#triage-agent">Triage</a></td>
+      <td>Output is <strong>routing only, never diagnosis</strong>; regex output-guard enforces this</td>
+    </tr>
+    <tr>
+      <td><a href="./03-agentic-architecture.html#enrichment-agent">Enrichment</a></td>
+      <td>Pull contextual public-health signals from MCPs; surface alongside report</td>
+    </tr>
+    <tr>
+      <td><a href="./03-agentic-architecture.html#notification-agent">Notification</a></td>
+      <td>Public-source-cited copy; reply-back when report contributes to Detect</td>
+    </tr>
+    <tr>
+      <td><a href="./03-agentic-architecture.html#cluster-detection-agent">Cluster Detection</a></td>
+      <td>New report types feed the spatio-temporal detector</td>
+    </tr>
+    <tr>
+      <td><a href="./03-agentic-architecture.html#knowledge-update-agent">Knowledge Update</a></td>
+      <td>Write coarsened <code class="language-plaintext highlighter-rouge">public.observation</code>, encrypted <code class="language-plaintext highlighter-rouge">precise.observation</code></td>
+    </tr>
+  </tbody>
+</table>
+
+<h2 id="new-schema">New schema</h2>
+
+<p>Lands as <code class="language-plaintext highlighter-rouge">schema/deep/report_intake.sql</code> (Phase 06.1) with:</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">report_intake</code> node type (one row per submission, anonymous-by-default)</li>
+  <li><code class="language-plaintext highlighter-rouge">media_asset</code> node type (one row per photo, with <code class="language-plaintext highlighter-rouge">exif_stripped_at</code>)</li>
+  <li><code class="language-plaintext highlighter-rouge">coarse_geo_token</code> table (rotating-salt IP → token map; not in <code class="language-plaintext highlighter-rouge">kg.node</code>)</li>
+  <li><code class="language-plaintext highlighter-rouge">kg.v_public_observations</code> view that joins <code class="language-plaintext highlighter-rouge">report_intake</code> to its
+coarsened location for the public dashboard</li>
+  <li><code class="language-plaintext highlighter-rouge">kg.v_precise_observations</code> view (agency-only, consent-gated)</li>
+</ul>
+
+<p>Edge IDs reserved in the 70000–70999 block (next free after the
+60000–60999 used by <code class="language-plaintext highlighter-rouge">outbreaks_near_me.sql</code>).</p>
+
+<h2 id="open-questions">Open questions</h2>
+
+<ol>
+  <li><strong>Incentives.</strong> Capture the workshop list (above).</li>
+  <li><strong>Native-app framework.</strong> Capacitor everywhere, or
+Capacitor-for-pilot + native rewrite for v1? Driven by whether
+HealthKit / Health Connect / silent push needs justify the
+native-rewrite cost.</li>
+  <li><strong>Photo storage.</strong> Object store (S3 / R2) vs. inline in
+DuckLake. Leaning S3-equivalent with the row in DuckLake
+carrying the URL + content hash, for cost and CDN reasons.</li>
+  <li><strong>CDC MCP.</strong> Is there an existing CDC-data MCP we can adopt, or
+do we need to ship <code class="language-plaintext highlighter-rouge">cdc-mcp</code> to surface FluView / RSV-NET /
+COVID-NET context? (Phase 06.2 if we ship it.)</li>
+  <li><strong>Bidirectional confirmation.</strong> When a report contributes to a
+Detect milestone, what’s the consented channel for the
+reply-back? In-app push only, or also SMS / email if the user
+shared contact?</li>
+</ol>
+
+<h2 id="acceptance-criteria">Acceptance criteria</h2>
+
+<p>The Phase 06 ship is done when:</p>
+
+<ul>
+  <li>A new user can file an <strong>Animal</strong> report from a fresh phone in
+<strong>under 60 seconds</strong>, with zero text input, and the report
+lands in <code class="language-plaintext highlighter-rouge">public.observation</code> with ZIP-coarsened location.</li>
+  <li>A new user can file the same report <strong>offline</strong>, and it
+syncs cleanly on reconnect.</li>
+  <li>An uploaded photo with embedded GPS is <strong>rejected by the
+server</strong> (defense-in-depth check).</li>
+  <li>The profile UI defaults every consent toggle to <strong>off</strong> and
+the toggles are reflected in the <code class="language-plaintext highlighter-rouge">consent_profile</code> row.</li>
+  <li>Triage Agent output never contains the strings “you have”, “you
+may have”, “this is”, or “diagnosis” (regex output guard +
+test).</li>
+  <li>DuckLake <code class="language-plaintext highlighter-rouge">AT (SNAPSHOT …)</code> queries reproduce the historical
+state of <code class="language-plaintext highlighter-rouge">public.observation</code> for any past snapshot.</li>
+  <li>The admin dashboard renders cleanly at 360 px and at
+1440 px.</li>
+  <li>A pen-tester cannot recover a reporter’s precise location or
+IP from the public dataset.</li>
+</ul>
+
+
+  <footer>
+    Source: Ending Pandemics Academy &middot; University of Arizona Mel &amp;
+    Enid Zuckerman College of Public Health &middot; Global Health Institute.
+  </footer>
+</body>
+</html>

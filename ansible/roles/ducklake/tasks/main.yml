@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>EpiHack Arizona 2026</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      max-width: 1100px;
+      margin: 2rem auto;
+      padding: 0 1.25rem;
+      color: #1a1a1a;
+      line-height: 1.55;
+    }
+    nav.crumbs { font-size: .9rem; color: #555; margin-bottom: 1rem; }
+    nav.crumbs a { color: #1F3A93; text-decoration: none; }
+    h1 { border-bottom: 3px solid #1F3A93; padding-bottom: .35rem; }
+    h2 { margin-top: 2.25rem; color: #1F3A93; }
+    h3 { margin-top: 1.25rem; }
+    table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: .95rem; }
+    th, td { border: 1px solid #ddd; padding: .5rem .75rem; text-align: left; vertical-align: top; }
+    th { background: #f0f3f8; }
+    blockquote {
+      border-left: 4px solid #1F3A93;
+      background: #f4f6fb;
+      margin: 1rem 0;
+      padding: .75rem 1rem;
+    }
+    code { background: #f1f3f7; padding: 1px 5px; border-radius: 3px; font-size: .9em; }
+    pre code { display: block; padding: .75rem 1rem; overflow-x: auto; }
+    footer { margin-top: 4rem; padding-top: 1rem; border-top: 1px solid #ddd; color: #666; font-size: .85rem; }
+    a { color: #1F3A93; }
+  </style>
+</head>
+<body>
+  <nav class="crumbs">
+    <a href="/epihack-2026/">EpiHack AZ 2026</a>
+  </nav>
+
+  ---
+# Provision the DuckLake knowledge-graph lakehouse:
+#   * DuckDB CLI (operator shell) + query engine in the kg-mcp venv
+#   * DuckLake catalog in the epihack Postgres DB (ACID metadata)
+#   * Parquet data files under 
+# then seed the schema once (idempotent). knowledge-graph-mcp reads this
+# catalog at runtime; the FastAPI reports write-path + audit sink write to it.
+#
+# Runs after `repo` (schema files) + `postgres` (catalog DB) + `mcp_servers`
+# (the kg-mcp venv that ships duckdb + the loader).
+
+# --- DuckDB command-line shell (operator convenience) ------------------------
+# Lets an operator `duckdb` into the DuckLake catalog directly. The runtime
+# (kg-mcp + FastAPI write-path) uses the venv's duckdb, not this binary.
+- name: Map host architecture to the DuckDB CLI asset name
+  ansible.builtin.set_fact:
+    duckdb_cli_arch: "arm64"
+
+- name: Check the installed DuckDB CLI version (if any)
+  ansible.builtin.command: duckdb --version
+  register: duckdb_cli_installed
+  changed_when: false
+  failed_when: false
+
+- name: Install the DuckDB CLI 
+  when: duckdb_cli_version not in (duckdb_cli_installed.stdout | default(''))
+  block:
+    - name: Ensure unzip is present (the DuckDB CLI ships as a .zip)
+      ansible.builtin.apt:
+        name: unzip
+        state: present
+        update_cache: true
+
+    - name: Download + unpack the DuckDB CLI to /usr/local/bin
+      ansible.builtin.unarchive:
+        src: "https://github.com/duckdb/duckdb/releases/download/v/duckdb_cli-linux-.zip"
+        dest: /usr/local/bin
+        remote_src: true
+        owner: root
+        group: root
+
+    - name: Ensure the DuckDB CLI is executable
+      ansible.builtin.file:
+        path: /usr/local/bin/duckdb
+        mode: "0755"
+
+- name: Create the DuckLake Parquet data directory
+  ansible.builtin.file:
+    path: ""
+    state: directory
+    owner: ""
+    group: ""
+    mode: "0750"
+
+# The seed script lives under roles/ducklake/files (in exouser's home, 0750),
+# which the onehealth user can't read — copy it into onehealth-owned space.
+- name: Stage the DuckLake bootstrap script
+  ansible.builtin.copy:
+    src: bootstrap_ducklake.py
+    dest: "/bootstrap_ducklake.py"
+    owner: ""
+    group: ""
+    mode: "0755"
+
+- name: Seed the DuckLake catalog (idempotent — skips if kg.node populated)
+  become_user: ""
+  ansible.builtin.command:
+    cmd: " /bootstrap_ducklake.py"
+  environment:
+    KG_DUCKLAKE_URI: ""
+    KG_DUCKLAKE_DATA_PATH: ""
+    KG_SCHEMA_PATH: "/schema"
+  register: ducklake_seed
+  changed_when: "'SEEDED:' in ducklake_seed.stdout"
+  no_log: false
+
+- name: Report DuckLake seed result
+  ansible.builtin.debug:
+    msg: ""
+
+
+  <footer>
+    Source: Ending Pandemics Academy &middot; University of Arizona Mel &amp;
+    Enid Zuckerman College of Public Health &middot; Global Health Institute.
+  </footer>
+</body>
+</html>

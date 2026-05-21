@@ -1,0 +1,480 @@
+/* =========================================================================
+   AZ One Health Today — public aggregated dashboard.
+   Mobile-first. Mirrors the palette in app/shared/style.css so this page
+   feels native to the rest of the site.
+
+   The page is tuned for outdoor reading on a phone:
+     - 17 px base, 1.55 line-height
+     - high-contrast text on solid backgrounds
+     - 44 x 44 minimum tap targets on every interactive element
+     - all motion gated by prefers-reduced-motion
+   ========================================================================= */
+
+:root {
+  --c-navy:    #1F3A93;
+  --c-navy-2:  #15296a;
+  --c-red:     #C0392B;
+  --c-orange:  #E84A2B;
+  --c-orange-2:#b53212;
+  --c-magenta: #962FBF;
+  --c-green:   #4CAF50;
+  --c-yellow:  #E6A038;
+  --c-bg:      #ffffff;
+  --c-soft:    #f4f6fb;
+  --c-soft-warm:#fff5f1;
+  --c-ink:     #1a1a1a;
+  --c-mute:    #555;
+  --c-rule:    #d8dde6;
+  --c-focus:   #FFB300;
+
+  /* HeatRisk tier colours (CPC palette, kept consistent with the
+     NWS legend). Used by the hero ribbon + the 7-day strip. */
+  --hr-green:   #2C7A2C;
+  --hr-yellow:  #F2C523;
+  --hr-orange:  #E68A2A;
+  --hr-red:     #C0392B;
+  --hr-magenta: #962FBF;
+
+  --radius:    10px;
+  --tap:       44px;
+
+  --safe-top:    env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+
+  --maxw:      720px;
+}
+
+* { box-sizing: border-box; }
+
+html, body { margin: 0; padding: 0; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+               Helvetica, Arial, sans-serif;
+  font-size: 17px;        /* outdoor-readable base */
+  line-height: 1.55;
+  color: var(--c-ink);
+  background: var(--c-bg);
+  -webkit-text-size-adjust: 100%;
+  -webkit-font-smoothing: antialiased;
+}
+
+a { color: var(--c-navy); }
+a:hover { text-decoration: underline; }
+
+:focus-visible {
+  outline: 3px solid var(--c-focus);
+  outline-offset: 2px;
+}
+
+/* ----- Top bar ---------------------------------------------------------- */
+.today-bar {
+  background: var(--c-navy);
+  color: #fff;
+  padding: calc(.6rem + var(--safe-top)) 1rem .6rem;
+  position: relative;
+}
+.today-bar .crumbs { font-size: .85rem; opacity: .9; margin-bottom: .15rem; }
+.today-bar .crumbs a { color: #fff; text-decoration: none; }
+.today-bar .crumbs a:hover { text-decoration: underline; }
+.today-bar h1 {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 600;
+}
+
+/* ----- Page container --------------------------------------------------- */
+.today-main {
+  max-width: var(--maxw);
+  margin: 0 auto;
+  padding: 1rem 1rem calc(5rem + var(--safe-bottom));
+}
+
+/* ============================================================== Hero === */
+.hero {
+  background: linear-gradient(135deg, var(--c-navy) 0%, var(--c-orange) 100%);
+  color: #fff;
+  padding: 1.5rem 1.25rem;
+  border-radius: var(--radius);
+  margin: .5rem 0 1.25rem;
+  position: relative;
+  overflow: hidden;
+}
+.hero[data-tier="magenta"] { background: linear-gradient(135deg, var(--hr-magenta) 0%, var(--c-red) 100%); }
+.hero[data-tier="red"]     { background: linear-gradient(135deg, var(--c-red)     0%, var(--c-orange) 100%); }
+.hero[data-tier="orange"]  { background: linear-gradient(135deg, var(--c-orange)  0%, var(--c-yellow) 100%); }
+.hero[data-tier="yellow"]  { background: linear-gradient(135deg, var(--c-yellow)  0%, var(--c-green) 100%); color: #1a1a1a; }
+.hero[data-tier="green"]   { background: linear-gradient(135deg, var(--c-green)   0%, var(--c-navy) 100%); }
+
+.hero .today-date {
+  font-size: .9rem;
+  opacity: .9;
+  margin: 0 0 .35rem 0;
+}
+.hero h2 {
+  margin: 0 0 .5rem 0;
+  font-size: 1.7rem;
+  line-height: 1.2;
+  color: inherit;
+}
+.hero .hero-sub {
+  margin: 0;
+  font-size: 1.05rem;
+  opacity: .95;
+}
+.hero .hero-strip {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  margin-top: .85rem;
+  flex-wrap: wrap;
+}
+.hero .hero-strip .day {
+  flex: 1 1 0;
+  min-width: 50px;
+  text-align: center;
+  background: rgba(255,255,255,.18);
+  border-radius: 6px;
+  padding: .3rem .15rem .35rem;
+  font-size: .72rem;
+  line-height: 1.15;
+}
+.hero .hero-strip .day .d  { display: block; font-weight: 700; font-size: .9rem; }
+.hero .hero-strip .day .c  { display: block; opacity: .9; font-size: .7rem; }
+
+/* ============================================================ Geo strip = */
+.geo-strip {
+  display: flex;
+  gap: .5rem;
+  align-items: center;
+  flex-wrap: wrap;
+  background: var(--c-soft);
+  border: 1px solid var(--c-rule);
+  border-radius: var(--radius);
+  padding: .55rem .75rem;
+  margin: 0 0 1rem;
+  font-size: .9rem;
+}
+.geo-strip label {
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: .25rem;
+}
+.geo-strip select {
+  font: inherit;
+  min-height: var(--tap);
+  padding: .25rem .5rem;
+  border: 1px solid var(--c-rule);
+  border-radius: 6px;
+  background: #fff;
+  min-width: 12rem;
+  flex: 1 1 auto;
+}
+.geo-strip .status {
+  flex: 1 1 100%;
+  color: var(--c-mute);
+  font-size: .82rem;
+}
+
+/* ============================================================= Panels = */
+.panel {
+  background: #fff;
+  border: 1px solid var(--c-rule);
+  border-left: 6px solid var(--c-navy);
+  border-radius: var(--radius);
+  padding: 1rem 1.1rem;
+  margin: 0 0 1rem;
+}
+.panel h3 {
+  margin: 0 0 .5rem;
+  font-size: 1.15rem;
+  color: var(--c-navy);
+}
+.panel p.lead { margin: 0 0 .5rem; font-size: .95rem; color: var(--c-mute); }
+.panel .actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+  margin-top: .75rem;
+}
+
+.panel.heat   { border-left-color: var(--c-orange); }
+.panel.heat   h3 { color: var(--c-orange-2); }
+.panel.vbd    { border-left-color: var(--c-red); }
+.panel.vbd    h3 { color: var(--c-red); }
+.panel.wild   { border-left-color: #2C5F2D; }
+.panel.wild   h3 { color: #2C5F2D; }
+.panel.rollup { border-left-color: var(--c-magenta); }
+.panel.rollup h3 { color: var(--c-magenta); }
+.panel.action { border-left-color: #1f8fbf; }
+.panel.action h3 { color: #1f8fbf; }
+
+/* Big numeric "card" inside a panel (used by heat + vbd headline numbers). */
+.numbox {
+  display: flex;
+  align-items: baseline;
+  gap: .65rem;
+  margin: .25rem 0 .5rem;
+  flex-wrap: wrap;
+}
+.numbox .num  { font-size: 2rem; font-weight: 700; color: var(--c-ink); font-variant-numeric: tabular-nums; }
+.numbox .unit { font-size: .9rem; color: var(--c-mute); }
+.numbox .trend {
+  font-size: .8rem;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #eef1f7;
+  color: var(--c-ink);
+}
+.numbox .trend.up    { background: #fbe1dd; color: var(--c-red); }
+.numbox .trend.down  { background: #dceadc; color: #1b6b1b; }
+.numbox .trend.flat  { background: #eef1f7; color: var(--c-mute); }
+
+/* HeatRisk pill (today's tier) */
+.hr-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+  padding: .25rem .65rem;
+  border-radius: 999px;
+  color: #fff;
+  font-weight: 700;
+  font-size: .85rem;
+}
+.hr-pill[data-tier="Green"]   { background: var(--hr-green); }
+.hr-pill[data-tier="Yellow"]  { background: var(--hr-yellow); color: #1a1a1a; }
+.hr-pill[data-tier="Orange"]  { background: var(--hr-orange); }
+.hr-pill[data-tier="Red"]     { background: var(--hr-red); }
+.hr-pill[data-tier="Magenta"] { background: var(--hr-magenta); }
+
+/* Buttons (same shape as app/shared/style.css). */
+.btn {
+  appearance: none;
+  -webkit-appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .4rem;
+  min-height: var(--tap);
+  min-width: var(--tap);
+  padding: .65rem 1.1rem;
+  font: inherit;
+  font-weight: 600;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: var(--c-navy);
+  color: #fff;
+  cursor: pointer;
+  text-decoration: none;
+  text-align: center;
+}
+.btn:hover { background: var(--c-navy-2); text-decoration: none; }
+.btn:disabled { opacity: .55; cursor: not-allowed; }
+.btn.secondary {
+  background: #fff;
+  color: var(--c-navy);
+  border-color: var(--c-navy);
+}
+.btn.secondary:hover { background: var(--c-soft); }
+.btn.heat    { background: var(--c-orange); }
+.btn.heat:hover { background: var(--c-orange-2); }
+.btn.magenta { background: var(--c-magenta); }
+.btn.magenta:hover { background: #6f1f95; }
+
+/* Sparkline */
+.spark { display: inline-block; vertical-align: middle; }
+
+/* Wildlife list */
+.wildlife-list {
+  list-style: none;
+  padding: 0;
+  margin: .5rem 0 0;
+  display: grid;
+  gap: .4rem;
+}
+.wildlife-list li {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: .55rem;
+  align-items: baseline;
+  padding: .4rem .55rem;
+  border: 1px solid var(--c-rule);
+  border-radius: 8px;
+  background: #fff;
+  font-size: .92rem;
+}
+.wildlife-list .ic {
+  display: inline-block;
+  width: .85rem; height: .85rem;
+  border-radius: 50%;
+  background: var(--c-orange);
+  align-self: center;
+}
+.wildlife-list .ic[data-icon="rodent"]   { background: #7d4f1c; }
+.wildlife-list .ic[data-icon="bird"]     { background: #1f3a93; }
+.wildlife-list .ic[data-icon="deer"]     { background: #5d4037; }
+.wildlife-list .ic[data-icon="tick"]     { background: #962fbf; }
+.wildlife-list .ic[data-icon="mosquito"] { background: #2c5f2d; }
+.wildlife-list .ic[data-icon="bat"]      { background: #1a1a1a; }
+.wildlife-list .ic[data-icon="bug"]      { background: #c0392b; }
+.wildlife-list .meta { color: var(--c-mute); font-size: .8rem; }
+
+/* Map host */
+.today-map {
+  width: 100%;
+  height: 280px;
+  margin-top: .65rem;
+  border-radius: 8px;
+  border: 1px solid var(--c-rule);
+  overflow: hidden;
+}
+button.today-marker {
+  appearance: none;
+  border: 2px solid #fff;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  box-shadow: 0 1px 4px rgba(0,0,0,.35);
+  cursor: pointer;
+  padding: 0;
+}
+
+/* Statewide rollup grid */
+.rollup-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: .65rem;
+  margin: .5rem 0 0;
+}
+.rollup-grid .cell {
+  padding: .65rem .75rem;
+  border: 1px solid var(--c-rule);
+  border-radius: 8px;
+  background: #fff;
+}
+.rollup-grid .cell .v {
+  font-size: 1.65rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--c-ink);
+  display: block;
+}
+.rollup-grid .cell .l {
+  color: var(--c-mute);
+  font-size: .82rem;
+  display: block;
+}
+.rollup-grid .cell .t {
+  display: inline-block;
+  margin-top: .25rem;
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: .72rem;
+}
+.rollup-grid .cell .t.up    { background: #fbe1dd; color: var(--c-red); }
+.rollup-grid .cell .t.down  { background: #dceadc; color: #1b6b1b; }
+.rollup-grid .cell .t.flat  { background: #eef1f7; color: var(--c-mute); }
+
+/* Action menu */
+.action-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: .55rem;
+  margin-top: .5rem;
+}
+.action-grid .btn { width: 100%; }
+@media (min-width: 540px) {
+  .action-grid { grid-template-columns: repeat(3, 1fr); }
+}
+
+/* Lang switcher (top right). Same shape as app/shared/style.css. */
+.lang-switch {
+  position: absolute;
+  top: calc(.45rem + var(--safe-top));
+  right: .75rem;
+  display: inline-flex;
+  background: rgba(255,255,255,.18);
+  border-radius: 999px;
+  overflow: hidden;
+  font-size: .8rem;
+}
+.lang-switch button {
+  appearance: none;
+  background: transparent;
+  color: #fff;
+  border: 0;
+  padding: .25rem .65rem;
+  min-height: 32px;
+  cursor: pointer;
+  font: inherit;
+}
+.lang-switch button[aria-pressed="true"] {
+  background: rgba(255,255,255,.95);
+  color: var(--c-navy);
+  font-weight: 700;
+}
+
+/* Footer */
+.today-foot {
+  margin-top: 1.5rem;
+  padding: 1rem;
+  background: var(--c-soft);
+  border: 1px solid var(--c-rule);
+  border-radius: var(--radius);
+  color: var(--c-mute);
+  font-size: .85rem;
+}
+.today-foot h4 {
+  margin: 0 0 .3rem 0;
+  color: var(--c-ink);
+  font-size: 1rem;
+}
+.today-foot a { color: var(--c-navy); }
+.today-foot .privacy-stamp {
+  display: inline-block;
+  margin-top: .25rem;
+  padding: .15rem .5rem;
+  border-radius: 999px;
+  background: #dceadc;
+  color: #1b6b1b;
+  font-weight: 700;
+  font-size: .75rem;
+}
+
+/* Loading + empty + error states (uniform across panels). */
+.skeleton {
+  display: inline-block;
+  background: linear-gradient(90deg, #eef1f7 0%, #f8fafc 50%, #eef1f7 100%);
+  background-size: 200% 100%;
+  border-radius: 4px;
+  height: 1.4em;
+  width: 8em;
+  animation: shimmer 1.2s linear infinite;
+}
+.skeleton.lg { width: 12em; height: 2.2em; }
+@keyframes shimmer { from { background-position: 200% 0 } to { background-position: -200% 0 } }
+.err {
+  color: var(--c-red);
+  background: #fbe1dd;
+  border-radius: 6px;
+  padding: .35rem .55rem;
+  font-size: .85rem;
+}
+
+/* Honour user motion preference everywhere. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+  .skeleton { animation: none; background: #eef1f7; }
+}
+
+/* Print-friendly (good for the "show this to grandma" use case). */
+@media print {
+  .today-bar, .geo-strip, .panel .actions, .lang-switch { display: none; }
+  .today-main { max-width: 100%; }
+  .panel { break-inside: avoid; border: 1px solid #999; }
+}

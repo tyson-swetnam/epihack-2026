@@ -1,0 +1,10 @@
+[Unit]
+Description=AZ One Health Sentinel — periodic Mongo -> DuckLake sync
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec={{ mongo_sync_interval }}
+Persistent=true
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,13 @@
+{
+  "_comment": "Paste the 'nws-heatrisk' block into your Claude Desktop config under mcpServers. Restart Claude Desktop after editing. NWS_USER_AGENT is required by the NWS public API; replace the email with a real contact.",
+  "mcpServers": {
+    "nws-heatrisk": {
+      "command": "uvx",
+      "args": ["--from", "/absolute/path/to/epihack-2026/mcp/nws-heatrisk-mcp", "nws-heatrisk-mcp"],
+      "env": {
+        "NWS_USER_AGENT": "epihack-az-2026-sentinel (contact@example.org)",
+        "NWS_BASE_URL": "https://api.weather.gov"
+      }
+    }
+  }
+}

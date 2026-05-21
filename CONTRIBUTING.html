@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Contributing to EpiHack Arizona 2026</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      max-width: 1100px;
+      margin: 2rem auto;
+      padding: 0 1.25rem;
+      color: #1a1a1a;
+      line-height: 1.55;
+    }
+    nav.crumbs { font-size: .9rem; color: #555; margin-bottom: 1rem; }
+    nav.crumbs a { color: #1F3A93; text-decoration: none; }
+    h1 { border-bottom: 3px solid #1F3A93; padding-bottom: .35rem; }
+    h2 { margin-top: 2.25rem; color: #1F3A93; }
+    h3 { margin-top: 1.25rem; }
+    table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: .95rem; }
+    th, td { border: 1px solid #ddd; padding: .5rem .75rem; text-align: left; vertical-align: top; }
+    th { background: #f0f3f8; }
+    blockquote {
+      border-left: 4px solid #1F3A93;
+      background: #f4f6fb;
+      margin: 1rem 0;
+      padding: .75rem 1rem;
+    }
+    code { background: #f1f3f7; padding: 1px 5px; border-radius: 3px; font-size: .9em; }
+    pre code { display: block; padding: .75rem 1rem; overflow-x: auto; }
+    footer { margin-top: 4rem; padding-top: 1rem; border-top: 1px solid #ddd; color: #666; font-size: .85rem; }
+    a { color: #1F3A93; }
+  </style>
+</head>
+<body>
+  <nav class="crumbs">
+    <a href="/epihack-2026/">EpiHack AZ 2026</a>
+  </nav>
+
+  <h1 id="contributing">Contributing</h1>
+
+<p>Thanks for wanting to extend the EpiHack Arizona 2026 One Health
+Sentinel stack. This repository was bootstrapped during the EpiHack
+Arizona 2026 event hosted by the Ending Pandemics Academy and the
+University of Arizona Global Health Institute, and is now maintained
+by a multi-agency review board (see <a href="/epihack-2026/GOVERNANCE.html">GOVERNANCE.md</a>)
+for continued community use.</p>
+
+<p>The repo is intentionally small, agent-friendly, and bundler-free.
+Most of what you need to know lives in the file paths themselves;
+this guide just calls out the conventions reviewers expect.</p>
+
+<blockquote>
+  <p>Before opening any PR that touches <strong>observation data</strong> (anything
+flowing through <code class="language-plaintext highlighter-rouge">agents/</code>, <code class="language-plaintext highlighter-rouge">mcp/&lt;server&gt;/</code>, or <code class="language-plaintext highlighter-rouge">schema/deep/*.sql</code>)
+walk the <a href="#privacy--data-sovereignty-checklist">Privacy + data-sovereignty checklist</a>
+at the bottom of this file. PRs that fail the checklist are blocked
+regardless of code-review status.</p>
+</blockquote>
+
+<h2 id="local-environment-setup">Local environment setup</h2>
+
+<p>Everything runs on a laptop. There is no Kubernetes, no Docker
+compose, no build step.</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># 1. Python 3.11+ (3.11 is the floor; 3.12 works)</span>
+python3.11 <span class="nt">--version</span>
+
+<span class="c"># 2. uv (https://docs.astral.sh/uv/) for per-package envs</span>
+curl <span class="nt">-LsSf</span> https://astral.sh/uv/install.sh | sh
+
+<span class="c"># 3. duckdb CLI for the knowledge graph</span>
+<span class="c">#    https://duckdb.org/docs/installation/</span>
+duckdb <span class="nt">--version</span>
+</code></pre></div></div>
+
+<h3 id="per-package-install">Per-package install</h3>
+
+<p>Each <code class="language-plaintext highlighter-rouge">mcp/&lt;server&gt;/</code> and the <code class="language-plaintext highlighter-rouge">agents/</code> package are independent uv
+workspaces with their own <code class="language-plaintext highlighter-rouge">pyproject.toml</code>. Install only what you
+need:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">cd </span>mcp/vectorsurv-mcp <span class="o">&amp;&amp;</span> uv <span class="nb">sync</span>                      <span class="c"># any MCP server</span>
+<span class="nb">cd </span>agents          <span class="o">&amp;&amp;</span> uv <span class="nb">sync</span>                     <span class="c"># orchestrator</span>
+<span class="nb">cd </span>mcp/knowledge-graph-mcp <span class="o">&amp;&amp;</span> uv <span class="nb">sync</span>             <span class="c"># kg query server</span>
+</code></pre></div></div>
+
+<h3 id="static-site-figures-map-graph-dashboard-today-app">Static site (figures, map, graph, dashboard, today, app)</h3>
+
+<p>The site has no JS bundler. Open from the repo root:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">cd</span> /path/to/epihack-2026
+python <span class="nt">-m</span> http.server 8000
+<span class="c"># then visit http://localhost:8000/</span>
+</code></pre></div></div>
+
+<p>GitHub Pages serves the same files with Jekyll; the <code class="language-plaintext highlighter-rouge">_config.yml</code>
+preserves the directory layout.</p>
+
+<h3 id="knowledge-graph-bootstrap">Knowledge-graph bootstrap</h3>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>duckdb
+</code></pre></div></div>
+
+<div class="language-sql highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">INSTALL</span> <span class="n">ducklake</span><span class="p">;</span>  <span class="n">INSTALL</span> <span class="n">postgres</span><span class="p">;</span>
+<span class="k">LOAD</span>    <span class="n">ducklake</span><span class="p">;</span>  <span class="k">LOAD</span>    <span class="n">postgres</span><span class="p">;</span>
+<span class="n">ATTACH</span> <span class="s1">'ducklake:postgres:dbname=epihack host=localhost user=epihack'</span>
+  <span class="k">AS</span> <span class="n">epihack</span> <span class="p">(</span><span class="n">DATA_PATH</span> <span class="s1">'s3://epihack/ducklake/'</span><span class="p">);</span>
+<span class="n">USE</span> <span class="n">epihack</span><span class="p">;</span>
+<span class="p">.</span><span class="k">read</span> <span class="k">schema</span><span class="o">/</span><span class="n">knowledge_graph</span><span class="p">.</span><span class="k">sql</span>
+<span class="p">.</span><span class="k">read</span> <span class="k">schema</span><span class="o">/</span><span class="n">system_designs</span><span class="p">.</span><span class="k">sql</span>
+<span class="p">.</span><span class="k">read</span> <span class="k">schema</span><span class="o">/</span><span class="n">world_cafe</span><span class="p">.</span><span class="k">sql</span>
+<span class="p">.</span><span class="k">read</span> <span class="k">schema</span><span class="o">/</span><span class="n">wildlife_vectors</span><span class="p">.</span><span class="k">sql</span>
+<span class="p">.</span><span class="k">read</span> <span class="k">schema</span><span class="o">/</span><span class="n">heat</span><span class="p">.</span><span class="k">sql</span>
+<span class="p">.</span><span class="k">read</span> <span class="k">schema</span><span class="o">/</span><span class="n">deep</span><span class="o">/</span><span class="n">standards</span><span class="p">.</span><span class="k">sql</span>        <span class="c1">-- load first</span>
+<span class="p">.</span><span class="k">read</span> <span class="k">schema</span><span class="o">/</span><span class="n">deep</span><span class="o">/</span><span class="n">pathogens</span><span class="p">.</span><span class="k">sql</span>        <span class="c1">-- load second</span>
+<span class="p">.</span><span class="k">read</span> <span class="k">schema</span><span class="o">/</span><span class="n">deep</span><span class="o">/</span><span class="n">counties</span><span class="p">.</span><span class="k">sql</span>
+<span class="p">.</span><span class="k">read</span> <span class="k">schema</span><span class="o">/</span><span class="n">deep</span><span class="o">/</span><span class="n">tribes</span><span class="p">.</span><span class="k">sql</span>
+<span class="p">.</span><span class="k">read</span> <span class="k">schema</span><span class="o">/</span><span class="n">deep</span><span class="o">/</span><span class="n">outbreaks</span><span class="p">.</span><span class="k">sql</span>
+<span class="p">.</span><span class="k">read</span> <span class="k">schema</span><span class="o">/</span><span class="n">deep</span><span class="o">/</span><span class="n">datasets_apis</span><span class="p">.</span><span class="k">sql</span>
+<span class="p">.</span><span class="k">read</span> <span class="k">schema</span><span class="o">/</span><span class="n">deep</span><span class="o">/</span><span class="n">application</span><span class="p">.</span><span class="k">sql</span>
+<span class="p">.</span><span class="k">read</span> <span class="k">schema</span><span class="o">/</span><span class="n">deep</span><span class="o">/</span><span class="n">followups</span><span class="p">.</span><span class="k">sql</span>
+</code></pre></div></div>
+
+<p>Load order matters: <code class="language-plaintext highlighter-rouge">standards.sql</code> and <code class="language-plaintext highlighter-rouge">pathogens.sql</code> must precede
+the rest of <code class="language-plaintext highlighter-rouge">deep/*.sql</code> so SNOMED/ICD-10 cross-references and
+pathogen FKs find their parents.</p>
+
+<h2 id="pull-request-workflow">Pull-request workflow</h2>
+
+<ul>
+  <li><strong>One PR per concern.</strong> Small, reviewable, reversible. The current
+history runs at ~200-line diffs per PR; reviewers will ask you to
+split anything larger.</li>
+  <li><strong>Commits are often drafted by Claude Code.</strong> The repo was bootstrapped
+with Claude Code sub-agents; most commit messages name a Claude-led
+change. Human-authored commits are equally welcome — just write them
+in the same style (imperative subject, scope first, then summary).</li>
+  <li><strong>Every PR includes test results.</strong> Paste the relevant <code class="language-plaintext highlighter-rouge">uv run pytest</code>
+or <code class="language-plaintext highlighter-rouge">python -m http.server</code> smoke output into the PR body. For
+MCP changes: tool count + test count. For schema changes: row counts
+before/after.</li>
+  <li><strong>Update <code class="language-plaintext highlighter-rouge">plan/EXECUTION-STATUS-PHASE-1-2.md</code> when relevant.</strong> Any
+PR that closes a roadmap item or unblocks a downstream agent should
+tick the corresponding line and add a <code class="language-plaintext highlighter-rouge">verification</code> cell.</li>
+  <li><strong>Run linters before pushing</strong> (see <a href="#coding-style">Coding style</a>).</li>
+</ul>
+
+<h2 id="contribution-templates">Contribution templates</h2>
+
+<h3 id="adding-a-new-mcp-server">Adding a new MCP server</h3>
+
+<p>Use <a href="./mcp/vectorsurv-mcp/"><code class="language-plaintext highlighter-rouge">mcp/vectorsurv-mcp/</code></a> as the template — it is the
+most complete reference and follows every convention reviewers expect.</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>mcp/&lt;your-server&gt;/
+├── README.md                  # what / why / tool table / auth / env vars
+├── pyproject.toml             # FastMCP + httpx + pydantic v2; uv workspace
+├── src/&lt;your_server&gt;/
+│   ├── __init__.py
+│   ├── __main__.py            # `python -m &lt;your_server&gt;` entry point
+│   ├── server.py              # FastMCP() instance + @mcp.tool definitions
+│   └── client.py              # httpx wrapper; env-overridable base URL
+├── examples/
+│   └── claude_desktop_config.json
+└── tests/
+    └── test_*.py              # uv run pytest
+</code></pre></div></div>
+
+<p>Required conventions:</p>
+
+<ul>
+  <li><strong>Tool-name prefix.</strong> Every tool name starts with a short server
+prefix (<code class="language-plaintext highlighter-rouge">vectorsurv_*</code>, <code class="language-plaintext highlighter-rouge">kg_*</code>, <code class="language-plaintext highlighter-rouge">mag_*</code>, <code class="language-plaintext highlighter-rouge">az211_*</code>, <code class="language-plaintext highlighter-rouge">gattc_*</code>,
+<code class="language-plaintext highlighter-rouge">nws_*</code>, <code class="language-plaintext highlighter-rouge">whispers_*</code>, <code class="language-plaintext highlighter-rouge">inat_*</code>, <code class="language-plaintext highlighter-rouge">adhs_*</code>, <code class="language-plaintext highlighter-rouge">sms_*</code>, <code class="language-plaintext highlighter-rouge">wearable_*</code>).
+The <code class="language-plaintext highlighter-rouge">agents/</code> orchestrator dispatches on the prefix; collisions
+silently break Scenario A/C/D end-to-end runs.</li>
+  <li><strong>Env-overridable base URL.</strong> Hard-coded URLs are a deploy blocker.
+Read from <code class="language-plaintext highlighter-rouge">os.environ.get("&lt;SERVER&gt;_BASE_URL")</code> with a sensible
+default. If the upstream has no API today (e.g. ADHS, MAG supply,
+211 dispatch, Great AZ Tick Check), ship a mock backend behind the
+same env-var contract so swapping is a one-line change.</li>
+  <li><strong>Versioned OpenAPI snapshot.</strong> If the upstream publishes an OpenAPI
+spec, drop a snapshot in <code class="language-plaintext highlighter-rouge">openapi/</code> and reference it from the
+README. PRs that bump the snapshot are the changelog the MCP client
+reacts to.</li>
+  <li><strong>Pure-stdlib mock fallback.</strong> Tests must run with no network. Put
+canned data in a sibling module (<code class="language-plaintext highlighter-rouge">canned_data.py</code> or <code class="language-plaintext highlighter-rouge">mock_data.py</code>)
+and silently fall back on connection errors.</li>
+  <li><strong>Register the server in:</strong>
+    <ul>
+      <li><a href="/epihack-2026/mcp/README.html"><code class="language-plaintext highlighter-rouge">mcp/README.md</code></a> — one row in the index table.</li>
+      <li><a href="/epihack-2026/schema/deep/mcp_servers.sql"><code class="language-plaintext highlighter-rouge">schema/deep/mcp_servers.sql</code></a> —
+a <code class="language-plaintext highlighter-rouge">mcp_server</code> node + per-tool nodes.</li>
+      <li><a href="/epihack-2026/plan/02-mcp-integration.html"><code class="language-plaintext highlighter-rouge">plan/02-mcp-integration.md</code></a> —
+if the server unlocks a new agent → MCP route.</li>
+      <li><code class="language-plaintext highlighter-rouge">agents/src/onehealth_agents/mcp_client.py</code> — if any of the eight
+agents calls a tool on it.</li>
+    </ul>
+  </li>
+</ul>
+
+<h3 id="adding-a-knowledge-graph-schema-seed">Adding a knowledge-graph schema seed</h3>
+
+<p>Use <a href="/epihack-2026/schema/deep/pathogens.sql"><code class="language-plaintext highlighter-rouge">schema/deep/pathogens.sql</code></a> as the
+template — it shows the full pattern (nodes → edges → properties →
+cross-references → views).</p>
+
+<p>Required conventions:</p>
+
+<ul>
+  <li><strong>Stable slugs.</strong> Node IDs are dot-namespaced (<code class="language-plaintext highlighter-rouge">pathogen.west_nile</code>,
+<code class="language-plaintext highlighter-rouge">county.maricopa</code>, <code class="language-plaintext highlighter-rouge">tribe.tohono_oodham</code>). Renames break every
+downstream join; coordinate via PR before renaming.</li>
+  <li><strong>Reserve edge-ID ranges.</strong> Each seed owns a contiguous edge-ID
+range to avoid collisions (<code class="language-plaintext highlighter-rouge">counties.sql</code> 10000-10999,
+<code class="language-plaintext highlighter-rouge">tribes.sql</code> 11000-11999, <code class="language-plaintext highlighter-rouge">pathogens.sql</code> 12000-12999,
+<code class="language-plaintext highlighter-rouge">outbreaks.sql</code> 13000-13999, <code class="language-plaintext highlighter-rouge">standards.sql</code> 14000-14999,
+<code class="language-plaintext highlighter-rouge">datasets_apis.sql</code> 15000-15999, <code class="language-plaintext highlighter-rouge">mcp_servers.sql</code> 16000-16999,
+<code class="language-plaintext highlighter-rouge">application.sql</code> 17000-17999, <code class="language-plaintext highlighter-rouge">followups.sql</code> 30000-30199, etc.).
+Pick the next free range and document it in your PR.</li>
+  <li><strong>Cite every fact.</strong> Inline <code class="language-plaintext highlighter-rouge">-- source: &lt;URL or doc path&gt;</code> comments
+on rows whose values came from a published agency report. Reviewers
+will ask for citations on anything that looks like a magic number.</li>
+  <li><strong>Property values are typed.</strong> Use <code class="language-plaintext highlighter-rouge">value_text</code>, <code class="language-plaintext highlighter-rouge">value_num</code>, or
+<code class="language-plaintext highlighter-rouge">value_json</code> consistently. Lat/lon, ordinals, counts go in
+<code class="language-plaintext highlighter-rouge">value_num</code>. URLs, names, slugs go in <code class="language-plaintext highlighter-rouge">value_text</code>.</li>
+  <li><strong>Update load order</strong> in <code class="language-plaintext highlighter-rouge">README.md</code> and (where applicable)
+<code class="language-plaintext highlighter-rouge">mcp/knowledge-graph-mcp/</code> if your seed has FK dependencies on
+another seed.</li>
+</ul>
+
+<h2 id="coding-style">Coding style</h2>
+
+<ul>
+  <li><strong>No bundlers.</strong> All client JS is vanilla ES modules served from the
+same origin. The only third-party JS we load are MapLibre GL and
+Cytoscape, both from unpkg pinned to a major.minor.patch.</li>
+  <li><strong>Vanilla ES modules</strong> with native <code class="language-plaintext highlighter-rouge">import</code> / <code class="language-plaintext highlighter-rouge">export</code>. No JSX, no
+TypeScript, no transpilation. Files end in <code class="language-plaintext highlighter-rouge">.js</code> and run in modern
+browsers untouched.</li>
+  <li><strong>Python: pydantic v2 + FastMCP.</strong> Every MCP server uses the FastMCP
+decorator API. Request/response models are pydantic v2
+<code class="language-plaintext highlighter-rouge">BaseModel</code>s. Async via <code class="language-plaintext highlighter-rouge">httpx.AsyncClient</code>.</li>
+  <li><strong>Format: <code class="language-plaintext highlighter-rouge">black</code> defaults + <code class="language-plaintext highlighter-rouge">ruff</code> defaults.</strong> Run
+<code class="language-plaintext highlighter-rouge">uv run ruff check .</code> and <code class="language-plaintext highlighter-rouge">uv run black --check .</code> before pushing.
+Line length defaults (88 / 88). One module per concern.</li>
+  <li><strong>Tests: pytest + pytest-asyncio.</strong> Test files live in <code class="language-plaintext highlighter-rouge">tests/</code>,
+named <code class="language-plaintext highlighter-rouge">test_&lt;unit&gt;.py</code>. Async tests use the <code class="language-plaintext highlighter-rouge">pytest.mark.asyncio</code>
+decorator. Network is forbidden in unit tests — use the canned
+fallback or <code class="language-plaintext highlighter-rouge">respx</code> mocks.</li>
+</ul>
+
+<h2 id="privacy--data-sovereignty-checklist">Privacy + data-sovereignty checklist</h2>
+
+<p>Walk this on every PR that touches observation data. If any box
+fails, the PR is blocked.</p>
+
+<ul class="task-list">
+  <li class="task-list-item"><input type="checkbox" class="task-list-item-checkbox" disabled="disabled" /><strong>No tribal data writes by default.</strong> If the code paths touch
+tribal lands (<code class="language-plaintext highlighter-rouge">tribe.*</code> nodes, ZCTAs intersecting a reservation),
+the default behaviour is suppression. Opt-in is per-tribe and
+per-data-source, configured in <code class="language-plaintext highlighter-rouge">consent_profile</code> rows in the kg.</li>
+  <li class="task-list-item"><input type="checkbox" class="task-list-item-checkbox" disabled="disabled" /><strong><code class="language-plaintext highlighter-rouge">consent_profile</code> is consulted at write time.</strong> Validation
+Agent (<code class="language-plaintext highlighter-rouge">agents/src/onehealth_agents/validation.py</code>) is the single
+enforcement point. Bypassing it is a hard reviewer-block.</li>
+  <li class="task-list-item"><input type="checkbox" class="task-list-item-checkbox" disabled="disabled" /><strong>No raw line data in shared dashboards.</strong> Anything reaching
+<code class="language-plaintext highlighter-rouge">dashboard/</code> or <code class="language-plaintext highlighter-rouge">today/</code> has been aggregated or suppressed per the
+rules in <code class="language-plaintext highlighter-rouge">plan/03-agentic-architecture.md</code>.</li>
+  <li class="task-list-item"><input type="checkbox" class="task-list-item-checkbox" disabled="disabled" /><strong>No PII in logs or <code class="language-plaintext highlighter-rouge">agent_run</code> rows.</strong> The audit log captures
+input/output <strong>digests</strong> (SHA-256 of canonicalized JSON), never raw
+observations.</li>
+  <li class="task-list-item"><input type="checkbox" class="task-list-item-checkbox" disabled="disabled" /><strong>MCP credentials are env-var only.</strong> No tokens, API keys, or
+agency credentials in source. The <code class="language-plaintext highlighter-rouge">.env.example</code> next to each MCP
+server documents what is required; the <code class="language-plaintext highlighter-rouge">.env</code> itself is
+<code class="language-plaintext highlighter-rouge">.gitignore</code>d.</li>
+  <li class="task-list-item"><input type="checkbox" class="task-list-item-checkbox" disabled="disabled" /><strong>SELECT-only escape hatches stay SELECT-only.</strong> The
+<code class="language-plaintext highlighter-rouge">knowledge-graph-mcp</code> <code class="language-plaintext highlighter-rouge">kg_sql</code> tool parses for write keywords and
+rejects them; do not weaken that filter.</li>
+  <li class="task-list-item"><input type="checkbox" class="task-list-item-checkbox" disabled="disabled" /><strong>MOU expiry is honoured.</strong> Any new MCP server that proxies a
+tribal data source has a sunset comment naming the MOU it depends
+on (see <a href="/epihack-2026/GOVERNANCE.html">GOVERNANCE.md</a> sunset clauses).</li>
+  <li class="task-list-item"><input type="checkbox" class="task-list-item-checkbox" disabled="disabled" /><strong>Re-identification risk is reviewed.</strong> Cell counts below
+agreed thresholds are suppressed in dashboards; cluster-detection
+output uses ZCTA-week / ZCTA-2h aggregations, never individual
+observations.</li>
+</ul>
+
+<p>If you are unsure whether your change crosses any of these lines, ask
+in the PR description — a reviewer from the standing board will weigh
+in (see <a href="/epihack-2026/GOVERNANCE.html">GOVERNANCE.md</a>).</p>
+
+
+  <footer>
+    Source: Ending Pandemics Academy &middot; University of Arizona Mel &amp;
+    Enid Zuckerman College of Public Health &middot; Global Health Institute.
+  </footer>
+</body>
+</html>
