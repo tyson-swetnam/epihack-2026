@@ -70,10 +70,10 @@ export async function createReportRaw(
     };
   }
   const form = new FormData();
-  form.append(
-    'payload',
-    new Blob([JSON.stringify(payload)], { type: 'application/json' })
-  );
+  // Append as a plain string, NOT a Blob: a Blob becomes a multipart *file*
+  // part (filename "blob"), which the API's `payload: str = Form(...)` rejects
+  // with a 422. A string is a normal text field, which it parses as JSON.
+  form.append('payload', JSON.stringify(payload));
   if (photo) form.append('photo', photo, 'report.jpg');
   const res = await fetch(`${BASE}/v1/reports`, {
     method: 'POST',
