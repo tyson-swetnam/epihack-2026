@@ -138,4 +138,7 @@ export interface ProfilePatch {
   race_ethnicity?: string[];
   primary_language?: string;
   accessibility_needs?: string[];
+  household_size?: number;
+  has_pets?: boolean;
+  works_outdoors?: boolean;
 }

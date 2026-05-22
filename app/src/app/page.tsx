@@ -66,6 +66,13 @@ export default function HomePage() {
           </Link>
         </div>
 
+        <Link
+          href="/dashboard"
+          className="focus-ring mx-auto mt-4 text-sm font-semibold text-public-teal underline"
+        >
+          View my dashboard
+        </Link>
+
         <p className="mt-4 text-[10px] font-medium text-slate-500">
           Takes about 2 minutes · EXIF GPS stripped on your device
         </p>

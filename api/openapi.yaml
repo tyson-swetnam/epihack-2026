@@ -238,6 +238,60 @@ paths:
                 $ref: "#/components/schemas/Error"
 
   # -------------------------------------------------------------------------
+  # /v1/reports/{observation_id}/withdraw — withdraw a report.
+  #
+  # A report can be withdrawn either anonymously (with the claim token
+  # returned at submit) OR by the authenticated account it is attached
+  # to. Either credential satisfies `OwnerAuth`. Withdrawal sets the
+  # report state to `withdrawn`; the observation is dropped from the
+  # ZCTA-aggregate scans (privacy rule 6) but the audit row is kept.
+  # -------------------------------------------------------------------------
+  /v1/reports/{observation_id}/withdraw:
+    parameters:
+      - $ref: "#/components/parameters/ObservationId"
+      - $ref: "#/components/parameters/OwnerAuth"
+    post:
+      tags: [reports]
+      operationId: withdrawReport
+      summary: Withdraw a previously-submitted report
+      responses:
+        "200":
+          description: Report withdrawn (state is now `withdrawn`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReportStatus"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  # -------------------------------------------------------------------------
+  # /v1/reports/{observation_id}/photo — delete the photo attached to a
+  # report. The structured observation is retained; only the image is
+  # removed. Same owner-auth rule as withdraw.
+  # -------------------------------------------------------------------------
+  /v1/reports/{observation_id}/photo:
+    parameters:
+      - $ref: "#/components/parameters/ObservationId"
+      - $ref: "#/components/parameters/OwnerAuth"
+    delete:
+      tags: [reports]
+      operationId: removeReportPhoto
+      summary: Remove the photo attached to a report
+      responses:
+        "200":
+          description: Photo removed (or there was none).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReportStatus"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  # -------------------------------------------------------------------------
   # /v1/context — public-health signals for a coarse location.
   # -------------------------------------------------------------------------
   /v1/context:
@@ -277,6 +331,40 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ContextEnvelope"
+
+  # -------------------------------------------------------------------------
+  # /v1/community — aggregate reporting picture for a coarse location.
+  #
+  # Powers the citizen-facing public dashboard. Unlike /v1/context (which
+  # surfaces upstream MCP signals), this endpoint summarises *reports
+  # submitted through this app*, aggregated to ZCTA-week buckets so no
+  # individual observation is ever exposed (privacy rule 6). Buckets below
+  # the small-cell threshold are suppressed server-side.
+  # -------------------------------------------------------------------------
+  /v1/community:
+    get:
+      tags: [context]
+      operationId: getCommunity
+      summary: ZCTA-aggregated reporting picture + signals for a location
+      parameters:
+        - in: query
+          name: zip
+          required: true
+          schema: { type: string, pattern: "^[0-9]{5}$" }
+          description: 5-digit US ZIP code anchoring the local/regional view.
+      responses:
+        "200":
+          description: Aggregated community envelope.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CommunityEnvelope"
+        "422":
+          description: Missing or malformed ZIP.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
 
   # -------------------------------------------------------------------------
   # /v1/healthz, /v1/openapi.json — meta.
@@ -383,6 +471,35 @@ paths:
           $ref: "#/components/responses/Unauthorized"
 
   # -------------------------------------------------------------------------
+  # /v1/auth/me/reports — list reports attached to the authenticated
+  # account. This is the ONLY enumeration surface, and it is scoped to
+  # the caller's own user_id — there is no way to list anyone else's
+  # reports (the anonymous GET /v1/reports/{id} path stays claim-gated).
+  # -------------------------------------------------------------------------
+  /v1/auth/me/reports:
+    get:
+      tags: [auth]
+      operationId: listMyReports
+      summary: List the reports attached to the current account
+      description: |
+        Returns coarse summaries of every report the signed-in user has
+        attached to their account, newest first. Each summary carries
+        only the report's own coarse location (ZIP / 1 km cell) — the
+        same data the reporter submitted — so the personal map can plot
+        the user's *own* dots. It never includes anyone else's reports.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: The caller's reports.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReportList"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  # -------------------------------------------------------------------------
   # /v1/auth/sign-out — record the sign-out in the server audit log.
   # -------------------------------------------------------------------------
   /v1/auth/sign-out:
@@ -471,6 +588,18 @@ components:
       description: |
         Anonymous claim token returned by `POST /v1/reports`. The token
         is the only proof-of-submission; treat it like a password.
+    OwnerAuth:
+      in: header
+      name: Authorization
+      required: true
+      schema:
+        type: string
+        pattern: "^(Claim [A-Za-z0-9_-]{16,}|Bearer .+)$"
+      description: |
+        Proof of ownership for a report. Accepts EITHER an anonymous
+        `Claim <token>` (the claim token from submit) OR a `Bearer <jwt>`
+        (the Supabase session of the account the report is attached to).
+        The server resolves whichever is present.
 
   responses:
     NotFound:
@@ -783,6 +912,26 @@ components:
         accessibility_needs:
           type: array
           items: { type: string, maxLength: 60 }
+        household_size:
+          type: integer
+          minimum: 1
+          maximum: 20
+          description: |
+            Number of people in the household. Used only to tailor the
+            relevance of advisory messages (e.g. children / large-household
+            heat guidance). Coarse count, never linked to individuals.
+        has_pets:
+          type: boolean
+          default: false
+          description: |
+            Household has pets. Lets tick / zoonotic advisories mention
+            pet-shared exposure. Opt-in; default false.
+        works_outdoors:
+          type: boolean
+          default: false
+          description: |
+            Spends working hours outdoors. Raises the relevance of heat
+            and vector advisories. Opt-in; default false.
 
     ContactChannel:
       type: object
@@ -929,3 +1078,104 @@ components:
         race_ethnicity:
           type: array
           items: { type: string, maxLength: 60 }
+
+    # -----------------------------------------------------------------------
+    # Dashboard — the authenticated user's own reports + community aggregates.
+    # -----------------------------------------------------------------------
+    ReportSummary:
+      type: object
+      required: [observation_id, report_type, event_class, coarse_location, state, has_photo]
+      description: |
+        A coarse, owner-scoped view of a single report, for the personal
+        dashboard. Carries only the data the reporter themselves
+        submitted; never any cross-report or other-user data.
+      properties:
+        observation_id:
+          type: string
+          format: uuid
+        report_type:    { $ref: "#/components/schemas/ReportType" }
+        event_class:    { $ref: "#/components/schemas/EventClass" }
+        coarse_location: { $ref: "#/components/schemas/CoarseLocation" }
+        event_date:
+          type: string
+          format: date
+        severity:       { $ref: "#/components/schemas/SeverityIcon" }
+        state:
+          type: string
+          enum: [received, triaged, notified, archived, withdrawn]
+        next_action:
+          $ref: "#/components/schemas/NextAction"
+        has_photo:
+          type: boolean
+          default: false
+        photo_url:
+          type: string
+          format: uri
+          description: |
+            Owner-only, time-limited URL to the report's photo. Present
+            only when `has_photo` is true and the caller owns the report.
+        created_at:
+          type: string
+          format: date-time
+
+    NextAction:
+      type: string
+      enum:
+        - self_care
+        - see_clinician_routine
+        - see_clinician_urgent
+        - call_211
+        - report_to_agency
+        - mail_in_specimen
+
+    ReportList:
+      type: object
+      required: [reports]
+      properties:
+        reports:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReportSummary"
+
+    ZctaAggregate:
+      type: object
+      required: [zcta, report_type, count]
+      description: |
+        Counts rolled up to a ZIP Code Tabulation Area for a recent
+        window. Buckets below the small-cell threshold are suppressed
+        server-side and never appear here (privacy rule 6).
+      properties:
+        zcta:
+          type: string
+          pattern: "^[0-9]{5}$"
+        report_type:    { $ref: "#/components/schemas/ReportType" }
+        count:
+          type: integer
+          minimum: 1
+        window:
+          type: string
+          description: Aggregation window label, e.g. "2026-W21".
+
+    CommunityEnvelope:
+      type: object
+      required: [coarse_location, signals, local, regional]
+      description: |
+        The citizen-facing public picture for a ZIP. `signals` mirrors
+        the /v1/context MCP signals; `local` is the anchoring ZCTA;
+        `regional` is the surrounding ZCTAs. Aggregates only — never
+        individual observations or precise locations.
+      properties:
+        coarse_location:
+          $ref: "#/components/schemas/CoarseLocation"
+        signals:
+          type: array
+          items:
+            $ref: "#/components/schemas/ContextSignal"
+        local:
+          type: array
+          items:
+            $ref: "#/components/schemas/ZctaAggregate"
+        regional:
+          type: array
+          items:
+            $ref: "#/components/schemas/ZctaAggregate"

@@ -65,6 +65,11 @@
      event &mdash; a mobile-first reporting app, an eight-agent FastAPI
      backend, eleven MCP servers, and a dual MongoDB + DuckLake datastore
      over a DuckDB / Postgres knowledge graph.</p>
+  <p style="margin-top:.6rem">
+    <a href="http://epihack-test.cis240692.projects.jetstream-cloud.org/"
+       style="color:#fff;font-weight:700;text-decoration:underline">
+      ▶ Try the live reporting app</a>
+    <span style="opacity:.85">&mdash; running on a Jetstream2 VM</span></p>
 </div>
 
 <h2>Reference frameworks</h2>
@@ -163,9 +168,19 @@
        Human / Animal / Environmental reporting, EXIF-stripped photos,
        ZIP / 1&nbsp;km coarsening, never-diagnose triage, an offline retry
        queue, and an <code>X-Client-Channel</code> header routing mobile
-       writes to MongoDB and web writes to DuckLake. See
+       writes to MongoDB and web writes to DuckLake.</p>
+    <p>Optional account adds <strong>profile enrichment</strong> (household
+       size, pets, outdoor work) so advisories stay relevant, plus a
+       <strong>personal dashboard</strong>: local weather, active alerts near
+       you, a link into the live map &amp; county resources, a community
+       leaderboard, engagement rewards, and a weekly-email opt-in (the
+       leaderboard, rewards, and weather strip are demo stubs pending a live
+       feed). See
        <a href="plan/06-mobile-app.html">plan&nbsp;06</a> +
        <a href="plan/09-mobile-datastore.html">plan&nbsp;09</a>.</p>
+    <p><strong>Live demo:</strong>
+       <a href="http://epihack-test.cis240692.projects.jetstream-cloud.org/">epihack-test.cis240692.projects.jetstream-cloud.org</a>
+       (running on a Jetstream2 VM).</p>
     <div class="badges">
       <span class="badge">vbd</span>
       <span class="badge">heat</span>
@@ -173,6 +188,7 @@
       <span class="badge">react</span>
       <span class="badge">offline</span>
       <span class="badge">mongo</span>
+      <span class="badge">live-demo</span>
     </div>
   </a>
   <a class="card" href="app/legacy/index.html" style="--c: #C0392B">

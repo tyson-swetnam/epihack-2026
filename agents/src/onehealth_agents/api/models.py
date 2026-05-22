@@ -181,6 +181,9 @@ class ProfilePatch(BaseModel):
     race_ethnicity: Optional[list[str]] = None
     primary_language: Optional[str] = Field(default=None, max_length=32)
     accessibility_needs: Optional[list[str]] = None
+    household_size: Optional[int] = Field(default=None, ge=1, le=20)
+    has_pets: Optional[bool] = None
+    works_outdoors: Optional[bool] = None
 
 
 # --- Auth -----------------------------------------------------------------
@@ -228,6 +231,48 @@ class ClaimAttachRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     claim_token: str = Field(pattern=r"^[A-Za-z0-9_-]{16,}$")
+
+
+# --- Dashboard (owner-scoped reports + community aggregates) ---------------
+
+
+ReportState = Literal["received", "triaged", "notified", "archived", "withdrawn"]
+
+
+class ReportSummary(BaseModel):
+    """Coarse, owner-scoped view of one report for the personal dashboard."""
+
+    observation_id: str
+    report_type: ReportType
+    event_class: EventClass
+    coarse_location: CoarseLocation
+    event_date: Optional[date] = None
+    severity: Optional[Literal["grin", "neutral", "frown", "alarm"]] = None
+    state: ReportState = "received"
+    next_action: Optional[NextAction] = None
+    has_photo: bool = False
+    photo_url: Optional[str] = None
+    created_at: Optional[datetime] = None
+
+
+class ReportList(BaseModel):
+    reports: list[ReportSummary]
+
+
+class ZctaAggregate(BaseModel):
+    """ZCTA-bucketed counts. Small cells are suppressed before this point."""
+
+    zcta: str = Field(pattern=r"^[0-9]{5}$")
+    report_type: ReportType
+    count: int = Field(ge=1)
+    window: Optional[str] = None
+
+
+class CommunityEnvelope(BaseModel):
+    coarse_location: CoarseLocation
+    signals: list[ContextSignal]
+    local: list[ZctaAggregate]
+    regional: list[ZctaAggregate]
 
 
 class ApiError(BaseModel):
