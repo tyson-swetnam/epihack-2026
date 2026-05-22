@@ -56,6 +56,20 @@ duckdb_cli_version: "1.5.3"
 # role. Set false to omit those two location blocks (e.g. app-only deploys).
 serve_query_console: true
 
+# --- MCP remote connectors (Claude.ai custom connectors) ---------------------
+# Each entry adds an nginx `location <path>` proxying https://<fqdn><path> to a
+# locally-running FastMCP streamable-HTTP server on 127.0.0.1:<port>. Multiple
+# MCP servers share the VM, so each gets its own sub-path under /mcp/ and its
+# own port. Run every server with FASTMCP_STREAMABLE_HTTP_PATH=<path> so nginx
+# can proxy the path through unchanged (see each server's README).
+#
+# This only wires the proxy routes — you still run each server yourself (e.g. a
+# systemd unit with that server's credentials). Empty by default: every entry
+# exposes an UNAUTHENTICATED endpoint backed by that server's credentials.
+mcp_http_servers: []
+#  - { name: vectorsurv, path: /mcp/vectorsurv, port: 8000 }
+#  - { name: nws,        path: /mcp/nws,        port: 8001 }
+
 # --- MongoDB (mobile-channel store, plan/09) ---------------------------------
 # Self-hosted MongoDB CE, bound to loopback, auth enabled. The FastAPI
 # mobile-channel write-path (mongo_writer.py) + the Mongo->DuckLake sync use it.
