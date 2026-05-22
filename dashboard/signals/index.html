@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Statewide signal monitor — AZ One Health Sentinel</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="theme-color" content="#1F3A93" />
+<meta name="description" content="Read-only statewide signal monitor over real aggregated reports in the AZ One Health Sentinel knowledge graph. ZCTA-week observation-space signals — not diagnoses." />
+<link rel="stylesheet" href="../shared/style.css" />
+</head>
+<body data-signals-src="../data/signals.json">
+
+<header class="dash-header">
+  <div>
+    <div class="crumbs">
+      <a href="../../index.html">EpiHack AZ 2026</a>
+      &middot;
+      <a href="../index.html">agency dashboard</a>
+    </div>
+    <h1>Statewide signal monitor <span class="agency-tag">live aggregate</span></h1>
+  </div>
+  <div id="auth-stub"></div>
+</header>
+
+<main class="container">
+
+  <p class="muted small" style="margin-top:.5rem">
+    This view reads a <strong>privacy-safe ZCTA-week aggregation exported from
+    the live DuckLake knowledge graph</strong> — the same store the intake
+    write-path persists every report into. It is the analyst-facing read of
+    the <a href="../../plan/03-agentic-architecture.html">Cluster Detection
+    Agent</a>: it highlights where a <em>category of report</em> is arriving
+    above its expected statewide share.
+  </p>
+
+  <div class="future-box" style="border-left-color:#1F3A93">
+    <strong>What this is — and is not.</strong>
+    Every signal below is an above-baseline <em>count of what people reported</em>
+    (e.g.&nbsp;febrile/rash reports, gastrointestinal/food-safety reports,
+    animal die-off/bite reports). It is <strong>never a diagnosis</strong>:
+    no disease, pathogen, or cause is inferred or named here, by design.
+    Confirming a cause is a downstream, human, agency act
+    (<a href="../../plan/04-data-flows.html#scenario-d--agency-side-cluster-review">Scenario&nbsp;D</a>),
+    not something this surveillance feed asserts. Aggregations are ZCTA-week;
+    no individual observation, precise location, or free-text note is exposed.
+  </div>
+
+  <h2>Provenance</h2>
+  <div id="provenance"></div>
+
+  <h2>Signals <span class="sub">above expected statewide share &middot; most recent window</span></h2>
+  <ul class="cluster-feed" id="signal-feed"></ul>
+
+  <h2>ZCTA-week counts <span class="sub">report-category counts by ZIP &middot; weekly trend</span></h2>
+  <div class="analyst-table-wrap">
+    <table class="analyst-table" id="matrix-table">
+      <caption>
+        Weekly counts of report categories in flagged ZCTAs. Counts only —
+        no observations. "Recent" = last two ISO-weeks.
+      </caption>
+      <thead>
+        <tr>
+          <th scope="col">ZCTA</th>
+          <th scope="col">Place</th>
+          <th scope="col">Report category</th>
+          <th scope="col" class="num">Recent (2 wk)</th>
+          <th scope="col" class="num">Total to date</th>
+          <th scope="col">Weekly trend</th>
+        </tr>
+      </thead>
+      <tbody id="matrix-body"></tbody>
+    </table>
+  </div>
+
+  <h2>Open the underlying aggregation</h2>
+  <p class="small">
+    Click to view the SQL behind this view. The dashboard never executes SQL
+    from the browser; analysts run it against the read-only
+    <code>knowledge-graph-mcp</code> endpoint configured for their agency.
+  </p>
+  <button id="show-sql" class="btn secondary">Show SQL preview</button>
+  <div id="sql-mount"></div>
+
+  <div class="future-box">
+    <strong>Future work (not in this prototype):</strong>
+    live refresh on a schedule (this snapshot is exported by
+    <code>scripts/export_signals.py</code>); calibrated detection thresholds
+    per signal group; agency scoping so each audience sees only its
+    jurisdiction; and the audited "Verify" write-back through the
+    <a href="../../plan/03-agentic-architecture.html">Knowledge Update Agent</a>.
+  </div>
+
+  <p class="crosslinks">
+    Cross-references:
+    <a href="../index.html">agency dashboard</a>
+    <a href="../../map/index.html">Arizona map</a>
+    <a href="../../graph/index.html">pathogen graph</a>
+    <a href="../../app/index.html">field app</a>
+  </p>
+</main>
+
+<footer class="dash-footer">
+  Source: Ending Pandemics Academy &middot; University of Arizona Mel &amp;
+  Enid Zuckerman College of Public Health &middot; Global Health Institute.
+</footer>
+
+<script type="module">
+  import { mountAuthStub } from '../shared/auth-stub.js';
+  import { mountSignalMonitor } from '../shared/signal-monitor.js';
+
+  mountAuthStub(document.getElementById('auth-stub'), null);
+  mountSignalMonitor({
+    provenanceMount: document.getElementById('provenance'),
+    feedMount:       document.getElementById('signal-feed'),
+    tableBody:       document.getElementById('matrix-body'),
+    sqlButton:       document.getElementById('show-sql'),
+    sqlMount:        document.getElementById('sql-mount'),
+  }).catch(err => console.error('signal monitor:', err));
+</script>
+
+</body>
+</html>
