@@ -1,0 +1,2261 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="The AZ One Health Sentinel — a mobile-first participatory surveillance stack built at EpiHack Arizona 2026. Archived journey, architecture, and reference documentation.
+">
+      
+      
+        <meta name="author" content="Ending Pandemics Academy & University of Arizona collaborators">
+      
+      
+        <link rel="canonical" href="https://tyson-swetnam.github.io/epihack-2026/docs/journey/05-orchestrate/">
+      
+      
+        <link rel="prev" href="../04-store/">
+      
+      
+        <link rel="next" href="../06-app/">
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.5.49">
+    
+    
+      
+        <title>05 · Orchestrate the agents - EpiHack Arizona 2026</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.6f8fc17f.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.06af60db.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,700,700i%7CJetBrains+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Inter";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../stylesheets/extra.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+   <link href="../../assets/stylesheets/glightbox.min.css" rel="stylesheet"/><style>
+    html.glightbox-open { overflow: initial; height: 100%; }
+    .gslide-title { margin-top: 0px; user-select: text; }
+    .gslide-desc { color: #666; user-select: text; }
+    .gslide-image img { background: white; }
+    .gscrollbar-fixer { padding-right: 15px; }
+    .gdesc-inner { font-size: 0.75rem; }
+    body[data-md-color-scheme="slate"] .gdesc-inner { background: var(--md-default-bg-color);}
+    body[data-md-color-scheme="slate"] .gslide-title { color: var(--md-default-fg-color);}
+    body[data-md-color-scheme="slate"] .gslide-desc { color: var(--md-default-fg-color);}</style> <script src="../../assets/javascripts/glightbox.min.js"></script></head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="deep-orange">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#05-orchestrate-the-agents" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="EpiHack Arizona 2026" class="md-header__button md-logo" aria-label="EpiHack Arizona 2026" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            EpiHack Arizona 2026
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              05 · Orchestrate the agents
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="deep-orange"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="deep-orange"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      <label class="md-header__button md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+      </label>
+      <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+          <a href="javascript:void(0)" class="md-search__icon md-icon" title="Share" aria-label="Share" data-clipboard data-clipboard-text="" data-md-component="search-share" tabindex="-1">
+            
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9a3 3 0 0 0-3 3 3 3 0 0 0 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.15c-.05.21-.08.43-.08.66 0 1.61 1.31 2.91 2.92 2.91s2.92-1.3 2.92-2.91A2.92 2.92 0 0 0 18 16.08"/></svg>
+          </a>
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/tyson-swetnam/epihack-2026" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.7.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8M97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    tyson-swetnam/epihack-2026
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="EpiHack Arizona 2026" class="md-nav__button md-logo" aria-label="EpiHack Arizona 2026" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    EpiHack Arizona 2026
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/tyson-swetnam/epihack-2026" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.7.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8M97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    tyson-swetnam/epihack-2026
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Home
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
+        
+          
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../" class="md-nav__link ">
+              
+  
+  <span class="md-ellipsis">
+    Journey
+  </span>
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_2" id="__nav_2_label" tabindex="">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            Journey
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../01-frame/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    01 · Frame the problem
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../02-map/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    02 · Map the data sources
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../03-mcps/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    03 · Build the MCPs
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../04-store/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    04 · Stand up the store
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  <span class="md-ellipsis">
+    05 · Orchestrate the agents
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  <span class="md-ellipsis">
+    05 · Orchestrate the agents
+  </span>
+  
+
+      </a>
+      
+        
+
+  
+
+<nav class="md-nav md-nav--secondary" aria-label="On this page">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      On this page
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#what-we-wanted" class="md-nav__link">
+    <span class="md-ellipsis">
+      What we wanted
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-we-built" class="md-nav__link">
+    <span class="md-ellipsis">
+      What we built
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="What we built">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#the-privacy-contract-encoded-not-just-documented" class="md-nav__link">
+    <span class="md-ellipsis">
+      The privacy contract (encoded, not just documented)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#the-four-worked-scenarios" class="md-nav__link">
+    <span class="md-ellipsis">
+      The four worked scenarios
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#offline-by-construction" class="md-nav__link">
+    <span class="md-ellipsis">
+      Offline by construction
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-it-looks-like" class="md-nav__link">
+    <span class="md-ellipsis">
+      What it looks like
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#decisions-trade-offs" class="md-nav__link">
+    <span class="md-ellipsis">
+      Decisions &amp; trade-offs
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#where-to-go-next" class="md-nav__link">
+    <span class="md-ellipsis">
+      Where to go next
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../06-app/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    06 · Ship the app
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../07-vibe-coding/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    07 · Vibe-coding history
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  <span class="md-ellipsis">
+    Architecture
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            Architecture
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/overview/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    System overview
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/privacy/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Privacy contract
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/data-flows/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Data flows (A/B/C/D)
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/agents/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Eight-agent topology
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../mcps/" class="md-nav__link ">
+              
+  
+  <span class="md-ellipsis">
+    MCP servers
+  </span>
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_4" id="__nav_4_label" tabindex="">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            MCP servers
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../mcps/vectorsurv/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    vectorsurv-mcp
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../mcps/knowledge-graph/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    knowledge-graph-mcp
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../mcps/nws-heatrisk/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    nws-heatrisk-mcp
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../mcps/mag-hrn/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    mag-hrn-mcp
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../mcps/adhs/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    adhs-mcp
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../mcps/211-az/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    211-az-mcp
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../mcps/whispers/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    whispers-mcp
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../mcps/inaturalist/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    inaturalist-mcp
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../mcps/great-az-tick-check/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    great-az-tick-check-mcp
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../mcps/sms-entry/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    sms-entry-mcp
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../mcps/wearable/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    wearable-mcp
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  <span class="md-ellipsis">
+    App
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            App
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../app/pages/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Pages tour
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../app/privacy/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Privacy & EXIF stripping
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../app/offline/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Offline retry queue
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
+            
+  
+  <span class="md-ellipsis">
+    Knowledge graph
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            Knowledge graph
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../kg/schema/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Schema reference
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../kg/seeds/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Seed load order
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../kg/queries/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Example queries
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="">
+            
+  
+  <span class="md-ellipsis">
+    Deploy
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            Deploy
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../deploy/local/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Local development
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../deploy/ansible/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Ansible / Jetstream2
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../deploy/gh-pages/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    GitHub Pages
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="">
+            
+  
+  <span class="md-ellipsis">
+    Reference
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            Reference
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/openapi/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    OpenAPI spec
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/mcp-tools/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    MCP tool inventory
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/test-matrix/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Test matrix
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/glossary/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Glossary
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="">
+            
+  
+  <span class="md-ellipsis">
+    About
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9">
+            <span class="md-nav__icon md-icon"></span>
+            About
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../about/governance/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Governance
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../about/security/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Security
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../about/contributing/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Contributing
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../about/changelog/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Changelog
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../about/citation/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Citation
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+  
+
+<nav class="md-nav md-nav--secondary" aria-label="On this page">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      On this page
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#what-we-wanted" class="md-nav__link">
+    <span class="md-ellipsis">
+      What we wanted
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-we-built" class="md-nav__link">
+    <span class="md-ellipsis">
+      What we built
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="What we built">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#the-privacy-contract-encoded-not-just-documented" class="md-nav__link">
+    <span class="md-ellipsis">
+      The privacy contract (encoded, not just documented)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#the-four-worked-scenarios" class="md-nav__link">
+    <span class="md-ellipsis">
+      The four worked scenarios
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#offline-by-construction" class="md-nav__link">
+    <span class="md-ellipsis">
+      Offline by construction
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-it-looks-like" class="md-nav__link">
+    <span class="md-ellipsis">
+      What it looks like
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#decisions-trade-offs" class="md-nav__link">
+    <span class="md-ellipsis">
+      Decisions &amp; trade-offs
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#where-to-go-next" class="md-nav__link">
+    <span class="md-ellipsis">
+      Where to go next
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+  
+    <a href="https://github.com/tyson-swetnam/epihack-2026/edit/main/docs/journey/05-orchestrate.md" title="Edit this page" class="md-content__button md-icon">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20.71 7.04c.39-.39.39-1.04 0-1.41l-2.34-2.34c-.37-.39-1.02-.39-1.41 0l-1.84 1.83 3.75 3.75M3 17.25V21h3.75L17.81 9.93l-3.75-3.75z"/></svg>
+    </a>
+  
+  
+
+
+<h1 id="05-orchestrate-the-agents">05 · Orchestrate the agents<a class="headerlink" href="#05-orchestrate-the-agents" title="Permanent link">&para;</a></h1>
+<div class="admonition info">
+<p class="admonition-title">Source</p>
+<p><a href="https://github.com/tyson-swetnam/epihack-2026/blob/main/plan/03-agentic-architecture.md"><code>plan/03-agentic-architecture.md</code></a>,
+<a href="https://github.com/tyson-swetnam/epihack-2026/blob/main/plan/04-data-flows.md"><code>plan/04-data-flows.md</code></a>,
+and the eight agents under
+<a href="https://github.com/tyson-swetnam/epihack-2026/blob/main/agents/src/onehealth_agents/"><code>agents/src/onehealth_agents/</code></a>.</p>
+</div>
+<h2 id="what-we-wanted">What we wanted<a class="headerlink" href="#what-we-wanted" title="Permanent link">&para;</a></h2>
+<p>A pipeline that turns one anonymous mobile report into a triage decision,
+a knowledge-graph write, and (when appropriate) an agency notification —
+without ever diagnosing the user, ever logging a raw observation, and ever
+letting a precise latitude or longitude touch a persisted row. Eight
+agents, narrow contracts, no shared state, the whole thing testable
+offline.</p>
+<h2 id="what-we-built">What we built<a class="headerlink" href="#what-we-built" title="Permanent link">&para;</a></h2>
+<p>Eight Pydantic v2 agents wired into a single async pipeline. Each agent
+is one file under
+<a href="https://github.com/tyson-swetnam/epihack-2026/blob/main/agents/src/onehealth_agents/"><code>agents/src/onehealth_agents/</code></a>;
+the typed messages they pass back and forth live in
+<a href="https://github.com/tyson-swetnam/epihack-2026/blob/main/agents/src/onehealth_agents/contracts.py"><code>contracts.py</code></a>.</p>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Agent</th>
+<th>File</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><strong>IntakeAgent</strong></td>
+<td><a href="https://github.com/tyson-swetnam/epihack-2026/blob/main/agents/src/onehealth_agents/intake.py"><code>intake.py</code></a></td>
+<td>Free text / voice / structured form → Minimum-Dataset draft; picks the <code>Vertical</code> (vbd / heat / both / neither) and the <code>ConsentProfile</code>.</td>
+</tr>
+<tr>
+<td>2</td>
+<td><strong>GeoEnrichmentAgent</strong></td>
+<td><a href="https://github.com/tyson-swetnam/epihack-2026/blob/main/agents/src/onehealth_agents/geo.py"><code>geo.py</code></a></td>
+<td>Calls <code>knowledge-graph-mcp.kg_regions_at_point</code>; resolves coords → <code>county.*</code> / <code>tribe.*</code> / <code>region.*</code> slugs, with a tiny in-process ZCTA fallback.</td>
+</tr>
+<tr>
+<td>3</td>
+<td><strong>ValidationAgent</strong></td>
+<td><a href="https://github.com/tyson-swetnam/epihack-2026/blob/main/agents/src/onehealth_agents/validation.py"><code>validation.py</code></a></td>
+<td>Dedupe, AZ bounding-box sanity, consent-profile field suppression, tribal-MOU enforcement. The single enforcement point for the privacy contract.</td>
+</tr>
+<tr>
+<td>4</td>
+<td><strong>TriageAgent</strong></td>
+<td><a href="https://github.com/tyson-swetnam/epihack-2026/blob/main/agents/src/onehealth_agents/triage.py"><code>triage.py</code></a></td>
+<td>Vertical-specific dispatch (<code>HeatTriage</code> / <code>VBDTriage</code>). Emits a <code>TriageDecision</code> whose <code>triage_class</code> is constrained to the <code>tc.*</code> enum subset for that vertical.</td>
+</tr>
+<tr>
+<td>5</td>
+<td><strong>EnrichmentAgent</strong></td>
+<td><a href="https://github.com/tyson-swetnam/epihack-2026/blob/main/agents/src/onehealth_agents/enrichment.py"><code>enrichment.py</code></a></td>
+<td>Vertical- and triage-class-conditioned MCP fan-out: VectorSurv pools, NWS HeatRisk, MAG HRN cooling centers, 211 transport, WHISPers wildlife mortality, iNaturalist nearby observations, the Great AZ Tick Check mail-in.</td>
+</tr>
+<tr>
+<td>6</td>
+<td><strong>NotificationAgent</strong></td>
+<td><a href="https://github.com/tyson-swetnam/epihack-2026/blob/main/agents/src/onehealth_agents/notification.py"><code>notification.py</code></a></td>
+<td>Picks audience (<code>user</code> / <code>chw</code> / <code>agency_analyst</code>), channel, locale; user-first except for <code>tc.call_911</code>, where the agency dispatch ordering inverts.</td>
+</tr>
+<tr>
+<td>7</td>
+<td><strong>ClusterDetectionAgent</strong></td>
+<td><a href="https://github.com/tyson-swetnam/epihack-2026/blob/main/agents/src/onehealth_agents/cluster.py"><code>cluster.py</code></a></td>
+<td>Async, runs over the buffered observation list — ZCTA-week and ZCTA-2h Poisson scans, a Gamma-Poisson posterior on top, plus Tier-A single-case, Tier-B county-week, Tier-C chronic-drift, and travel-import detectors. Calibrated against AZ outbreak history in <a href="https://github.com/tyson-swetnam/epihack-2026/blob/main/plan/CLUSTER-CALIBRATION.md"><code>plan/CLUSTER-CALIBRATION.md</code></a>.</td>
+</tr>
+<tr>
+<td>8</td>
+<td><strong>KnowledgeUpdateAgent</strong></td>
+<td><a href="https://github.com/tyson-swetnam/epihack-2026/blob/main/agents/src/onehealth_agents/update.py"><code>update.py</code></a></td>
+<td>Nightly + on-demand MCP pull; reshapes upstream rows into <code>Kind.MCP_PULL</code> observations so they round-trip through the same write path.</td>
+</tr>
+</tbody>
+</table>
+<p>The pipeline itself is
+<a href="https://github.com/tyson-swetnam/epihack-2026/blob/main/agents/src/onehealth_agents/orchestrator.py"><code>orchestrator.py</code></a> —
+about 300 lines, mostly <code>try</code> / <code>except</code> boundaries so a failing agent
+degrades to <code>AgentRun.status='failed'</code> plus a flag on the observation
+and never drops the whole report. Agents 1–6 run synchronously per
+report (<code>Orchestrator.process(raw) -&gt; Observation</code>); the Cluster
+Detection Agent and the Knowledge Update Agent are async / nightly via
+<code>Orchestrator.detect_clusters</code> and <code>Orchestrator.refresh_from_mcp</code>.</p>
+<p>The per-agent default model assignment lives in <code>_DEFAULT_MODEL_FOR_AGENT</code>
+at the top of the orchestrator — <strong>Haiku</strong> on the high-volume Intake /
+Geo / Validation / Notification / Update steps, <strong>Sonnet</strong> on Triage and
+Enrichment, <strong>Opus</strong> only on Cluster Detection. The cost-shaping is
+documented in <a href="https://github.com/tyson-swetnam/epihack-2026/blob/main/plan/03-agentic-architecture.md"><code>plan/03</code></a>
+and <a href="https://github.com/tyson-swetnam/epihack-2026/blob/main/plan/05-roadmap.md"><code>plan/05</code></a>.</p>
+<h3 id="the-privacy-contract-encoded-not-just-documented">The privacy contract (encoded, not just documented)<a class="headerlink" href="#the-privacy-contract-encoded-not-just-documented" title="Permanent link">&para;</a></h3>
+<p>Six rules — and where each one is enforced — from
+<a href="../../architecture/privacy/"><code>docs/architecture/privacy.md</code></a>:</p>
+<ol>
+<li><strong>No precise lat/lon over the wire.</strong> The <code>CoarseLocation</code> schema in
+   <a href="https://github.com/tyson-swetnam/epihack-2026/blob/main/api/openapi.yaml"><code>api/openapi.yaml</code></a>
+   accepts <code>zip</code> (5-digit) or <code>grid_id</code> (<code>g1km:…</code> pattern) only; the
+   client coarsens via
+   <a href="https://github.com/tyson-swetnam/epihack-2026/blob/main/app/src/lib/coarse-geo.ts"><code>app/src/lib/coarse-geo.ts</code></a>;
+   the ValidationAgent re-runs the AZ bounding-box check before
+   persisting.</li>
+<li><strong>EXIF GPS stripped before upload.</strong> The client canvas re-encode in
+   <a href="https://github.com/tyson-swetnam/epihack-2026/blob/main/app/src/lib/exif-stripper.ts"><code>app/src/lib/exif-stripper.ts</code></a>
+   strips first; the FastAPI route in
+   <a href="https://github.com/tyson-swetnam/epihack-2026/blob/main/agents/src/onehealth_agents/api/routes/reports.py"><code>agents/.../api/routes/reports.py</code></a>
+   rejects with <code>photo_exif_gps_present</code> (422) if anything slips through.</li>
+<li><strong>Tribal data is suppressed by default.</strong> <code>ValidationAgent</code> consults
+   the in-process <code>_TRIBAL_MOU_ACTIVE</code> set: an empty default means <em>every</em>
+   tribal observation has row-level identifiers blanked and coordinates
+   coarsened to the county centroid before any downstream sharing. An
+   operator populates that set at deployment from an out-of-band list of
+   signed agreements.</li>
+<li><strong>Triage is routing, not diagnosis.</strong> Every <code>TriageDecision</code> is
+   constrained to the closed <code>tc.*</code> enum
+   (<a href="https://github.com/tyson-swetnam/epihack-2026/blob/main/agents/src/onehealth_agents/contracts.py"><code>contracts.py</code></a>,
+   <code>TriageClass</code>); the LLM branch is gated by <code>VBD_TRIAGE_CLASSES</code> /
+   <code>HEAT_TRIAGE_CLASSES</code> frozensets, with an <code>assert</code> in <code>triage.py</code> that
+   fires if either branch tries to escape its enumeration. A
+   server-side regex output-guard rejects <code>you have …</code> / <code>you may have …</code>
+   / <code>diagnos*</code> copy from any free-text agent output before it reaches
+   the client.</li>
+<li><strong>Audit log stores SHA-256 digests, never raw observations.</strong> Every
+   <code>AgentRun</code> carries <code>input_digest</code> and <code>output_digest</code> —
+   <a href="https://github.com/tyson-swetnam/epihack-2026/blob/main/agents/src/onehealth_agents/audit.py"><code>audit.py</code></a>
+   canonicalises the payload (<code>json.dumps(..., sort_keys=True,
+   separators=(",", ":"))</code>) and writes only the sha256 hex digest into
+   <code>kg.agent_run</code>. No PII or symptom payload survives in the audit row.</li>
+<li><strong>Cluster output uses ZCTA-week / ZCTA-2h aggregations</strong>, never
+   individual observations. The Cluster Detection Agent's spatial scan
+   buckets on <code>(zcta, iso_week)</code> for VBD and <code>(zcta, 2h)</code> for Heat
+   in-season; its alerts carry <code>observation_ids</code> for the audit trail but
+   the public-facing detector output is the bucket-level
+   <code>expected</code>/<code>observed</code> count and the Tier-2 posterior, not the
+   underlying rows.</li>
+</ol>
+<p>The PR checklist at the bottom of
+<a href="https://github.com/tyson-swetnam/epihack-2026/blob/main/CONTRIBUTING.md"><code>CONTRIBUTING.md</code></a>
+is what gates changes to any of the above — review board members
+explicitly walk the six rules before merging anything that touches
+<code>agents/</code>, <code>mcp/&lt;server&gt;/</code>, or <code>schema/deep/*.sql</code>.</p>
+<h3 id="the-four-worked-scenarios">The four worked scenarios<a class="headerlink" href="#the-four-worked-scenarios" title="Permanent link">&para;</a></h3>
+<p><a href="https://github.com/tyson-swetnam/epihack-2026/blob/main/plan/04-data-flows.md"><code>plan/04-data-flows.md</code></a>
+fixes four end-to-end scenarios. Scenarios A and C are committed as
+runnable Python under
+<a href="https://github.com/tyson-swetnam/epihack-2026/blob/main/agents/examples/"><code>agents/examples/</code></a>;
+B and D are documented data flows that the same orchestrator already
+supports through the existing tool inventory.</p>
+<ul>
+<li><strong>Scenario A — hiker mails in a tick</strong> (<a href="https://github.com/tyson-swetnam/epihack-2026/blob/main/agents/examples/scenario_a_tick.py"><code>scenario_a_tick.py</code></a>).
+  Mobile / VBD / Patagonia. IntakeAgent fixes vertical=<code>vbd</code> and
+  consent=<code>tick_mailin</code>; GeoEnrichmentAgent resolves the 31.541,
+  -110.755 GPS to <code>county.santa_cruz</code> / <code>region.border_corridor</code>;
+  TriageAgent picks <code>tc.mail_to_walker_lab</code> with a 14-day
+  self-monitor secondary action; EnrichmentAgent calls
+  <code>gattc_create_submission</code> for the mailing label PDF and
+  <code>vectorsurv_get_pools</code> for nearby positivity; NotificationAgent
+  ships the user a mailing-label card.</li>
+<li><strong>Scenario B — symptomatic patient calls 211</strong>. Voice channel,
+  Phoenix construction worker, fevers + muscle aches. The triage
+  rule layer surfaces WNV, dengue, and leptospirosis as candidate
+  pathogens; the enrichment step calls <code>vectorsurv_get_pools</code> for
+  WNV pool positivity and <code>adhs_recent_cases</code> for a Maricopa
+  uptick; triage class lands on <code>tc.urgent_care</code>. Worker, 211
+  operator, and the MCDPH agency dashboard all get differently-
+  shaped notifications.</li>
+<li><strong>Scenario C — unsheltered resident heat check-in</strong>
+  (<a href="https://github.com/tyson-swetnam/epihack-2026/blob/main/agents/examples/scenario_c_heat.py"><code>scenario_c_heat.py</code></a>).
+  CHW tablet / Heat / downtown Phoenix on a Magenta-HeatRisk day.
+  IntakeAgent applies the anonymous-heat consent profile and
+  blanks email/phone/occupation. HeatTriage scores the
+  vulnerability components — unsheltered (+3), outdoor exposure
+  (+2), no AC (+2), Magenta HeatRisk (+3), symptomatic heat
+  exhaustion (+2) = 12 of a max 15 — picks <code>tc.go_to_cooling_center</code>,
+  and appends a <code>dispatch-CHW-transport</code> secondary action because
+  <code>transport_access="none"</code>. EnrichmentAgent calls
+  <code>nws_heatrisk</code>, <code>mag_search_centers</code>, and
+  <code>az211_transport_to_cooling_center</code>.</li>
+<li><strong>Scenario D — agency-side cluster review</strong>. The
+  ClusterDetectionAgent's nightly run flags a hantavirus-compatible
+  cluster in Coconino; the ADHS dashboard surfaces the alert; the
+  analyst runs plain SQL against the kg through the
+  <code>knowledge-graph-mcp</code> <code>kg_sql</code> escape hatch and dispatches a
+  field investigation, which itself becomes a <code>Verify</code> milestone
+  written back through <code>knowledge-graph-mcp</code>. The
+  <a href="https://github.com/tyson-swetnam/epihack-2026/blob/main/dashboard/"><code>dashboard/</code></a>
+  workspace implements this scenario.</li>
+</ul>
+<h3 id="offline-by-construction">Offline by construction<a class="headerlink" href="#offline-by-construction" title="Permanent link">&para;</a></h3>
+<p><a href="https://github.com/tyson-swetnam/epihack-2026/blob/main/agents/src/onehealth_agents/mcp_client.py"><code>mcp_client.py</code></a>
+ships two implementations of the same <code>MCPClient</code> Protocol:
+<code>StdioMCPClient</code> for real-MCP runs and <code>FakeMCPClient.with_default_handlers()</code>
+for tests. The fake is what <code>Orchestrator.__init__</code> defaults to. Every
+tool call referenced in Scenarios A and C — <code>kg_regions_at_point</code>,
+<code>vectorsurv_get_pools</code>, <code>gattc_create_submission</code>, <code>nws_heatrisk</code>,
+<code>mag_search_centers</code>, <code>az211_transport_to_cooling_center</code>,
+<code>whispers_events_bbox</code>, <code>inat_observations_near</code> — has a canned response
+registered in <code>with_default_handlers</code>. Both scenario scripts run with
+zero network access:</p>
+<p><code>bash
+cd agents
+uv sync
+uv run python examples/scenario_a_tick.py
+uv run python examples/scenario_c_heat.py
+uv run pytest   # entire test suite is offline</code></p>
+<p>This is the calibration we held to repo-wide:
+<a href="https://github.com/tyson-swetnam/epihack-2026/blob/main/CLAUDE.md"><code>CLAUDE.md</code></a>
+puts it bluntly — <em>tests must not hit the network</em> — and every per-MCP
+test suite uses the same canned-data / <code>respx</code> pattern.</p>
+<h2 id="what-it-looks-like">What it looks like<a class="headerlink" href="#what-it-looks-like" title="Permanent link">&para;</a></h2>
+<p>The agency dashboard at <code>/dashboard/</code> is the orchestrator's read-side
+window — four audiences (ADHS / MCDPH / AZGFD / Coconino), status
+cards, the cluster-detection feed, a MapLibre embed, sparkline
+case-count tables, and a SQL preview that round-trips to
+<code>knowledge-graph-mcp</code>. This is Scenario D from
+<a href="https://github.com/tyson-swetnam/epihack-2026/blob/main/plan/04-data-flows.md"><code>plan/04-data-flows.md</code></a>:</p>
+<p><a class="glightbox" href="../../_screenshots/site-dashboard.png" data-type="image" data-width="100%" data-height="auto" data-desc-position="bottom"><img alt="Agency dashboard" src="../../_screenshots/site-dashboard.png" /></a></p>
+<p>The "AZ One Health Today" page is the public-facing counterpart —
+same enrichment pipeline output, but ZCTA-week aggregated and
+small-cell suppressed before render:</p>
+<p><a class="glightbox" href="../../_screenshots/site-today.png" data-type="image" data-width="100%" data-height="auto" data-desc-position="bottom"><img alt="AZ One Health Today" src="../../_screenshots/site-today.png" /></a></p>
+<h2 id="decisions-trade-offs">Decisions &amp; trade-offs<a class="headerlink" href="#decisions-trade-offs" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>Two parallel <code>contracts.py</code> files.</strong> The pipeline's typed messages
+  live in
+  <a href="https://github.com/tyson-swetnam/epihack-2026/blob/main/agents/src/onehealth_agents/contracts.py"><code>agents/src/onehealth_agents/contracts.py</code></a>
+  (Pydantic v2, one sub-model per Figure-2 parameter class); the HTTP
+  models live in
+  <a href="https://github.com/tyson-swetnam/epihack-2026/blob/main/agents/src/onehealth_agents/api/models.py"><code>agents/src/onehealth_agents/api/models.py</code></a>
+  (the wire shapes the OpenAPI spec generates against). The two are
+  deliberately not unified — the wire shape is anonymous-first and uses
+  closed <code>Literal[…]</code> enums, while the agent-internal shape is the full
+  Minimum-Dataset bag with every field optional. Conflating them would
+  force the API to expose the entire Figure-2 catalog or force the
+  agents to round-trip through anonymisation on every step.</li>
+<li><strong>Each branch is enum-constrained, even the LLM step.</strong> Triage's two
+  branches both <code>assert tc in HEAT_TRIAGE_CLASSES</code> / <code>… VBD_TRIAGE_CLASSES</code>
+  before returning. Production swaps the rule layer for an LLM forced
+  through a structured-output schema keyed on the same enums — but the
+  enum is the contract, not the LLM.</li>
+<li><strong>Failures degrade; they don't drop.</strong> Every stage in the orchestrator
+  is wrapped in <code>_timed(name, fn, …)</code>, which catches every exception,
+  emits <code>AgentRun(status='failed', error=…)</code>, and lets the next stage
+  decide whether to continue. The pipeline reaches <code>NotificationAgent</code>
+  even when <code>GeoEnrichmentAgent</code> couldn't reach the MCP; the only hard
+  stop is <code>ValidationStatus.REJECT</code>.</li>
+<li><strong>Cost accounting is in-band.</strong> Every <code>AgentRun</code> carries
+  <code>prompt_tokens</code> / <code>completion_tokens</code> / <code>cache_read_tokens</code> /
+  <code>cache_creation_tokens</code> and a <code>cost_usd</code> computed from the pricing
+  table in <code>audit.py</code>. The table is overridable via
+  <code>CLAUDE_HAIKU_INPUT_USD_PER_M</code> etc., so a deployment can adjust
+  without a code change when the public rate card changes.</li>
+<li><strong><code>FakeMCPClient</code> is also the documentation.</strong> Reading
+  <code>with_default_handlers</code> is the fastest way to see what the orchestrator
+  expects each MCP server to return. New scenarios land canned-handler-
+  first; the real server is wired up later.</li>
+</ul>
+<div class="admonition warning">
+<p class="admonition-title">The kg_sql escape hatch is SELECT-only by parser, not by convention</p>
+<p><a href="https://github.com/tyson-swetnam/epihack-2026/blob/main/mcp/knowledge-graph-mcp/"><code>knowledge-graph-mcp</code></a>
+exposes a raw-SQL tool for the agency dashboard's Scenario D
+workflow — but the SQL parser blocks anything that isn't a <code>SELECT</code>.
+Don't weaken that filter. It's the only reason an analyst can
+re-shape a cluster query without going through a PR.</p>
+</div>
+<h2 id="where-to-go-next">Where to go next<a class="headerlink" href="#where-to-go-next" title="Permanent link">&para;</a></h2>
+<p><a href="../06-app/">06 · Ship the app →</a> — the mobile-first reporting surface
+that feeds this orchestrator. Or read the privacy contract end-to-end at
+<a href="../../architecture/privacy/">Architecture · Privacy</a>, the agent topology
+diagram at <a href="../../architecture/agents/">Architecture · Agents</a>, and the
+worked scenarios at <a href="../../architecture/data-flows/">Architecture · Data flows</a>.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Ending Pandemics Academy · University of Arizona Mel & Enid Zuckerman College of Public Health · Global Health Institute · 2026
+
+    </div>
+  
+  
+</div>
+      
+        <div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/tyson-swetnam/epihack-2026" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.7.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8M97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://endingpandemicsacademy.arizona.edu/trainings-events/epihack-arizona" target="_blank" rel="noopener" title="endingpandemicsacademy.arizona.edu" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.7.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M352 256c0 22.2-1.2 43.6-3.3 64H163.4c-2.2-20.4-3.3-41.8-3.3-64s1.2-43.6 3.3-64h185.3c2.2 20.4 3.3 41.8 3.3 64m28.8-64h123.1c5.3 20.5 8.1 41.9 8.1 64s-2.8 43.5-8.1 64H380.8c2.1-20.6 3.2-42 3.2-64s-1.1-43.4-3.2-64m112.6-32H376.7c-10-63.9-29.8-117.4-55.3-151.6 78.3 20.7 142 77.5 171.9 151.6zm-149.1 0H167.7c6.1-36.4 15.5-68.6 27-94.7 10.5-23.6 22.2-40.7 33.5-51.5C239.4 3.2 248.7 0 256 0s16.6 3.2 27.8 13.8c11.3 10.8 23 27.9 33.5 51.5 11.6 26 20.9 58.2 27 94.7m-209 0H18.6c30-74.1 93.6-130.9 172-151.6-25.5 34.2-45.3 87.7-55.3 151.6M8.1 192h123.1c-2.1 20.6-3.2 42-3.2 64s1.1 43.4 3.2 64H8.1C2.8 299.5 0 278.1 0 256s2.8-43.5 8.1-64m186.6 254.6c-11.6-26-20.9-58.2-27-94.6h176.6c-6.1 36.4-15.5 68.6-27 94.6-10.5 23.6-22.2 40.7-33.5 51.5-11.2 10.7-20.5 13.9-27.8 13.9s-16.6-3.2-27.8-13.8c-11.3-10.8-23-27.9-33.5-51.5zM135.3 352c10 63.9 29.8 117.4 55.3 151.6-78.4-20.7-142-77.5-172-151.6zm358.1 0c-30 74.1-93.6 130.9-171.9 151.6 25.5-34.2 45.2-87.7 55.3-151.6h116.7z"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    <script id="__config" type="application/json">{"base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.sections", "navigation.expand", "navigation.top", "navigation.path", "navigation.indexes", "toc.follow", "search.suggest", "search.highlight", "search.share", "content.code.copy", "content.code.annotate", "content.tabs.link", "content.tooltips", "content.action.edit"], "search": "../../assets/javascripts/workers/search.6ce7567c.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.88dd0f4e.min.js"></script>
+      
+    
+  <script id="init-glightbox">const lightbox = GLightbox({"touchNavigation": true, "loop": false, "zoomable": true, "draggable": true, "openEffect": "zoom", "closeEffect": "zoom", "slideEffect": "slide"});
+document$.subscribe(() => { lightbox.reload() });
+</script></body>
+</html>

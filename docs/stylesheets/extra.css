@@ -1,0 +1,30 @@
+/* EpiHack AZ 2026 — Material theme overrides.
+ *
+ * Keep this file small. The Material theme already handles 95% of the
+ * styling; only override here when we have a clear reason. */
+
+:root {
+  --md-primary-fg-color:        #1F3A93;  /* Wildcat blue */
+  --md-primary-fg-color--light: #2C5BAA;
+  --md-primary-fg-color--dark:  #142659;
+  --md-accent-fg-color:         #C0392B;  /* Sedona red */
+}
+
+[data-md-color-scheme="slate"] {
+  --md-primary-fg-color:        #2C5BAA;
+  --md-accent-fg-color:         #E84A2B;
+}
+
+/* Hero card grid on the home page — give cards a tiny left accent so
+ * they read as "entry points" rather than uniform tiles. */
+.md-typeset .grid.cards > ul > li {
+  border-left: 4px solid var(--md-primary-fg-color);
+}
+.md-typeset .grid.cards > ul > li:hover {
+  border-left-color: var(--md-accent-fg-color);
+}
+
+/* Make the "Archived" admonition feel like a status badge. */
+.md-typeset .admonition.abstract > .admonition-title::before {
+  background-color: var(--md-accent-fg-color);
+}
