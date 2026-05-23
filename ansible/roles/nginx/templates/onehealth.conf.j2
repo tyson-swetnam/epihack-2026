@@ -62,6 +62,38 @@ server {
     }
 {% endif %}
 
+{% if serve_dashboard | default(true) %}
+    # ---- Signal-monitor dashboard (browser-side) --------------------------
+    # Static Jekyll page at {{ onehealth_repo_path }}/dashboard/, including
+    # dashboard/signals/index.html + dashboard/shared/signal-monitor.js +
+    # dashboard/data/signals.json (refreshed by scripts/export_signals.py).
+    # On GitHub Pages this is served from gh-pages; this block makes it
+    # reachable on the live VM too. More specific than `location /`, so it wins.
+    location /dashboard/ {
+        alias {{ onehealth_repo_path }}/dashboard/;
+        index index.html;
+        try_files $uri $uri/ =404;
+    }
+{% endif %}
+
+{% for srv in mcp_http_servers | default([]) %}
+    # ---- {{ srv.name }}-mcp remote endpoint (Claude.ai custom connector) ---
+    # FastMCP streamable-HTTP server on 127.0.0.1:{{ srv.port }}, serving its
+    # full public path so nginx proxies it through unchanged. Run it with
+    # FASTMCP_STREAMABLE_HTTP_PATH={{ srv.path }} (see the server's README).
+    # SSE-style long-lived stream: disable buffering, raise the read timeout.
+    location {{ srv.path }} {
+        proxy_pass            http://127.0.0.1:{{ srv.port }};
+        proxy_http_version    1.1;
+        proxy_set_header      Host              $host;
+        proxy_set_header      X-Forwarded-Proto $scheme;
+        proxy_set_header      Connection        "";
+        proxy_buffering       off;
+        proxy_read_timeout    3600s;
+        chunked_transfer_encoding on;
+    }
+{% endfor %}
+
     location / {
         # Next.js static export emits /report/human/, etc. as directories
         # with index.html inside. Try the path, then the path-with-slash,

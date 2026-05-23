@@ -56,10 +56,22 @@ _site/
 .jekyll-cache/
 .sass-cache/
 
+# MkDocs build output (Pages publishes from source; never commit site/)
+/site/
+
+# Backups created by Claude during the archival rewrite (Phase 1).
+# Original is in git history; we don't need a sibling .bak file too.
+*.bak
+
 # Local data
 *.duckdb
 *.duckdb.wal
 ducklake-data/
+
+# Generated synthetic-report artifacts (markdown + images for offline demo);
+# the durable DuckLake batch is the source of truth, see scripts/export_signals.py.
+/synthetic_dataset/
+/generate_dataset.py
 
 # Logs
 *.log

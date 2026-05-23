@@ -11,6 +11,9 @@ interface FormState {
   contact_sms: string;
   share_photo_gps_animal_env: boolean;
   share_photo_gps_human: boolean;
+  household_size: string;
+  has_pets: boolean;
+  works_outdoors: boolean;
 }
 
 const initial: FormState = {
@@ -20,6 +23,9 @@ const initial: FormState = {
   contact_sms: '',
   share_photo_gps_animal_env: false,
   share_photo_gps_human: false,
+  household_size: '',
+  has_pets: false,
+  works_outdoors: false,
 };
 
 const fieldClass =
@@ -44,7 +50,11 @@ export function ProfileForm() {
     }
 
     const patch: ProfilePatch = {};
-    if (state.home_zip) patch.home_zip = state.home_zip;
+    if (state.home_zip) {
+      patch.home_zip = state.home_zip;
+      // Let the personal dashboard localize to this ZIP.
+      window.localStorage.setItem('homeZip', state.home_zip);
+    }
     if (state.precise_location_consent) patch.precise_location_consent = true;
     if (state.contact_email || state.contact_sms) {
       patch.contact_about_my_reports = {
@@ -54,6 +64,9 @@ export function ProfileForm() {
     }
     if (state.share_photo_gps_animal_env) patch.share_photo_gps_animal_env = true;
     if (state.share_photo_gps_human) patch.share_photo_gps_human = true;
+    if (state.household_size) patch.household_size = Number(state.household_size);
+    if (state.has_pets) patch.has_pets = true;
+    if (state.works_outdoors) patch.works_outdoors = true;
 
     try {
       await attachProfile(observationId, claimToken, patch);
@@ -90,6 +103,29 @@ export function ProfileForm() {
           className={fieldClass}
         />
       </label>
+
+      <fieldset className="flex flex-col gap-2">
+        <legend className="mb-1 text-xs font-bold uppercase tracking-wide text-public-teal">
+          About my household
+        </legend>
+        <p className="text-xs leading-4 text-slate-500">
+          Optional — helps us tailor which alerts are actually relevant to you.
+        </p>
+        <label className="flex flex-col gap-1 text-sm font-semibold text-ink">
+          People in my household
+          <input
+            type="number"
+            inputMode="numeric"
+            min={1}
+            max={20}
+            value={state.household_size}
+            onChange={(e) => setState({ ...state, household_size: e.target.value })}
+            className={fieldClass}
+          />
+        </label>
+        {toggle('has_pets', 'I have pets (tailors tick / zoonotic advisories)')}
+        {toggle('works_outdoors', 'I work outdoors (raises heat & vector relevance)')}
+      </fieldset>
 
       <fieldset className="flex flex-col gap-2">
         <legend className="mb-1 text-xs font-bold uppercase tracking-wide text-public-teal">

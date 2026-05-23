@@ -1,0 +1,101 @@
+{
+  "generated": "2026-05-23T18:50:20.737Z",
+  "results": [
+    {
+      "slug": "index",
+      "url": "file:///home/exouser/epihack-2026/index.html",
+      "status": "OK",
+      "ms": 998
+    },
+    {
+      "slug": "site-figures",
+      "url": "https://tyson-swetnam.github.io/epihack-2026/figures/",
+      "status": "OK",
+      "ms": 1144
+    },
+    {
+      "slug": "site-wildlife",
+      "url": "https://tyson-swetnam.github.io/epihack-2026/wildlife/",
+      "status": "OK",
+      "ms": 1054
+    },
+    {
+      "slug": "site-heat",
+      "url": "https://tyson-swetnam.github.io/epihack-2026/heat/",
+      "status": "OK",
+      "ms": 1047
+    },
+    {
+      "slug": "site-plan",
+      "url": "https://tyson-swetnam.github.io/epihack-2026/plan/",
+      "status": "OK",
+      "ms": 861
+    },
+    {
+      "slug": "site-today",
+      "url": "https://tyson-swetnam.github.io/epihack-2026/today/",
+      "status": "OK",
+      "ms": 1024
+    },
+    {
+      "slug": "site-dashboard",
+      "url": "https://tyson-swetnam.github.io/epihack-2026/dashboard/",
+      "status": "OK",
+      "ms": 841
+    },
+    {
+      "slug": "site-map",
+      "url": "https://tyson-swetnam.github.io/epihack-2026/map/",
+      "status": "OK",
+      "ms": 4828
+    },
+    {
+      "slug": "site-graph",
+      "url": "https://tyson-swetnam.github.io/epihack-2026/graph/",
+      "status": "OK",
+      "ms": 2940
+    },
+    {
+      "slug": "site-query",
+      "url": "https://tyson-swetnam.github.io/epihack-2026/query/",
+      "status": "OK",
+      "ms": 6324
+    },
+    {
+      "slug": "app-home",
+      "url": "http://epihack-test.cis240692.projects.jetstream-cloud.org/",
+      "status": "OK",
+      "ms": 806
+    },
+    {
+      "slug": "app-sign-in",
+      "url": "http://epihack-test.cis240692.projects.jetstream-cloud.org/sign-in",
+      "status": "OK",
+      "ms": 770
+    },
+    {
+      "slug": "app-report",
+      "url": "http://epihack-test.cis240692.projects.jetstream-cloud.org/report",
+      "status": "OK",
+      "ms": 763
+    },
+    {
+      "slug": "app-dashboard",
+      "url": "http://epihack-test.cis240692.projects.jetstream-cloud.org/dashboard",
+      "status": "OK",
+      "ms": 751
+    },
+    {
+      "slug": "app-profile",
+      "url": "http://epihack-test.cis240692.projects.jetstream-cloud.org/profile",
+      "status": "OK",
+      "ms": 750
+    },
+    {
+      "slug": "app-account",
+      "url": "http://epihack-test.cis240692.projects.jetstream-cloud.org/account",
+      "status": "OK",
+      "ms": 767
+    }
+  ]
+}

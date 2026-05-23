@@ -50,6 +50,12 @@ exclude:
   - app/node_modules
   - api
   - agents
+  # MkDocs Material site is built separately
+  # (see .github/workflows/deploy-docs.yml) and deployed to
+  # gh-pages/docs/. Jekyll must NOT try to process these.
+  - docs
+  - mkdocs.yml
+  - site
 
 defaults:
   - scope:

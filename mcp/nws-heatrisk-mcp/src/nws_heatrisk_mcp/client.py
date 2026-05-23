@@ -222,11 +222,25 @@ class NWSClient:
         return await self._get(PATHS["alerts_active"], params=params)
 
     # ------------------------------------------------------- HeatRisk
-    async def get_heatrisk_feed(self) -> Any:
+    async def get_heatrisk_feed(self) -> Any | None:
         """Fetch the WPC HeatRisk gridded product (experimental).
 
         The default URL is best-known at build time but the WPC has
         moved this feed before; override with ``NWS_HEATRISK_URL`` if
         you get a 404 or non-JSON response.
+
+        HeatRisk's machine-readable hosting has drifted repeatedly and
+        the historic default 404s in production (verified 2026-05-21).
+        Rather than let a transport error or 4xx propagate and surface
+        as a tool crash, we swallow ``httpx`` errors here and return
+        ``None``. The downstream parser (``heatrisk.extract_daily``)
+        and the ``nws_heatrisk`` / ``nws_heatrisk_week`` tools already
+        treat ``None`` / empty as "no data" and emit a graceful
+        Unknown-category payload with a drift note. This keeps the
+        server usable (all other NWS tools work) even while the feed
+        URL is unresolved.
         """
-        return await self._get(self.heatrisk_url)
+        try:
+            return await self._get(self.heatrisk_url)
+        except httpx.HTTPError:
+            return None

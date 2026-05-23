@@ -1,0 +1,35 @@
+---
+# For each entry in `mcp_http_servers`, render and start a systemd unit that
+# runs the named server in FastMCP streamable-HTTP mode on the requested
+# 127.0.0.1:<port>. nginx then proxies <path> → 127.0.0.1:<port> per the
+# `location {{ srv.path }}` block in roles/nginx (see
+# onehealth.conf.j2). Combined, this is the Claude.ai custom-connector path.
+#
+# Off by default (mcp_http_servers defaults to []). When you flip a server
+# on, you also need to flip `tls_enabled: true` (Claude.ai connectors
+# require HTTPS) and provide any per-server secrets via the per-host
+# /etc/onehealth-mcp-<name>.env file.
+#
+# Driven from roles/mcp_servers/tasks/main.yml via include_tasks. See
+# plan/ANSIBLE-AUDIT-2026-05-23.md role 7 + plan/10-archival-and-docs.md
+# Phase 7b.
+
+- name: Render a systemd unit per HTTP-MCP server
+  ansible.builtin.template:
+    src: mcp-http.service.j2
+    dest: "/etc/systemd/system/onehealth-mcp-{{ item.name }}.service"
+    mode: "0644"
+  loop: "{{ mcp_http_servers }}"
+  loop_control:
+    label: "{{ item.name }}"
+  notify: Reload systemd
+
+- name: Enable + start each HTTP-MCP unit
+  ansible.builtin.systemd:
+    name: "onehealth-mcp-{{ item.name }}.service"
+    enabled: true
+    state: started
+    daemon_reload: true
+  loop: "{{ mcp_http_servers }}"
+  loop_control:
+    label: "{{ item.name }}"

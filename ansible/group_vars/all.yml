@@ -46,6 +46,16 @@ kg_mcp_venv_python: "{{ onehealth_repo_path }}/mcp/knowledge-graph-mcp/.venv/bin
 # Pinned to match the venv's duckdb so extension formats stay compatible.
 duckdb_cli_version: "1.5.3"
 
+# Set to true to load the 4,395-observation synthetic demo cohort
+# (scripts/load_synthetic_observations.py) on top of the empty schema.
+# Off by default — the kg seeds give you the reference graph (counties,
+# tribes, pathogens, outbreaks, …); flip this on to also seed the
+# dashboard/signals/ page with realistic observation traffic + three
+# intentional anomaly signals (Nogales febrile/rash, Lake Havasu City
+# food-safety + GI, Portal animal die-off). Idempotent — the loader
+# wipes any prior `source_fig='synthetic-load'` rows first.
+ducklake_load_synthetic_demo: false
+
 # --- DuckDB-WASM query console (browser-side) --------------------------------
 # The /query/ page (Jekyll site) runs DuckDB entirely in the browser via
 # DuckDB-WASM and rebuilds the kg.* graph by fetching the schema/*.sql seeds.
@@ -55,6 +65,28 @@ duckdb_cli_version: "1.5.3"
 # that nginx serve the static page + the SQL seeds, wired up in the `nginx`
 # role. Set false to omit those two location blocks (e.g. app-only deploys).
 serve_query_console: true
+
+# --- Signal-monitor dashboard (browser-side) ---------------------------------
+# The /dashboard/signals/ page reads dashboard/data/signals.json (refreshed by
+# scripts/export_signals.py against the DuckLake catalog — small-cell
+# suppression + privacy-safe ZCTA-week aggregation) and renders the live
+# signal-monitor over the synthetic + production observation traffic. Set
+# false to omit the nginx alias on app-only deploys.
+serve_dashboard: true
+
+# --- MCP remote connectors (Claude.ai custom connectors) ---------------------
+# Each entry adds an nginx `location <path>` proxying https://<fqdn><path> to a
+# locally-running FastMCP streamable-HTTP server on 127.0.0.1:<port>. Multiple
+# MCP servers share the VM, so each gets its own sub-path under /mcp/ and its
+# own port. Run every server with FASTMCP_STREAMABLE_HTTP_PATH=<path> so nginx
+# can proxy the path through unchanged (see each server's README).
+#
+# This only wires the proxy routes — you still run each server yourself (e.g. a
+# systemd unit with that server's credentials). Empty by default: every entry
+# exposes an UNAUTHENTICATED endpoint backed by that server's credentials.
+mcp_http_servers: []
+#  - { name: vectorsurv, path: /mcp/vectorsurv, port: 8000 }
+#  - { name: nws,        path: /mcp/nws,        port: 8001 }
 
 # --- MongoDB (mobile-channel store, plan/09) ---------------------------------
 # Self-hosted MongoDB CE, bound to loopback, auth enabled. The FastAPI
@@ -100,6 +132,14 @@ mcp_modules:
 # (the iNat API requires every client to identify itself). Override per deploy.
 inat_user_agent: "az-onehealth-sentinel/0.1 (+https://github.com/tyson-swetnam/epihack-2026)"
 
+# Same posture for the NWS HeatRisk feed (api.weather.gov requires a
+# descriptive UA). See plan/ANSIBLE-AUDIT-2026-05-23.md role 7.
+nws_user_agent: "az-onehealth-sentinel/0.1 (+https://github.com/tyson-swetnam/epihack-2026)"
+
+# sms-entry-mcp backend. "mock" => canned messages; "twilio" => real
+# Twilio HMAC-verified webhooks. Mock-by-default for archive.
+sms_mode: "mock"
+
 # --- FastAPI backend ----------------------------------------------------------
 fastapi_bind_host:     "127.0.0.1"
 fastapi_bind_port:     8000
@@ -118,6 +158,16 @@ app_api_base:          "https://{{ onehealth_fqdn }}/api"
 # Override in inventory if you want them empty (auth-disabled build).
 app_supabase_url:      ""
 app_supabase_anon_key: ""
+
+# Baked into the static export as NEXT_PUBLIC_CLIENT_CHANNEL; the api-client
+# sends it on every POST /v1/reports as the X-Client-Channel header. The
+# FastAPI reports route (agents/src/onehealth_agents/api/routes/reports.py)
+# uses it to route writes: "mobile" -> MongoDB, "web" (or anything else) ->
+# DuckLake. Default "web" is correct for this VM (which serves the web build);
+# a Capacitor mobile bundle off the same playbook MUST override to "mobile"
+# or it will silently mis-route writes. See plan/09-mobile-datastore.md +
+# plan/ANSIBLE-AUDIT-2026-05-23.md (Role 11 — RED).
+app_client_channel:    "web"
 
 # --- TLS ----------------------------------------------------------------------
 # Set to true to issue + auto-renew a Let's Encrypt cert after DNS resolves.

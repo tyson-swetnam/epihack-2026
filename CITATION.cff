@@ -1,0 +1,51 @@
+cff-version: 1.2.0
+message: >-
+  If you use the schema, the MCP designs, the privacy contract, or the
+  reporting-app flows in your own work, please cite this archive.
+type: software
+title: "AZ One Health Sentinel — a participatory-surveillance stack for Arizona"
+abstract: >-
+  A working knowledge framework for participatory One Health surveillance
+  in Arizona, built across EpiHack Arizona 2026. The stack pairs a
+  mobile-first anonymous reporting app (Next.js + React + TypeScript)
+  with an eight-agent FastAPI backend, eleven FastMCP servers wrapping
+  vector-borne-disease and heat data sources, and a DuckLake-on-Postgres
+  knowledge graph (572 nodes / 791 edges / 1027 properties) covering
+  all 15 Arizona counties, 22 tribal nations, 16 pathogens, historical
+  outbreaks, and the standards crosswalk (SNOMED / ICD-10 / LOINC).
+  Frozen for archival 2026-05.
+authors:
+  - given-names: Tyson
+    family-names: Swetnam
+    email: tswetnam@arizona.edu
+    affiliation: University of Arizona
+    # TODO: add your ORCID here, e.g.
+    # orcid: "https://orcid.org/0000-0000-0000-0000"
+  - name: "Ending Pandemics Academy"
+  - name: "University of Arizona Mel and Enid Zuckerman College of Public Health"
+  - name: "University of Arizona Global Health Institute"
+repository-code: "https://github.com/tyson-swetnam/epihack-2026"
+url: "https://tyson-swetnam.github.io/epihack-2026/"
+license: MIT
+version: "1.0-archive"
+date-released: "2026-05-23"
+keywords:
+  - one-health
+  - participatory-surveillance
+  - vector-borne-disease
+  - extreme-heat
+  - arizona
+  - knowledge-graph
+  - ducklake
+  - duckdb
+  - fastmcp
+  - model-context-protocol
+  - claude-code
+  - anthropic
+identifiers:
+  - type: url
+    value: "https://tyson-swetnam.github.io/epihack-2026/"
+    description: Archived project site
+  - type: url
+    value: "https://endingpandemicsacademy.arizona.edu/trainings-events/epihack-arizona"
+    description: EpiHack Arizona event page

@@ -120,6 +120,13 @@ class ReportPayload(BaseModel):
 class TriageOutcome(BaseModel):
     next_action: NextAction
     urgency: Optional[Literal["none", "routine", "urgent", "emergent"]] = None
+    # FIXME(archive 2026-05-23): the field name `copy` shadows
+    # pydantic.BaseModel.copy(). Pydantic v2 emits a deprecation warning;
+    # under Pydantic 3.x it becomes a hard error. Rename to something like
+    # `triage_copy` or `display_copy` on revival — the change cascades
+    # through api/openapi.yaml (CitedSource sibling) and the generated
+    # app/src/lib/api-types.ts. Left in place here so the archived schema
+    # contract stays stable.
     copy: Optional[str] = Field(default=None, max_length=600)
     sources: list[CitedSource]
 
@@ -181,6 +188,9 @@ class ProfilePatch(BaseModel):
     race_ethnicity: Optional[list[str]] = None
     primary_language: Optional[str] = Field(default=None, max_length=32)
     accessibility_needs: Optional[list[str]] = None
+    household_size: Optional[int] = Field(default=None, ge=1, le=20)
+    has_pets: Optional[bool] = None
+    works_outdoors: Optional[bool] = None
 
 
 # --- Auth -----------------------------------------------------------------
@@ -228,6 +238,48 @@ class ClaimAttachRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     claim_token: str = Field(pattern=r"^[A-Za-z0-9_-]{16,}$")
+
+
+# --- Dashboard (owner-scoped reports + community aggregates) ---------------
+
+
+ReportState = Literal["received", "triaged", "notified", "archived", "withdrawn"]
+
+
+class ReportSummary(BaseModel):
+    """Coarse, owner-scoped view of one report for the personal dashboard."""
+
+    observation_id: str
+    report_type: ReportType
+    event_class: EventClass
+    coarse_location: CoarseLocation
+    event_date: Optional[date] = None
+    severity: Optional[Literal["grin", "neutral", "frown", "alarm"]] = None
+    state: ReportState = "received"
+    next_action: Optional[NextAction] = None
+    has_photo: bool = False
+    photo_url: Optional[str] = None
+    created_at: Optional[datetime] = None
+
+
+class ReportList(BaseModel):
+    reports: list[ReportSummary]
+
+
+class ZctaAggregate(BaseModel):
+    """ZCTA-bucketed counts. Small cells are suppressed before this point."""
+
+    zcta: str = Field(pattern=r"^[0-9]{5}$")
+    report_type: ReportType
+    count: int = Field(ge=1)
+    window: Optional[str] = None
+
+
+class CommunityEnvelope(BaseModel):
+    coarse_location: CoarseLocation
+    signals: list[ContextSignal]
+    local: list[ZctaAggregate]
+    regional: list[ZctaAggregate]
 
 
 class ApiError(BaseModel):

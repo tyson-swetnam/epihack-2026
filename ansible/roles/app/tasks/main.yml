@@ -49,6 +49,9 @@
     NEXT_PUBLIC_API_BASE: "{{ app_api_base }}"
     NEXT_PUBLIC_SUPABASE_URL: "{{ app_supabase_url }}"
     NEXT_PUBLIC_SUPABASE_ANON_KEY: "{{ app_supabase_anon_key }}"
+    # Baked into the static export so api-client sends X-Client-Channel on
+    # every POST /v1/reports. See plan/ANSIBLE-AUDIT-2026-05-23.md role 11.
+    NEXT_PUBLIC_CLIENT_CHANNEL: "{{ app_client_channel }}"
     NEXT_PUBLIC_BUILD: "{{ ansible_date_time.iso8601 }}"
 
 - name: Confirm app/out/index.html exists

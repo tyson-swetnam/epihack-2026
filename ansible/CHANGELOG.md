@@ -11,6 +11,71 @@ DuckDB/DuckLake knowledge-graph backend end-to-end. A run now completes with
 DuckLake with time-travel versioning, and all eleven MCP servers respond to an
 MCP `initialize` handshake.
 
+## post-EpiHack archive refresh — 2026-05-23
+
+Tightening pass after the 2026-05-20 datastore split (Mongo for mobile,
+DuckLake for web/analytics) and the profile-enrichment + personal-dashboard
+landing. Drives the **RED** finding *and the YELLOW Phase 7b / 7c follow-ups*
+in [`plan/ANSIBLE-AUDIT-2026-05-23.md`](../plan/ANSIBLE-AUDIT-2026-05-23.md)
+to green.
+
+### Changes
+
+- **`roles/app`** + **`group_vars/all.yml`** — added
+  `NEXT_PUBLIC_CLIENT_CHANNEL` to both the build env (`tasks/main.yml`)
+  and `app.env.local.j2`, driven by a new `app_client_channel` group
+  var (defaults to `"web"`). The Next.js api-client reads it at build
+  time and sends it on every `POST /v1/reports` as the
+  `X-Client-Channel` header; the FastAPI route uses that header to route
+  `mobile` writes to MongoDB and `web` writes to DuckLake. Default
+  `"web"` is correct for the VM, but a Capacitor mobile bundle off the
+  same playbook MUST override or it will silently mis-route writes.
+
+- **`roles/mcp_servers`** — new `tasks/http_units.yml` +
+  `templates/mcp-http.service.j2` + `handlers/main.yml`. For every entry
+  in `mcp_http_servers` (default `[]`), renders a hardened systemd unit
+  that runs the server in FastMCP streamable-HTTP mode on
+  `127.0.0.1:<port>` so nginx can proxy it as a Claude.ai custom
+  connector. Pairs with the matching `location` block already in
+  `roles/nginx/templates/onehealth.conf.j2`. Off by default.
+- **`roles/mcp_servers/templates/claude.json.j2`** — moved the
+  hard-coded `SMS_MODE: "mock"` to a new `sms_mode` group var; added an
+  `NWS_USER_AGENT` env line for `nws-heatrisk-mcp` (the server's
+  `.env.example` documents it as required).
+- **`mcp/wearable-mcp/.env.example`** — added (was the only server
+  without one). The empty file path was previously handled by the
+  template's `{% else %}` fallback; now there's a clean per-server
+  documented template.
+
+- **`roles/ducklake`** + **`scripts/load_synthetic_observations.py`** —
+  promoted the on-VM `/tmp/gen_synth.py` into the repo at
+  `scripts/load_synthetic_observations.py` and added an opt-in
+  `ducklake_load_synthetic_demo` toggle (defaults `false`) that runs it
+  after the schema seed. Reproduces the 4,395-observation demo cohort
+  with three intentional anomaly signals (Nogales febrile/rash, Lake
+  Havasu City food-safety + GI, Portal animal die-off). Idempotent.
+
+- **`roles/nginx`** — added a `/dashboard/` static-alias block (gated
+  on a new `serve_dashboard` toggle, defaults `true`) so the
+  signal-monitor at `dashboard/signals/` resolves on the live VM, not
+  just on GitHub Pages.
+
+- **`group_vars/all.yml`** — added: `app_client_channel`, `sms_mode`,
+  `nws_user_agent`, `ducklake_load_synthetic_demo`, `serve_dashboard`.
+
+### Known gaps (tracked, intentionally out of scope for archive)
+
+- Only `vectorsurv-mcp` honors `FASTMCP_HOST` / `FASTMCP_PORT` /
+  `FASTMCP_STREAMABLE_HTTP_PATH` in its `__main__.py`. The other ten
+  MCP servers will need the same shim before they can be exposed as
+  Claude.ai custom connectors. The Ansible side now ships the
+  infrastructure (the systemd template + the nginx proxy block);
+  the per-server shim is a repo change for revival.
+- The live demo (`epihack-test.cis240692.projects.jetstream-cloud.org`)
+  still terminates plain HTTP. Claude.ai custom connectors require
+  HTTPS — flip `tls_enabled: true` and set `vault_tls_email` when DNS
+  resolves to a host certbot can validate.
+
 ## New components
 
 - **`roles/ducklake/`** — new role (runs after `mcp_servers`, before

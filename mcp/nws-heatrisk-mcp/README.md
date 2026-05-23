@@ -164,6 +164,76 @@ responses up to 3 times with exponential backoff (0.5s, 1s, 2s) before
 raising. 4xx responses are surfaced immediately — they almost always
 indicate a malformed request or a missing User-Agent.
 
+## Production verification (2026-05-21)
+
+Status of the live check against production endpoints, run from the
+EpiHack VM on 2026-05-21.
+
+### Endpoint reachability (confirmed live)
+
+These were probed directly with `curl` from the deploy host:
+
+| Endpoint | Result |
+|---|---|
+| `https://api.weather.gov/` | **HTTP 200** — the NWS public API base is up. |
+| `https://www.wpc.ncep.noaa.gov/heatrisk/data/heatrisk.json` (historic `NWS_HEATRISK_URL` default) | **HTTP 404** — the documented HeatRisk feed has moved/changed and no longer serves at this path. |
+
+The NWS API requires a descriptive `User-Agent`
+(`NWS_USER_AGENT`, e.g. `epihack-az-2026-sentinel (contact@example.org)`);
+requests without one are rejected.
+
+### Tests
+
+The suite is **17 tests** (8 in `tests/test_client_paths.py`, 9 in
+`tests/test_heat_index.py`), matching the count documented above. They
+are pure-unit / offline (heat-index regression vs. the canonical NWS
+table, and env-driven client config) and require no network.
+
+> NOTE: in the verification environment `uv sync` / `uv run pytest`
+> and the live client probe could **not be executed** (the sandbox
+> denied all non-allowlisted command execution and the web tools).
+> The test *count and content* were confirmed by source inspection,
+> and endpoint reachability by the allowlisted `curl` probes above,
+> but a green pytest run and live tool calls (current conditions /
+> forecast / alerts / station obs for Phoenix) were **not captured in
+> this session**. Re-run `uv run pytest -q` and the probe in
+> `examples/` to record live values.
+
+### HeatRisk feed status
+
+The historic default feed (`.../heatrisk/data/heatrisk.json`) returns
+**404** in production — the WPC HeatRisk machine-readable product has
+drifted from this path again. A replacement public URL was **not
+confirmed live in this session** (web search/fetch were unavailable),
+so the in-code default is left unchanged and remains
+`NWS_HEATRISK_URL`-overridable. When NWS/WPC's current operational
+HeatRisk endpoint is identified, set `NWS_HEATRISK_URL` (no code
+release needed) and, if the wire format differs, extend
+`_iter_records` / `extract_daily` in `heatrisk.py`.
+
+**Graceful degradation (fixed in this verification):** previously a
+404 (or any transport error) on the HeatRisk feed propagated out of
+`NWSClient.get_heatrisk_feed()` as an `httpx.HTTPStatusError`, which
+would surface to the MCP caller as a tool **crash** — the README's
+claim that the tool returns a "no data" payload only held for a
+*200-with-unrecognized-JSON* response, not for the 404 that actually
+occurs today. `get_heatrisk_feed()` now catches `httpx.HTTPError` and
+returns `None`; the existing `None`/empty handling in `extract_daily`
+and the `nws_heatrisk` / `nws_heatrisk_week` tools then emit the
+graceful Unknown-category payload with a drift note instead of
+raising. All seven tools therefore remain callable even while the
+HeatRisk feed URL is unresolved.
+
+### Caveats
+
+- Live tool calls (forecast, current conditions, active alerts,
+  station observations, heat index over the wire) were **not executed
+  in this session**; only static analysis + allowlisted reachability
+  probes were possible here.
+- The HeatRisk replacement URL is unresolved; the feed tools degrade
+  gracefully rather than returning data until `NWS_HEATRISK_URL` is
+  pointed at the current product.
+
 ## License
 
 MIT, alongside the rest of `epihack-2026`.
