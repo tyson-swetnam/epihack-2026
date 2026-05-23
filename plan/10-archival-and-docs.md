@@ -127,7 +127,7 @@ About ─┬─ Governance                    about/governance.md
        └─ Citation                      about/citation.md
 ```
 
-Most "About" pages are stubs that include the existing top-level markdown via `{% include-markdown "../GOVERNANCE.md" %}` (mkdocs-include-markdown-plugin) — no duplication.
+Most "About" pages are stubs that include the existing top-level markdown via the `mkdocs-include-markdown-plugin` (an `include-markdown` Liquid-style tag with the upstream path) — no duplication.
 
 ### Phase 3 — Author the journey
 

@@ -206,19 +206,14 @@ Drift:
 - `tls_enabled: false`. Claude.ai connectors require HTTPS.
 - `mcp_http_servers: []` empty by default (see Role 7).
 
-**Fix:**
-
-```jinja2
-{% if serve_dashboard | default(true) %}
-location /dashboard/ {
-    alias {{ onehealth_repo_path }}/dashboard/;
-    index index.html;
-    try_files $uri $uri/ =404;
-}
-{% endif %}
-```
-
-And `tls_enabled: true` with a real `vault_tls_email` for the
+**Fix:** add a `location /dashboard/` block to the nginx template,
+gated on a new `serve_dashboard` toggle (defaults `true`), aliasing
+to `{{ onehealth_repo_path }}/dashboard/` with `try_files
+$uri $uri/ =404;`. See the actual diff in
+[`roles/nginx/templates/onehealth.conf.j2`](https://github.com/tyson-swetnam/epihack-2026/blob/main/ansible/roles/nginx/templates/onehealth.conf.j2)
+on commit
+[`4be8546`](https://github.com/tyson-swetnam/epihack-2026/commit/4be8546).
+Also: `tls_enabled: true` with a real `vault_tls_email` for the
 Jetstream2 host.
 
 ## Cross-cutting
