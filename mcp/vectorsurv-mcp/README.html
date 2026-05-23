@@ -191,6 +191,119 @@ on macOS, <code class="language-plaintext highlighter-rouge">%APPDATA%\Claude\cl
   <li>Restart Claude Desktop.</li>
 </ol>
 
+<h3 id="as-a-claudeai-custom-connector-remote-mcp-hosted-on-this-vm">As a Claude.ai custom connector (remote MCP, hosted on this VM)</h3>
+
+<p>Claude.ai (web + desktop) can talk to this server directly as a <strong>custom
+connector</strong> once it’s reachable over the public internet via <strong>HTTPS</strong>. The
+EpiHack VM (<code class="language-plaintext highlighter-rouge">epihack-test.cis240692.projects.jetstream-cloud.org</code>) hosts the
+reporting app behind nginx; the steps below put the MCP endpoint behind the
+same hostname at <strong><code class="language-plaintext highlighter-rouge">/mcp/vectorsurv</code></strong>.</p>
+
+<blockquote>
+  <p><strong>TLS is not provisioned yet.</strong> As of writing the VM’s nginx serves plain
+<code class="language-plaintext highlighter-rouge">http://</code> on port 80 only (no certbot cert). Provision HTTPS first —
+<code class="language-plaintext highlighter-rouge">sudo certbot --nginx -d epihack-test.cis240692.projects.jetstream-cloud.org</code>
+— or front the endpoint with a tunnel (below). Without it, Claude.ai will
+refuse the connector.</p>
+</blockquote>
+
+<blockquote>
+  <p><strong>One namespace, many servers.</strong> The VM runs several MCP servers, so each
+one gets its own sub-path under <code class="language-plaintext highlighter-rouge">/mcp/</code> (<code class="language-plaintext highlighter-rouge">/mcp/vectorsurv</code>, <code class="language-plaintext highlighter-rouge">/mcp/nws</code>, …)
+on its own local port. The trick is to give each server its <em>full</em> public
+path as <code class="language-plaintext highlighter-rouge">FASTMCP_STREAMABLE_HTTP_PATH</code> so nginx can proxy the path
+straight through without rewriting.</p>
+</blockquote>
+
+<blockquote>
+  <p><strong>HTTPS is required.</strong> Claude.ai will not connect to a plain <code class="language-plaintext highlighter-rouge">http://</code>
+URL. The VM must terminate TLS (the existing nginx + certbot, or a tunnel
+— both shown below).</p>
+</blockquote>
+
+<p><strong>1 — Run the server in HTTP transport, bound to localhost.</strong> Set its public
+sub-path and a dedicated port:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">cd</span> /home/exouser/epihack-2026/mcp/vectorsurv-mcp
+uv <span class="nb">sync
+</span><span class="nv">MCP_TRANSPORT</span><span class="o">=</span>streamable-http <span class="se">\</span>
+  <span class="nv">FASTMCP_HOST</span><span class="o">=</span>127.0.0.1 <span class="nv">FASTMCP_PORT</span><span class="o">=</span>8010 <span class="se">\</span>
+  <span class="nv">FASTMCP_STREAMABLE_HTTP_PATH</span><span class="o">=</span>/mcp/vectorsurv <span class="se">\</span>
+  <span class="nv">VECTORSURV_USERNAME</span><span class="o">=</span>your_gateway_username <span class="se">\</span>
+  <span class="nv">VECTORSURV_PASSWORD</span><span class="o">=</span>your_gateway_password <span class="se">\</span>
+  uv run vectorsurv-mcp
+<span class="c"># → MCP endpoint now live at http://127.0.0.1:8010/mcp/vectorsurv</span>
+</code></pre></div></div>
+
+<p>To keep it running across logouts, drop it in a <code class="language-plaintext highlighter-rouge">systemd</code> unit (e.g.
+<code class="language-plaintext highlighter-rouge">/etc/systemd/system/vectorsurv-mcp.service</code>) with the env vars in
+<code class="language-plaintext highlighter-rouge">Environment=</code> lines, then <code class="language-plaintext highlighter-rouge">systemctl enable --now vectorsurv-mcp</code>.</p>
+
+<p><strong>2 — Expose it over HTTPS.</strong> The VM runs <strong>nginx</strong> (see
+<a href="../../ansible/roles/nginx/"><code class="language-plaintext highlighter-rouge">ansible/roles/nginx</code></a>) in front of the
+reporting app; once TLS is provisioned (see the note above), it terminates
+HTTPS for this endpoint too. Add one <code class="language-plaintext highlighter-rouge">location</code> per MCP server, each
+proxying its sub-path to that server’s local port. Because the server owns
+the full <code class="language-plaintext highlighter-rouge">/mcp/vectorsurv</code> path, nginx passes the URI through unchanged (no
+trailing-slash rewriting). Streamable HTTP keeps a long-lived response open,
+so disable buffering and raise the read timeout:</p>
+
+<div class="language-nginx highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># inside the existing `server { … }` block for the FQDN</span>
+<span class="k">location</span> <span class="n">/mcp/vectorsurv</span> <span class="p">{</span>
+    <span class="kn">proxy_pass</span>            <span class="s">http://127.0.0.1:8010</span><span class="p">;</span>
+    <span class="kn">proxy_http_version</span>    <span class="mi">1</span><span class="s">.1</span><span class="p">;</span>
+    <span class="kn">proxy_set_header</span>      <span class="s">Host</span>              <span class="nv">$host</span><span class="p">;</span>
+    <span class="kn">proxy_set_header</span>      <span class="s">X-Forwarded-Proto</span> <span class="nv">$scheme</span><span class="p">;</span>
+    <span class="kn">proxy_set_header</span>      <span class="s">Connection</span>        <span class="s">""</span><span class="p">;</span>
+    <span class="kn">proxy_buffering</span>       <span class="no">off</span><span class="p">;</span>        <span class="c1"># flush the stream immediately</span>
+    <span class="kn">proxy_read_timeout</span>    <span class="s">3600s</span><span class="p">;</span>      <span class="c1"># keep the SSE channel open</span>
+    <span class="kn">chunked_transfer_encoding</span> <span class="no">on</span><span class="p">;</span>
+<span class="p">}</span>
+<span class="c1"># add a sibling block per server, e.g.:</span>
+<span class="c1"># location /mcp/nws { proxy_pass http://127.0.0.1:8011; … }</span>
+</code></pre></div></div>
+
+<p><code class="language-plaintext highlighter-rouge">sudo nginx -t &amp;&amp; sudo systemctl reload nginx</code>. The public connector URL is:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>https://epihack-test.cis240692.projects.jetstream-cloud.org/mcp/vectorsurv
+</code></pre></div></div>
+
+<blockquote>
+  <p>The live nginx config is ansible-generated (<code class="language-plaintext highlighter-rouge">onehealth.conf.j2</code> says <em>do
+not edit by hand</em>) — a redeploy overwrites manual edits. To make the
+route permanent, add an entry to the <code class="language-plaintext highlighter-rouge">mcp_http_servers</code> list in
+<code class="language-plaintext highlighter-rouge">ansible/group_vars/all.yml</code>; the <code class="language-plaintext highlighter-rouge">nginx</code> role renders one <code class="language-plaintext highlighter-rouge">location</code> per
+entry on the next <code class="language-plaintext highlighter-rouge">ansible-playbook</code> run:</p>
+
+  <div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">mcp_http_servers</span><span class="pi">:</span>
+  <span class="pi">-</span> <span class="pi">{</span> <span class="nv">name</span><span class="pi">:</span> <span class="nv">vectorsurv</span><span class="pi">,</span> <span class="nv">path</span><span class="pi">:</span> <span class="nv">/mcp/vectorsurv</span><span class="pi">,</span> <span class="nv">port</span><span class="pi">:</span> <span class="nv">8010</span> <span class="pi">}</span>
+  <span class="c1"># - { name: nws, path: /mcp/nws, port: 8011 }</span>
+</code></pre></div>  </div>
+</blockquote>
+
+<p><em>No nginx access?</em> A quick alternative is a tunnel that brings its own TLS:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>cloudflared tunnel <span class="nt">--url</span> http://127.0.0.1:8010   <span class="c"># prints an https://… URL; append /mcp/vectorsurv</span>
+<span class="c"># or:  ngrok http 8010                            # then use https://&lt;id&gt;.ngrok.app/mcp/vectorsurv</span>
+</code></pre></div></div>
+
+<p><strong>3 — Add it in Claude.ai.</strong> Settings → <strong>Connectors</strong> → <strong>Add custom
+connector</strong>. Give it a name (e.g. <code class="language-plaintext highlighter-rouge">VectorSurv (EpiHack AZ)</code>) and paste the
+HTTPS <code class="language-plaintext highlighter-rouge">/mcp/vectorsurv</code> URL from step 2. Save, then enable the connector from the
+tools/attachments menu in a conversation. The <code class="language-plaintext highlighter-rouge">vectorsurv_*</code> tools and the
+<code class="language-plaintext highlighter-rouge">vectorsurv://…</code> resources become available to Claude.</p>
+
+<blockquote>
+  <p><strong>Security — read before exposing.</strong> This server holds your VectorSurv
+Gateway credentials and the <code class="language-plaintext highlighter-rouge">/mcp/vectorsurv</code> endpoint above is <strong>unauthenticated</strong>:
+anyone who learns the URL can query VectorSurv through your login. For a
+short-lived hackathon demo that’s usually acceptable; for anything
+longer, restrict access (IP allow-list / VPN), put an auth layer in front
+(Claude.ai custom connectors support OAuth 2.0), or tear the tunnel down
+when you’re done. Never commit real credentials — keep them in the
+<code class="language-plaintext highlighter-rouge">systemd</code> unit or a sourced <code class="language-plaintext highlighter-rouge">.env</code> only.</p>
+</blockquote>
+
 <h3 id="standalone">Standalone</h3>
 
 <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">cd </span>mcp/vectorsurv-mcp

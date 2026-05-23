@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Plan 10 — Archival &amp; docs site (post-EpiHack)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      max-width: 1100px;
+      margin: 2rem auto;
+      padding: 0 1.25rem;
+      color: #1a1a1a;
+      line-height: 1.55;
+    }
+    nav.crumbs { font-size: .9rem; color: #555; margin-bottom: 1rem; }
+    nav.crumbs a { color: #1F3A93; text-decoration: none; }
+    h1 { border-bottom: 3px solid #1F3A93; padding-bottom: .35rem; }
+    h2 { margin-top: 2.25rem; color: #1F3A93; }
+    h3 { margin-top: 1.25rem; }
+    table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: .95rem; }
+    th, td { border: 1px solid #ddd; padding: .5rem .75rem; text-align: left; vertical-align: top; }
+    th { background: #f0f3f8; }
+    blockquote {
+      border-left: 4px solid #1F3A93;
+      background: #f4f6fb;
+      margin: 1rem 0;
+      padding: .75rem 1rem;
+    }
+    code { background: #f1f3f7; padding: 1px 5px; border-radius: 3px; font-size: .9em; }
+    pre code { display: block; padding: .75rem 1rem; overflow-x: auto; }
+    footer { margin-top: 4rem; padding-top: 1rem; border-top: 1px solid #ddd; color: #666; font-size: .85rem; }
+    a { color: #1F3A93; }
+  </style>
+</head>
+<body>
+  <nav class="crumbs">
+    <a href="/epihack-2026/">EpiHack AZ 2026</a>
+  </nav>
+
+  <h1 id="plan-10--archival--docs-site-post-epihack">Plan 10 — Archival &amp; docs site (post-EpiHack)</h1>
+
+<p><strong>Status:</strong> Draft, 2026-05-23
+<strong>Owner:</strong> Tyson Swetnam
+<strong>Scope:</strong> Prepare this repo for archival (or pause-and-resume) with a UI/UX-journey landing page, a full MkDocs Material docs site, and a refreshed Ansible deploy.</p>
+
+<hr />
+
+<h2 id="1--goal">1 — Goal</h2>
+
+<p>EpiHack Arizona 2026 has concluded. The repo currently presents itself as a flat directory of working components (app, agents, 11 MCPs, dashboards, schemas, plans). For an archival hand-off we need to:</p>
+
+<ol>
+  <li><strong>Tell the story</strong> — why we built each piece, in what order, and how they fit together.</li>
+  <li><strong>Preserve the path</strong> — anyone reviving this in 2027+ should be able to bootstrap from scratch.</li>
+  <li><strong>Document the <em>how</em> of vibe-coding</strong> — the Claude Code prompting history is itself an artifact worth keeping.</li>
+  <li><strong>Lock in working state</strong> — every MCP, every app page, every playbook role tested and screenshotted.</li>
+</ol>
+
+<p>Out of scope: new features, new MCPs, new agent capabilities. This plan is about <em>capturing</em> what exists, not extending it.</p>
+
+<hr />
+
+<h2 id="2--two-surface-publishing-model">2 — Two-surface publishing model</h2>
+
+<p><code class="language-plaintext highlighter-rouge">gh-pages</code> already serves two surfaces from one branch via <code class="language-plaintext highlighter-rouge">keep_files: true</code>:</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">/</code> — Jekyll site (cards landing) — <strong>redesigned as a narrative journey</strong></li>
+  <li><code class="language-plaintext highlighter-rouge">/app/</code> — Next.js static export — <strong>unchanged</strong></li>
+</ul>
+
+<p>We add a third:</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">/docs/</code> — <strong>new</strong> MkDocs Material site (full reference)</li>
+</ul>
+
+<p>The redesigned <code class="language-plaintext highlighter-rouge">index.html</code> becomes a <em>trailhead</em>: it hooks the visitor, then routes them either into the live app (try it), the docs site (understand it), or the source (build on it).</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>                 ┌─────────────────────────────────────────────────────┐
+                 │  /  (Jekyll: hero + journey ribbon + 6 entry cards) │
+                 └──────────────┬────────────────────────┬─────────────┘
+                                │                        │
+              ┌─────────────────▼───────┐    ┌───────────▼──────────┐
+              │ /app/  (live React app) │    │ /docs/  (MkDocs Mat.) │
+              │   Jetstream2 demo link  │    │   journey + reference │
+              └─────────────────────────┘    └──────────────────────┘
+</code></pre></div></div>
+
+<p>Three GitHub Actions workflows publish to <code class="language-plaintext highlighter-rouge">gh-pages</code> with <code class="language-plaintext highlighter-rouge">keep_files: true</code>:</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Workflow</th>
+      <th>Triggers on</th>
+      <th>Lands at</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">deploy-jekyll.yml</code></td>
+      <td>root non-<code class="language-plaintext highlighter-rouge">app/</code>, non-<code class="language-plaintext highlighter-rouge">api/</code>, non-<code class="language-plaintext highlighter-rouge">docs/</code> paths</td>
+      <td><code class="language-plaintext highlighter-rouge">gh-pages:/</code></td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">deploy-app.yml</code> (existing)</td>
+      <td><code class="language-plaintext highlighter-rouge">app/**</code>, <code class="language-plaintext highlighter-rouge">api/openapi.yaml</code></td>
+      <td><code class="language-plaintext highlighter-rouge">gh-pages:/app/</code></td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">deploy-docs.yml</code> (<strong>new</strong>)</td>
+      <td><code class="language-plaintext highlighter-rouge">docs/**</code>, <code class="language-plaintext highlighter-rouge">mkdocs.yml</code></td>
+      <td><code class="language-plaintext highlighter-rouge">gh-pages:/docs/</code></td>
+    </tr>
+  </tbody>
+</table>
+
+<p><code class="language-plaintext highlighter-rouge">_config.yml</code> excludes get a new entry: <code class="language-plaintext highlighter-rouge">- docs</code> and <code class="language-plaintext highlighter-rouge">- mkdocs.yml</code> so Jekyll doesn’t try to render Markdown that MkDocs owns.</p>
+
+<hr />
+
+<h2 id="3--phase-by-phase-plan">3 — Phase-by-phase plan</h2>
+
+<h3 id="phase-0--reconnaissance-this-plan-">Phase 0 — Reconnaissance (this plan) ✅</h3>
+<p>Inventory completed. 11 MCPs, 9 app pages, 17 plan docs, 14 Ansible roles, 12 schema seeds, 9 Claude Code transcripts (~5907 lines).</p>
+
+<h3 id="phase-1--redesign-indexhtml">Phase 1 — Redesign <code class="language-plaintext highlighter-rouge">index.html</code></h3>
+
+<p><strong>Goal:</strong> Replace the flat card grid with a top-to-bottom journey.</p>
+
+<p><strong>New section order:</strong></p>
+
+<ol>
+  <li><strong>Hero</strong> — keep current gradient, add a “Project archived 2026-05” badge and a “Read the Journey” CTA → <code class="language-plaintext highlighter-rouge">/docs/journey/</code>.</li>
+  <li><strong>Journey ribbon</strong> (new) — 6 numbered steps as a horizontal strip:
+<code class="language-plaintext highlighter-rouge">Frame → Map → Tool → Store → Orchestrate → Surface</code>
+Each step links into the matching MkDocs page.</li>
+  <li><strong>System diagram</strong> (new) — one inline SVG showing: phone → API → 8 agents → 11 MCPs → DuckLake/Mongo. Replaces three paragraphs of prose.</li>
+  <li><strong>Try it</strong> — current live-demo card, slimmed.</li>
+  <li><strong>Read it</strong> — three cards: Journey, Architecture, Reference (all → <code class="language-plaintext highlighter-rouge">/docs/</code>).</li>
+  <li><strong>Source</strong> — repo + license + citation.</li>
+  <li><strong>Browse-everything</strong> (collapsed) — the <em>current</em> card grid, demoted into a <code class="language-plaintext highlighter-rouge">&lt;details&gt;</code> so nothing breaks, but it’s no longer the front-and-center experience.</li>
+</ol>
+
+<p>Visual: keep the Wildcat-blue / Sedona-red palette. Add an inline footer crediting EpiHack participants + Anthropic Claude Code as a tool.</p>
+
+<h3 id="phase-2--stand-up-docs-mkdocs-material">Phase 2 — Stand up <code class="language-plaintext highlighter-rouge">docs/</code> (MkDocs Material)</h3>
+
+<p><strong>Tech:</strong></p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">mkdocs-material</code> (Material theme, the closest OSS analogue to “Zensical”)</li>
+  <li><code class="language-plaintext highlighter-rouge">mkdocs-mermaid2-plugin</code> (architecture diagrams)</li>
+  <li><code class="language-plaintext highlighter-rouge">mkdocs-glightbox</code> (clickable screenshots)</li>
+  <li><code class="language-plaintext highlighter-rouge">pymdown-extensions</code> (admonitions, tabs, code annotations)</li>
+  <li><code class="language-plaintext highlighter-rouge">mike</code> (versioning — pin “1.0-archive” once frozen)</li>
+</ul>
+
+<p><strong>Top-level nav (proposed):</strong></p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Home                   docs/index.md
+Journey ─┬─ 01 Frame the problem        journey/01-frame.md
+         ├─ 02 Map the data sources     journey/02-map.md
+         ├─ 03 Build the MCPs           journey/03-mcps.md
+         ├─ 04 Stand up the store       journey/04-store.md
+         ├─ 05 Orchestrate the agents   journey/05-orchestrate.md
+         ├─ 06 Ship the app             journey/06-app.md
+         └─ 07 Vibe-coding history      journey/07-vibe-coding.md
+Architecture ─┬─ System overview        architecture/overview.md
+              ├─ Privacy contract       architecture/privacy.md
+              ├─ Data flows (A/B/C/D)   architecture/data-flows.md
+              └─ Eight-agent topology   architecture/agents.md
+MCP servers ─┬─ Overview                mcps/index.md
+             ├─ vectorsurv-mcp          mcps/vectorsurv.md
+             ├─ knowledge-graph-mcp     mcps/knowledge-graph.md
+             ├─ ... (one per server)
+App ─┬─ Pages tour                      app/pages.md
+     ├─ Privacy &amp; EXIF stripping        app/privacy.md
+     └─ Offline retry queue             app/offline.md
+Knowledge graph ─┬─ Schema reference    kg/schema.md
+                 ├─ Seed load order     kg/seeds.md
+                 └─ Example queries     kg/queries.md
+Deploy ─┬─ Local development            deploy/local.md
+        ├─ Ansible / Jetstream2         deploy/ansible.md
+        └─ GitHub Pages                 deploy/gh-pages.md
+Reference ─┬─ OpenAPI spec              reference/openapi.md
+           ├─ MCP tool inventory        reference/mcp-tools.md
+           ├─ Test matrix               reference/test-matrix.md
+           └─ Glossary                  reference/glossary.md
+About ─┬─ Governance                    about/governance.md
+       ├─ Security                      about/security.md
+       ├─ Contributing                  about/contributing.md
+       ├─ Changelog                     about/changelog.md
+       └─ Citation                      about/citation.md
+</code></pre></div></div>
+
+<p>Most “About” pages are stubs that include the existing top-level markdown via the <code class="language-plaintext highlighter-rouge">mkdocs-include-markdown-plugin</code> (an <code class="language-plaintext highlighter-rouge">include-markdown</code> Liquid-style tag with the upstream path) — no duplication.</p>
+
+<h3 id="phase-3--author-the-journey">Phase 3 — Author the journey</h3>
+
+<p>Each <code class="language-plaintext highlighter-rouge">journey/0N-*.md</code> page has the same structure:</p>
+
+<ol>
+  <li><strong>What we wanted</strong> (one paragraph)</li>
+  <li><strong>What we built</strong> (concrete components: file paths, tool counts, links into Reference)</li>
+  <li><strong>What it looks like</strong> (screenshots from Phase 5)</li>
+  <li><strong>Decisions &amp; trade-offs</strong> (why DuckLake + Mongo split; why coarse-only geo; why never-diagnose triage)</li>
+  <li><strong>Where to go next</strong> (link to next journey page + relevant reference)</li>
+</ol>
+
+<p>Drafting cadence: one journey page per pomodoro, drawn from the corresponding <code class="language-plaintext highlighter-rouge">plan/0N-*.md</code> source.</p>
+
+<h3 id="phase-4--vibe-coding-history">Phase 4 — Vibe-coding history</h3>
+
+<p><code class="language-plaintext highlighter-rouge">journey/07-vibe-coding.md</code>. Distilled from the 9 transcripts under <code class="language-plaintext highlighter-rouge">/home/exouser/.claude/projects/-home-exouser-epihack-2026/</code>:</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Transcript</th>
+      <th>Lines</th>
+      <th>Approx. focus (guess from size)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>173972db</td>
+      <td>3200</td>
+      <td>the long main thread</td>
+    </tr>
+    <tr>
+      <td>849197ca</td>
+      <td>946</td>
+      <td> </td>
+    </tr>
+    <tr>
+      <td>924a2aed</td>
+      <td>546</td>
+      <td> </td>
+    </tr>
+    <tr>
+      <td>ff2c20eb</td>
+      <td>402</td>
+      <td> </td>
+    </tr>
+    <tr>
+      <td>367a72c1</td>
+      <td>259</td>
+      <td> </td>
+    </tr>
+    <tr>
+      <td>2442be0b</td>
+      <td>224</td>
+      <td> </td>
+    </tr>
+    <tr>
+      <td>0d7738c5</td>
+      <td>217</td>
+      <td> </td>
+    </tr>
+    <tr>
+      <td>02a81450</td>
+      <td>66</td>
+      <td> </td>
+    </tr>
+    <tr>
+      <td>9b4b90bf</td>
+      <td>47</td>
+      <td> </td>
+    </tr>
+  </tbody>
+</table>
+
+<p>Delegated to a <code class="language-plaintext highlighter-rouge">general-purpose</code> subagent. Output structure:</p>
+
+<ul>
+  <li><strong>Timeline</strong>: chronological one-liner per session (“session 4 — added MAG HRN MCP after Phoenix outreach asked about cooling centers”)</li>
+  <li><strong>Prompts that produced the most code</strong>: top 10 prompts ranked by diff size, each with a short excerpt and a link to the resulting commit.</li>
+  <li><strong>Pivots</strong>: places where we changed direction mid-session (e.g. when we replaced AWS/DynamoDB framing with DuckLake + Mongo per <code class="language-plaintext highlighter-rouge">pitch-vs-repo-reconciliation</code> memory).</li>
+  <li><strong>What worked</strong>: prompting patterns that produced shippable code first-try.</li>
+  <li><strong>What didn’t</strong>: where Claude needed a second pass, and what the user said to course-correct.</li>
+  <li><strong>Reproducibility note</strong>: how to re-run any prompt (the transcripts include the exact commands).</li>
+</ul>
+
+<p><strong>Important:</strong> redact any user names, tokens, or per-session UUIDs before publishing.</p>
+
+<h3 id="phase-5--headless-inspection-parallel-sub-agents">Phase 5 — Headless inspection (parallel sub-agents)</h3>
+
+<p>Goals:</p>
+
+<ol>
+  <li>Screenshot every URL under <code class="language-plaintext highlighter-rouge">https://tyson-swetnam.github.io/epihack-2026/</code> for embedding in journey pages.</li>
+  <li>Screenshot every page of the live app at <code class="language-plaintext highlighter-rouge">http://epihack-test.cis240692.projects.jetstream-cloud.org/</code>.</li>
+  <li>Detect 404s and JS console errors → file as tasks.</li>
+</ol>
+
+<p><strong>Tool:</strong> <code class="language-plaintext highlighter-rouge">mesa-mcp</code> (when its tools land) for high-level browser control. Fallback: <code class="language-plaintext highlighter-rouge">npx playwright</code> invoked from a one-off Python script — already a sibling project dependency.</p>
+
+<p>URL list (auto-generated from a <code class="language-plaintext highlighter-rouge">find . -name index.html</code> plus the live-app routes — <code class="language-plaintext highlighter-rouge">/</code>, <code class="language-plaintext highlighter-rouge">/sign-in</code>, <code class="language-plaintext highlighter-rouge">/report/{human,animal,environmental,heat}</code>, <code class="language-plaintext highlighter-rouge">/profile</code>, <code class="language-plaintext highlighter-rouge">/dashboard</code>).</p>
+
+<p>Output: <code class="language-plaintext highlighter-rouge">docs/_screenshots/&lt;page-slug&gt;.png</code>, referenced from the journey/app pages.</p>
+
+<h3 id="phase-6--smoke-test-everything">Phase 6 — Smoke-test everything</h3>
+
+<p>A <code class="language-plaintext highlighter-rouge">scripts/smoke-all.sh</code> (new) that runs:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Per MCP</span>
+<span class="k">for </span>d <span class="k">in </span>mcp/<span class="k">*</span>/<span class="p">;</span> <span class="k">do</span> <span class="o">(</span><span class="nb">cd</span> <span class="s2">"</span><span class="nv">$d</span><span class="s2">"</span> <span class="o">&amp;&amp;</span> uv <span class="nb">sync</span> <span class="nt">--frozen</span> <span class="o">&amp;&amp;</span> uv run pytest <span class="nt">-q</span><span class="o">)</span> <span class="p">;</span> <span class="k">done</span>
+<span class="c"># Agents</span>
+<span class="o">(</span><span class="nb">cd </span>agents <span class="o">&amp;&amp;</span> uv <span class="nb">sync</span> <span class="o">&amp;&amp;</span> uv run pytest <span class="nt">-q</span><span class="o">)</span>
+<span class="c"># App</span>
+<span class="o">(</span><span class="nb">cd </span>app <span class="o">&amp;&amp;</span> npm ci <span class="o">&amp;&amp;</span> npm run gen:api <span class="o">&amp;&amp;</span> npm run typecheck <span class="o">&amp;&amp;</span> npm run lint <span class="o">&amp;&amp;</span> npm run build<span class="o">)</span>
+<span class="c"># OpenAPI</span>
+redocly lint api/openapi.yaml
+</code></pre></div></div>
+
+<p>Output: <code class="language-plaintext highlighter-rouge">docs/reference/test-matrix.md</code> table — green/yellow/red per component, with logs linked.</p>
+
+<p><code class="language-plaintext highlighter-rouge">/loop</code> use: invoke this as <code class="language-plaintext highlighter-rouge">/loop 1h scripts/smoke-all.sh</code> on the Jetstream2 VM for the final 24 hours before tagging archive — gives a visible “still green” trail in CI history.</p>
+
+<h3 id="phase-7--ansible-refresh">Phase 7 — Ansible refresh</h3>
+
+<p>For each role under <code class="language-plaintext highlighter-rouge">ansible/roles/</code>:</p>
+
+<ol>
+  <li>Diff <code class="language-plaintext highlighter-rouge">tasks/main.yml</code> against the corresponding component’s <code class="language-plaintext highlighter-rouge">pyproject.toml</code> / <code class="language-plaintext highlighter-rouge">package.json</code> / <code class="language-plaintext highlighter-rouge">Dockerfile</code> / systemd unit.</li>
+  <li>Verify env vars listed in <code class="language-plaintext highlighter-rouge">.env.example</code> are mirrored in <code class="language-plaintext highlighter-rouge">group_vars/all.yml</code> (or <code class="language-plaintext highlighter-rouge">all.vault.example.yml</code>).</li>
+  <li>Add anything missing. Bump <code class="language-plaintext highlighter-rouge">ansible/CHANGELOG.md</code>.</li>
+</ol>
+
+<p>Specific items I already know need attention:</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">app</code> role: needs <code class="language-plaintext highlighter-rouge">NEXT_PUBLIC_API_BASE</code> and the Mongo client env if not already there.</li>
+  <li><code class="language-plaintext highlighter-rouge">mongodb</code> role: confirm it exists end-to-end (memory says “2026-05-20 datastore split” added this).</li>
+  <li><code class="language-plaintext highlighter-rouge">ducklake</code> + <code class="language-plaintext highlighter-rouge">postgres</code> roles: confirm seed-load order matches CLAUDE.md (<code class="language-plaintext highlighter-rouge">standards.sql</code>, <code class="language-plaintext highlighter-rouge">pathogens.sql</code> first).</li>
+  <li><code class="language-plaintext highlighter-rouge">mcp_servers</code>: enumerate all 11 services as <code class="language-plaintext highlighter-rouge">loop</code> items.</li>
+</ul>
+
+<p>Output: <code class="language-plaintext highlighter-rouge">docs/deploy/ansible.md</code> — a walkthrough from <code class="language-plaintext highlighter-rouge">inventory.yml</code> to “the VM is up”.</p>
+
+<h3 id="phase-8--archival-polish--deploy">Phase 8 — Archival polish &amp; deploy</h3>
+
+<ul>
+  <li>Rewrite top of <code class="language-plaintext highlighter-rouge">README.md</code> as an <em>archival</em> landing: status badge, “as of 2026-05-23”, “to revive: …”, citation block.</li>
+  <li>Add <code class="language-plaintext highlighter-rouge">CITATION.cff</code> (so GitHub shows the “Cite this repository” button).</li>
+  <li>Final pass on <code class="language-plaintext highlighter-rouge">CHANGELOG.md</code> — collapse the EpiHack sprint commits into a single “v1.0 — EpiHack Arizona 2026 release” entry.</li>
+  <li>Tag <code class="language-plaintext highlighter-rouge">v1.0-archive</code> once both deploys are green.</li>
+  <li>Optionally: GitHub repo settings → “Archive this repository” (the user’s call; this plan only readies it).</li>
+</ul>
+
+<hr />
+
+<h2 id="4--sub-agent-delegation">4 — Sub-agent delegation</h2>
+
+<p>Designed for parallelism. Each numbered phase can launch independent agents:</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Phase</th>
+      <th>Sub-agent type</th>
+      <th>Inputs</th>
+      <th>Output</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>3</td>
+      <td><code class="language-plaintext highlighter-rouge">general-purpose</code> × 7 (one per journey page)</td>
+      <td><code class="language-plaintext highlighter-rouge">plan/0N-*.md</code> + relevant code</td>
+      <td><code class="language-plaintext highlighter-rouge">docs/journey/0N-*.md</code></td>
+    </tr>
+    <tr>
+      <td>4</td>
+      <td><code class="language-plaintext highlighter-rouge">general-purpose</code></td>
+      <td>transcript jsonl files</td>
+      <td><code class="language-plaintext highlighter-rouge">docs/journey/07-vibe-coding.md</code></td>
+    </tr>
+    <tr>
+      <td>5</td>
+      <td><code class="language-plaintext highlighter-rouge">general-purpose</code> × 2 (Jekyll site + live app)</td>
+      <td>URL list</td>
+      <td>screenshots + 404 report</td>
+    </tr>
+    <tr>
+      <td>6</td>
+      <td><code class="language-plaintext highlighter-rouge">Explore</code></td>
+      <td>repo state</td>
+      <td>smoke-test inventory before scripting</td>
+    </tr>
+    <tr>
+      <td>7</td>
+      <td><code class="language-plaintext highlighter-rouge">general-purpose</code> × N (one per role)</td>
+      <td><code class="language-plaintext highlighter-rouge">ansible/roles/&lt;role&gt;/</code> + corresponding component</td>
+      <td>role diffs</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>Agents run in parallel where independent (Phase 3 pages, Phase 7 roles).</p>
+
+<hr />
+
+<h2 id="5--loop-use">5 — <code class="language-plaintext highlighter-rouge">/loop</code> use</h2>
+
+<p>Two loops only:</p>
+
+<ul>
+  <li><strong>Phase 5</strong>: <code class="language-plaintext highlighter-rouge">/loop</code> the screenshot script every 10 min while iterating on the redesign, so I see fresh thumbnails as I edit.</li>
+  <li><strong>Phase 6</strong>: <code class="language-plaintext highlighter-rouge">/loop 1h scripts/smoke-all.sh</code> for 24 h pre-tag.</li>
+</ul>
+
+<p>Other phases are one-shot, not recurring.</p>
+
+<hr />
+
+<h2 id="6--risks--open-questions">6 — Risks &amp; open questions</h2>
+
+<ol>
+  <li><strong><code class="language-plaintext highlighter-rouge">docs/</code> URL collisions with existing top-level <code class="language-plaintext highlighter-rouge">docs</code> content?</strong> None: no <code class="language-plaintext highlighter-rouge">docs/</code> directory exists today.</li>
+  <li><strong>MkDocs Material vs “Zensical”</strong> — Zensical is an internal Material variant. We default to vanilla <code class="language-plaintext highlighter-rouge">mkdocs-material</code>; if Zensical specifics are required, swap the theme line and re-deploy.</li>
+  <li><strong>Transcript privacy</strong> — Claude Code transcripts may contain tokens, API keys, hostnames, or third-party emails. Phase 4 must scrub these before publishing.</li>
+  <li><strong>Tribal-data disclosure</strong> — same governance rules apply to the docs site as to the code. Tribal-specific seeds remain <code class="language-plaintext highlighter-rouge">MOU_RENEWED_THROUGH</code>-gated; the docs page describes the <em>mechanism</em>, not the data.</li>
+  <li><strong>Bit-rot found by Phase 6</strong> — likely. We absorb small fixes into the plan; anything large becomes a follow-up task and ships in v1.1-archive.</li>
+</ol>
+
+<hr />
+
+<h2 id="7--done-criteria">7 — Done criteria</h2>
+
+<ul class="task-list">
+  <li class="task-list-item"><input type="checkbox" class="task-list-item-checkbox" disabled="disabled" /><code class="language-plaintext highlighter-rouge">index.html</code> ships the new journey layout; old card grid preserved under <code class="language-plaintext highlighter-rouge">&lt;details&gt;</code>.</li>
+  <li class="task-list-item"><input type="checkbox" class="task-list-item-checkbox" disabled="disabled" /><code class="language-plaintext highlighter-rouge">docs/</code> builds locally (<code class="language-plaintext highlighter-rouge">mkdocs serve</code>) and on GH Actions; landing page reachable at <code class="language-plaintext highlighter-rouge">/epihack-2026/docs/</code>.</li>
+  <li class="task-list-item"><input type="checkbox" class="task-list-item-checkbox" disabled="disabled" />Every component has a journey page + a reference page.</li>
+  <li class="task-list-item"><input type="checkbox" class="task-list-item-checkbox" disabled="disabled" />Vibe-coding history published, scrubbed.</li>
+  <li class="task-list-item"><input type="checkbox" class="task-list-item-checkbox" disabled="disabled" />Phase 6 smoke matrix is all green (or yellow with documented exceptions).</li>
+  <li class="task-list-item"><input type="checkbox" class="task-list-item-checkbox" disabled="disabled" />Ansible CHANGELOG updated; <code class="language-plaintext highlighter-rouge">ansible-playbook --check</code> clean against a fresh inventory.</li>
+  <li class="task-list-item"><input type="checkbox" class="task-list-item-checkbox" disabled="disabled" /><code class="language-plaintext highlighter-rouge">v1.0-archive</code> tag pushed; both Pages workflows publish without <code class="language-plaintext highlighter-rouge">keep_files</code> conflicts.</li>
+</ul>
+
+<hr />
+
+<h2 id="8--one-pr-per-concern-map">8 — One-PR-per-concern map</h2>
+
+<p>Per the repo’s ~200-line-diff rule:</p>
+
+<ol>
+  <li><code class="language-plaintext highlighter-rouge">plan/10-archival-and-docs.md</code> (this file).</li>
+  <li><code class="language-plaintext highlighter-rouge">index.html</code> redesign + new SVG.</li>
+  <li><code class="language-plaintext highlighter-rouge">docs/</code> scaffold + <code class="language-plaintext highlighter-rouge">mkdocs.yml</code> + <code class="language-plaintext highlighter-rouge">.github/workflows/deploy-docs.yml</code> + <code class="language-plaintext highlighter-rouge">_config.yml</code> exclude.</li>
+  <li>Journey pages (split into ~3 PRs if each runs long).</li>
+  <li>Vibe-coding history.</li>
+  <li>Screenshots batch.</li>
+  <li>Test-matrix + <code class="language-plaintext highlighter-rouge">scripts/smoke-all.sh</code>.</li>
+  <li>Ansible refresh (split per role family).</li>
+  <li>README rewrite + <code class="language-plaintext highlighter-rouge">CITATION.cff</code> + <code class="language-plaintext highlighter-rouge">v1.0-archive</code> tag.</li>
+</ol>
+
+
+  <footer>
+    Source: Ending Pandemics Academy &middot; University of Arizona Mel &amp;
+    Enid Zuckerman College of Public Health &middot; Global Health Institute.
+  </footer>
+</body>
+</html>

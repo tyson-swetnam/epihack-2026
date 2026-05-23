@@ -1,3 +1,0 @@
-:HL["/epihack-2026/app/_next/static/chunks/0h8_5mhucphre.css","style"]
-:HL["/epihack-2026/app/_next/static/media/83afe278b6a6bb3c-s.p.0q-301v4kxxnr.woff2","font",{"crossOrigin":"","type":"font/woff2"}]
-0:{"tree":{"name":"","param":null,"prefetchHints":16,"slots":{"children":{"name":"report","param":null,"prefetchHints":0,"slots":{"children":{"name":"type","param":{"type":"d","key":"human","siblings":null},"prefetchHints":0,"slots":{"children":{"name":"__PAGE__","param":null,"prefetchHints":0,"slots":null}}}}}}},"staleTime":300,"buildId":"i_xhOGUMjM8pEQChW64He"}

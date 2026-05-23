@@ -258,6 +258,94 @@ responses up to 3 times with exponential backoff (0.5s, 1s, 2s) before
 raising. 4xx responses are surfaced immediately — they almost always
 indicate a malformed request or a missing User-Agent.</p>
 
+<h2 id="production-verification-2026-05-21">Production verification (2026-05-21)</h2>
+
+<p>Status of the live check against production endpoints, run from the
+EpiHack VM on 2026-05-21.</p>
+
+<h3 id="endpoint-reachability-confirmed-live">Endpoint reachability (confirmed live)</h3>
+
+<p>These were probed directly with <code class="language-plaintext highlighter-rouge">curl</code> from the deploy host:</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Endpoint</th>
+      <th>Result</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">https://api.weather.gov/</code></td>
+      <td><strong>HTTP 200</strong> — the NWS public API base is up.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">https://www.wpc.ncep.noaa.gov/heatrisk/data/heatrisk.json</code> (historic <code class="language-plaintext highlighter-rouge">NWS_HEATRISK_URL</code> default)</td>
+      <td><strong>HTTP 404</strong> — the documented HeatRisk feed has moved/changed and no longer serves at this path.</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>The NWS API requires a descriptive <code class="language-plaintext highlighter-rouge">User-Agent</code>
+(<code class="language-plaintext highlighter-rouge">NWS_USER_AGENT</code>, e.g. <code class="language-plaintext highlighter-rouge">epihack-az-2026-sentinel (contact@example.org)</code>);
+requests without one are rejected.</p>
+
+<h3 id="tests-1">Tests</h3>
+
+<p>The suite is <strong>17 tests</strong> (8 in <code class="language-plaintext highlighter-rouge">tests/test_client_paths.py</code>, 9 in
+<code class="language-plaintext highlighter-rouge">tests/test_heat_index.py</code>), matching the count documented above. They
+are pure-unit / offline (heat-index regression vs. the canonical NWS
+table, and env-driven client config) and require no network.</p>
+
+<blockquote>
+  <p>NOTE: in the verification environment <code class="language-plaintext highlighter-rouge">uv sync</code> / <code class="language-plaintext highlighter-rouge">uv run pytest</code>
+and the live client probe could <strong>not be executed</strong> (the sandbox
+denied all non-allowlisted command execution and the web tools).
+The test <em>count and content</em> were confirmed by source inspection,
+and endpoint reachability by the allowlisted <code class="language-plaintext highlighter-rouge">curl</code> probes above,
+but a green pytest run and live tool calls (current conditions /
+forecast / alerts / station obs for Phoenix) were <strong>not captured in
+this session</strong>. Re-run <code class="language-plaintext highlighter-rouge">uv run pytest -q</code> and the probe in
+<code class="language-plaintext highlighter-rouge">examples/</code> to record live values.</p>
+</blockquote>
+
+<h3 id="heatrisk-feed-status">HeatRisk feed status</h3>
+
+<p>The historic default feed (<code class="language-plaintext highlighter-rouge">.../heatrisk/data/heatrisk.json</code>) returns
+<strong>404</strong> in production — the WPC HeatRisk machine-readable product has
+drifted from this path again. A replacement public URL was <strong>not
+confirmed live in this session</strong> (web search/fetch were unavailable),
+so the in-code default is left unchanged and remains
+<code class="language-plaintext highlighter-rouge">NWS_HEATRISK_URL</code>-overridable. When NWS/WPC’s current operational
+HeatRisk endpoint is identified, set <code class="language-plaintext highlighter-rouge">NWS_HEATRISK_URL</code> (no code
+release needed) and, if the wire format differs, extend
+<code class="language-plaintext highlighter-rouge">_iter_records</code> / <code class="language-plaintext highlighter-rouge">extract_daily</code> in <code class="language-plaintext highlighter-rouge">heatrisk.py</code>.</p>
+
+<p><strong>Graceful degradation (fixed in this verification):</strong> previously a
+404 (or any transport error) on the HeatRisk feed propagated out of
+<code class="language-plaintext highlighter-rouge">NWSClient.get_heatrisk_feed()</code> as an <code class="language-plaintext highlighter-rouge">httpx.HTTPStatusError</code>, which
+would surface to the MCP caller as a tool <strong>crash</strong> — the README’s
+claim that the tool returns a “no data” payload only held for a
+<em>200-with-unrecognized-JSON</em> response, not for the 404 that actually
+occurs today. <code class="language-plaintext highlighter-rouge">get_heatrisk_feed()</code> now catches <code class="language-plaintext highlighter-rouge">httpx.HTTPError</code> and
+returns <code class="language-plaintext highlighter-rouge">None</code>; the existing <code class="language-plaintext highlighter-rouge">None</code>/empty handling in <code class="language-plaintext highlighter-rouge">extract_daily</code>
+and the <code class="language-plaintext highlighter-rouge">nws_heatrisk</code> / <code class="language-plaintext highlighter-rouge">nws_heatrisk_week</code> tools then emit the
+graceful Unknown-category payload with a drift note instead of
+raising. All seven tools therefore remain callable even while the
+HeatRisk feed URL is unresolved.</p>
+
+<h3 id="caveats">Caveats</h3>
+
+<ul>
+  <li>Live tool calls (forecast, current conditions, active alerts,
+station observations, heat index over the wire) were <strong>not executed
+in this session</strong>; only static analysis + allowlisted reachability
+probes were possible here.</li>
+  <li>The HeatRisk replacement URL is unresolved; the feed tools degrade
+gracefully rather than returning data until <code class="language-plaintext highlighter-rouge">NWS_HEATRISK_URL</code> is
+pointed at the current product.</li>
+</ul>
+
 <h2 id="license">License</h2>
 
 <p>MIT, alongside the rest of <code class="language-plaintext highlighter-rouge">epihack-2026</code>.</p>

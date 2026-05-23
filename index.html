@@ -2,369 +2,571 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<title>EpiHack Arizona 2026</title>
+<title>EpiHack Arizona 2026 — AZ One Health Sentinel</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="description" content="Archived: a mobile-first participatory-surveillance stack for Arizona, built at EpiHack Arizona 2026 — a Next.js reporting app, an 8-agent FastAPI backend, 11 MCP servers, and a DuckLake-on-Postgres knowledge graph." />
 <style>
+  /* ---------- base ---------- */
+  :root {
+    --c-blue:   #1F3A93;     /* Wildcat */
+    --c-blue-d: #142659;
+    --c-red:    #C0392B;     /* Sedona */
+    --c-red-d:  #8B2818;
+    --c-bg:     #fafbfd;
+    --c-panel:  #fff;
+    --c-text:   #1a1a1a;
+    --c-muted:  #555;
+    --c-line:   #d0d7e2;
+    --c-soft:   #e3e8ef;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
   body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    max-width: 1100px;
-    margin: 2rem auto;
-    padding: 0 1.25rem;
-    color: #1a1a1a;
+    margin: 0;
+    padding: 0;
+    color: var(--c-text);
     line-height: 1.55;
+    background: var(--c-bg);
   }
-  .hero {
-    background: linear-gradient(135deg, #1F3A93 0%, #C0392B 100%);
-    color: #fff;
-    padding: 2rem;
-    border-radius: 10px;
-    margin: 1rem 0 2rem;
-  }
-  .hero h1 { color: #fff; border: none; margin: 0 0 .5rem 0; font-size: 2rem; }
-  .hero p { margin: 0; opacity: .95; font-size: 1.05rem; }
-  h2 { margin-top: 2.25rem; color: #1F3A93; border-bottom: 2px solid #e3e8ef; padding-bottom: .25rem; }
-  .section-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 1rem;
-    margin: 1rem 0 2rem;
-  }
-  .card {
-    border: 1px solid #d0d7e2;
-    border-left: 6px solid var(--c, #1F3A93);
-    border-radius: 6px;
-    padding: 1rem 1.1rem;
-    background: #fff;
-    text-decoration: none;
-    color: inherit;
-  }
-  .card:hover { background: #f6f8fc; }
-  .card h3 { margin: 0 0 .3rem 0; font-size: 1.05rem; }
-  .card p { margin: 0; color: #555; font-size: .9rem; }
-  .badges { margin-top: .6rem; }
-  .badge {
-    display: inline-block;
-    background: #e3e8ef;
-    color: #333;
-    padding: 2px 8px;
-    border-radius: 999px;
-    font-size: .72rem;
-    margin-right: .25rem;
-  }
-  footer { margin-top: 4rem; padding-top: 1rem; border-top: 1px solid #ddd; color: #666; font-size: .85rem; }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 0 1.25rem; }
+  a { color: var(--c-blue); }
   code { background: #f1f3f7; padding: 1px 5px; border-radius: 3px; font-size: .9em; }
+
+  /* ---------- top nav ---------- */
+  .topnav {
+    background: #fff;
+    border-bottom: 1px solid var(--c-line);
+    position: sticky; top: 0; z-index: 50;
+  }
+  .topnav .wrap {
+    display: flex; align-items: center; gap: 1.5rem; padding-top: .75rem; padding-bottom: .75rem;
+  }
+  .topnav .brand { font-weight: 700; color: var(--c-blue); text-decoration: none; font-size: 1.02rem; }
+  .topnav .links { margin-left: auto; display: flex; gap: 1.25rem; align-items: center; flex-wrap: wrap; }
+  .topnav .links a { color: var(--c-text); text-decoration: none; font-size: .95rem; }
+  .topnav .links a:hover { color: var(--c-blue); }
+  .topnav .links a.cta {
+    background: var(--c-red); color: #fff; padding: .35rem .8rem;
+    border-radius: 999px; font-weight: 600;
+  }
+  .topnav .links a.cta:hover { background: var(--c-red-d); color: #fff; }
+
+  /* ---------- hero ---------- */
+  .hero {
+    background: linear-gradient(135deg, var(--c-blue) 0%, var(--c-red) 100%);
+    color: #fff;
+    padding: 3rem 0 3.25rem;
+  }
+  .hero .wrap { display: grid; grid-template-columns: 1.4fr 1fr; gap: 2rem; align-items: center; }
+  @media (max-width: 820px) { .hero .wrap { grid-template-columns: 1fr; } }
+  .hero h1 {
+    color: #fff; border: none; margin: 0 0 .5rem 0;
+    font-size: 2.4rem; line-height: 1.15; font-weight: 700;
+  }
+  .hero .tag {
+    display: inline-block; background: rgba(255,255,255,.18);
+    color: #fff; font-size: .78rem; padding: 3px 12px;
+    border-radius: 999px; margin-bottom: .9rem; letter-spacing: .03em;
+    border: 1px solid rgba(255,255,255,.35);
+  }
+  .hero p { margin: 0; opacity: .95; font-size: 1.05rem; }
+  .hero .ctas { margin-top: 1.4rem; display: flex; gap: .75rem; flex-wrap: wrap; }
+  .hero .btn {
+    display: inline-block; padding: .65rem 1.1rem; border-radius: 6px;
+    text-decoration: none; font-weight: 600; font-size: .98rem;
+  }
+  .hero .btn.primary { background: #fff; color: var(--c-blue); }
+  .hero .btn.primary:hover { background: #f4f6fb; }
+  .hero .btn.ghost { background: transparent; color: #fff; border: 1px solid rgba(255,255,255,.6); }
+  .hero .btn.ghost:hover { background: rgba(255,255,255,.12); }
+
+  /* hero stat panel */
+  .hero .stats {
+    background: rgba(255,255,255,.10);
+    border: 1px solid rgba(255,255,255,.22);
+    border-radius: 10px; padding: 1.1rem 1.25rem;
+    backdrop-filter: blur(2px);
+  }
+  .hero .stats h3 { margin: 0 0 .6rem 0; color: #fff; font-size: .9rem; letter-spacing: .04em; text-transform: uppercase; opacity: .85; }
+  .hero .stats dl { display: grid; grid-template-columns: 1fr 1fr; gap: .55rem .9rem; margin: 0; }
+  .hero .stats dt { font-size: 1.45rem; font-weight: 700; color: #fff; margin: 0; }
+  .hero .stats dd { font-size: .82rem; opacity: .88; margin: 0 0 .35rem 0; }
+
+  /* ---------- journey ribbon ---------- */
+  section.ribbon { padding: 2.25rem 0 .75rem; }
+  .ribbon h2 { margin: 0 0 .4rem; color: var(--c-blue); font-size: 1.4rem; }
+  .ribbon .lede { margin: 0 0 1.4rem; color: var(--c-muted); font-size: 1rem; max-width: 720px; }
+  .ribbon-track {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: .8rem;
+  }
+  @media (max-width: 1080px) { .ribbon-track { grid-template-columns: repeat(3, 1fr); } }
+  @media (max-width:  640px) { .ribbon-track { grid-template-columns: repeat(2, 1fr); } }
+  .step {
+    position: relative;
+    background: #fff; border: 1px solid var(--c-line); border-radius: 8px;
+    padding: 1rem .9rem .9rem;
+    text-decoration: none; color: inherit;
+    transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease;
+  }
+  .step:hover { transform: translateY(-2px); border-color: var(--c-blue); box-shadow: 0 4px 14px rgba(20,38,89,.08); }
+  .step .num {
+    position: absolute; top: -10px; left: 12px;
+    background: var(--c-blue); color: #fff;
+    width: 28px; height: 28px; border-radius: 50%;
+    display: grid; place-items: center;
+    font-size: .82rem; font-weight: 700;
+  }
+  .step h3 { margin: .55rem 0 .15rem; font-size: 1rem; color: var(--c-blue-d); }
+  .step p { margin: 0; font-size: .82rem; color: var(--c-muted); }
+
+  /* ---------- system diagram ---------- */
+  section.diagram {
+    padding: 2.5rem 0;
+    background: #fff;
+    border-top: 1px solid var(--c-line);
+    border-bottom: 1px solid var(--c-line);
+    margin-top: 2rem;
+  }
+  .diagram h2 { margin: 0 0 .4rem; color: var(--c-blue); font-size: 1.4rem; }
+  .diagram .lede { margin: 0 0 1.5rem; color: var(--c-muted); max-width: 720px; }
+  .arch {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  .tier {
+    border: 1px solid var(--c-line);
+    border-left: 4px solid var(--c-blue);
+    background: #f8fafd;
+    border-radius: 6px;
+    padding: .9rem 1rem;
+  }
+  .tier.client   { border-left-color: #2C5F2D; }
+  .tier.agent    { border-left-color: #1F3A93; }
+  .tier.mcp      { border-left-color: #E84A2B; }
+  .tier.store    { border-left-color: #962FBF; }
+  .tier h3 { margin: 0 0 .5rem; font-size: .85rem; letter-spacing: .04em; text-transform: uppercase; color: var(--c-text); }
+  .tier .row {
+    display: flex; gap: .45rem; flex-wrap: wrap;
+  }
+  .chip {
+    background: #fff; border: 1px solid var(--c-line);
+    border-radius: 999px; padding: .25rem .75rem;
+    font-size: .82rem; color: var(--c-text);
+    text-decoration: none;
+  }
+  .chip:hover { border-color: var(--c-blue); background: #f4f6fb; }
+  .chip.heat  { border-color: #E84A2B; color: #C0392B; }
+  .chip.vbd   { border-color: #2C5F2D; color: #2C5F2D; }
+  .arrow {
+    text-align: center; color: var(--c-muted);
+    font-size: 1.1rem; line-height: 1;
+  }
+
+  /* ---------- generic section + cards ---------- */
+  section { padding: 2.25rem 0; }
+  section h2 {
+    margin: 0 0 .3rem; color: var(--c-blue); font-size: 1.4rem;
+    border-bottom: 2px solid var(--c-soft); padding-bottom: .25rem;
+  }
+  section .lede { margin: .35rem 0 1.4rem; color: var(--c-muted); max-width: 720px; }
+
+  .read-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
+    gap: 1rem;
+  }
+  .read-card {
+    background: #fff; border: 1px solid var(--c-line); border-radius: 8px;
+    padding: 1.1rem 1.2rem 1.15rem;
+    text-decoration: none; color: inherit;
+    border-top: 4px solid var(--c-blue);
+    transition: transform .12s ease, box-shadow .12s ease;
+  }
+  .read-card:hover { transform: translateY(-2px); box-shadow: 0 4px 14px rgba(20,38,89,.08); }
+  .read-card.accent-red { border-top-color: var(--c-red); }
+  .read-card.accent-green { border-top-color: #2C5F2D; }
+  .read-card h3 { margin: 0 0 .35rem; font-size: 1.05rem; color: var(--c-blue-d); }
+  .read-card p { margin: 0; color: var(--c-muted); font-size: .92rem; }
+  .read-card .meta { margin-top: .55rem; font-size: .8rem; color: #888; }
+
+  /* the demoted "browse everything" details block */
+  details.browse {
+    margin: 1rem 0 1.5rem;
+    background: #fff; border: 1px solid var(--c-line);
+    border-radius: 8px; padding: 0;
+  }
+  details.browse summary {
+    list-style: none; cursor: pointer;
+    padding: .9rem 1.1rem;
+    font-weight: 600; color: var(--c-blue);
+  }
+  details.browse summary::-webkit-details-marker { display: none; }
+  details.browse summary::after {
+    content: "▾"; float: right; transition: transform .15s ease;
+  }
+  details.browse[open] summary::after { transform: rotate(180deg); }
+  details.browse .body { padding: 0 1.1rem 1.1rem; border-top: 1px solid var(--c-soft); }
+  details.browse h4 { margin: 1.1rem 0 .4rem; color: var(--c-blue-d); font-size: .98rem; }
+  details.browse .browse-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: .55rem;
+  }
+  details.browse .browse-grid a {
+    display: block; padding: .55rem .75rem; border: 1px solid var(--c-line);
+    border-radius: 6px; text-decoration: none; color: inherit;
+    font-size: .9rem;
+  }
+  details.browse .browse-grid a:hover { background: #f4f6fb; border-color: var(--c-blue); }
+  details.browse .browse-grid a small { display: block; color: var(--c-muted); margin-top: 2px; font-size: .78rem; }
+
+  /* ---------- footer ---------- */
+  footer.foot {
+    border-top: 1px solid var(--c-line);
+    padding: 2rem 0 2.5rem;
+    color: var(--c-muted); font-size: .9rem;
+    background: #fff;
+    margin-top: 2rem;
+  }
+  footer.foot .wrap { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 2rem; }
+  @media (max-width: 720px) { footer.foot .wrap { grid-template-columns: 1fr; } }
+  footer.foot h4 { margin: 0 0 .5rem; color: var(--c-blue-d); font-size: .95rem; }
+  footer.foot ul { margin: 0; padding: 0; list-style: none; }
+  footer.foot li { margin: .2rem 0; }
+  footer.foot a { color: var(--c-blue); text-decoration: none; }
+  footer.foot a:hover { text-decoration: underline; }
+  footer.foot .cite { font-size: .82rem; color: #777; }
 </style>
 </head>
 <body>
 
-<div class="hero">
-  <h1>EpiHack Arizona 2026</h1>
-  <p>A working knowledge framework for the
-     <a href="https://endingpandemicsacademy.arizona.edu/trainings-events/epihack-arizona"
-        style="color:#fff;text-decoration:underline">EpiHack Arizona</a>
-     event &mdash; a mobile-first reporting app, an eight-agent FastAPI
-     backend, eleven MCP servers, and a dual MongoDB + DuckLake datastore
-     over a DuckDB / Postgres knowledge graph.</p>
-</div>
-
-<h2>Reference frameworks</h2>
-<div class="section-grid">
-  <a class="card" href="figures/index.html#fig-01" style="--c: #1F3A93">
-    <h3>Figure 1 &mdash; Purpose</h3>
-    <p>The mission statement of a One Health participatory system.</p>
-  </a>
-  <a class="card" href="figures/index.html#fig-02" style="--c: #E84A7A">
-    <h3>Figure 2 &mdash; Minimum Dataset</h3>
-    <p>53 key data parameters across 8 color-coded classes.</p>
-  </a>
-  <a class="card" href="figures/index.html#fig-03" style="--c: #C0392B">
-    <h3>Figure 3 &mdash; Timeliness Metrics</h3>
-    <p>11 outbreak milestones (Predict &rarr; After Action Review).</p>
-  </a>
-  <a class="card" href="figures/index.html#fig-04" style="--c: #E6A038">
-    <h3>Figure 4 &mdash; Design Lifecycle</h3>
-    <p>12-step design &amp; launch process for participatory surveillance.</p>
-  </a>
-  <a class="card" href="figures/index.html#fig-05" style="--c: #555">
-    <h3>Figure 5 &mdash; Design Worksheet</h3>
-    <p>The 10-prompt breakout-session template.</p>
-  </a>
-</div>
-
-<h2>Focus groups</h2>
-<div class="section-grid">
-  <a class="card" href="wildlife/index.html" style="--c: #2C5F2D">
-    <h3>Wildlife &amp; Vector-Borne Diseases</h3>
-    <p>Four questions plus 30+ anchor resources across state, county,
-       tribal, federal, academic, and citizen-science jurisdictions.</p>
-    <div class="badges">
-      <span class="badge">wildlife</span>
-      <span class="badge">vectors</span>
-      <span class="badge">zoonotic</span>
+<!-- ============================================================
+     TOP NAV
+============================================================ -->
+<nav class="topnav">
+  <div class="wrap">
+    <a class="brand" href="#top">EpiHack&nbsp;AZ&nbsp;2026</a>
+    <div class="links">
+      <a href="#journey">Journey</a>
+      <a href="#system">Architecture</a>
+      <a href="docs/">Docs</a>
+      <a href="https://github.com/tyson-swetnam/epihack-2026">Source</a>
+      <a class="cta" href="http://epihack-test.cis240692.projects.jetstream-cloud.org/">▶ Live demo</a>
     </div>
-  </a>
-  <a class="card" href="heat/index.html" style="--c: #E84A2B">
-    <h3>Heat</h3>
-    <p>Cooling-center awareness, real-time coordination, education, and
-       the populations most at risk in the hottest large U.S. metro.</p>
-    <div class="badges">
-      <span class="badge">extreme-heat</span>
-      <span class="badge">cooling-centers</span>
-      <span class="badge">equity</span>
-    </div>
-  </a>
-</div>
+  </div>
+</nav>
 
-<h2>Application plan</h2>
-<div class="section-grid">
-  <a class="card" href="plan/index.html" style="--c: #1F3A93">
-    <h3>AZ One Health Sentinel — plan</h3>
-    <p>Nine-part plan (01&ndash;09) for a mobile-first
-       participatory-surveillance app spanning Vector-Borne Disease and
-       Heat: parameter mapping, MCP integration, agentic architecture,
-       end-to-end data flows, auth, the mobile UX revamp, the dual
-       MongoDB / DuckLake datastore, and a phased roadmap.</p>
-    <div class="badges">
-      <span class="badge">plan</span>
-      <span class="badge">agentic</span>
-      <span class="badge">mcp</span>
+<!-- ============================================================
+     HERO
+============================================================ -->
+<header class="hero" id="top">
+  <div class="wrap">
+    <div>
+      <span class="tag">📦 Archived · May 2026</span>
+      <h1>AZ One Health Sentinel</h1>
+      <p>A mobile-first participatory-surveillance stack for Arizona — built at
+        <a href="https://endingpandemicsacademy.arizona.edu/trainings-events/epihack-arizona"
+           style="color:#fff;text-decoration:underline">EpiHack Arizona 2026</a>.
+        One Next.js reporting app, an eight-agent FastAPI backend, eleven MCP
+        servers, and a DuckLake-on-Postgres knowledge graph — all preserved
+        end-to-end so a future revival can start from a known-good baseline.</p>
+      <div class="ctas">
+        <a class="btn primary" href="docs/journey/">Read the journey →</a>
+        <a class="btn ghost" href="http://epihack-test.cis240692.projects.jetstream-cloud.org/">▶ Try the live app</a>
+      </div>
     </div>
-  </a>
-</div>
+    <aside class="stats">
+      <h3>What we built</h3>
+      <dl>
+        <dt>11</dt><dd>MCP servers</dd>
+        <dt>8</dt><dd>Pydantic agents</dd>
+        <dt>572</dt><dd>knowledge-graph nodes</dd>
+        <dt>791</dt><dd>edges</dd>
+        <dt>15</dt><dd>AZ counties</dd>
+        <dt>22</dt><dd>tribal nations</dd>
+      </dl>
+    </aside>
+  </div>
+</header>
 
-<h2>Public dashboard (Phase 3)</h2>
-<div class="section-grid">
-  <a class="card" href="today/index.html" style="--c: #962FBF">
-    <h3>AZ One Health Today</h3>
-    <p>Citizen-facing aggregated view: today's HeatRisk, WNV pool positivity, recent wildlife signals, and a five-number statewide snapshot &mdash; auto-detects your county, no login, no PII.</p>
-    <div class="badges">
-      <span class="badge">public</span>
-      <span class="badge">aggregated</span>
-      <span class="badge">phase-3</span>
+<!-- ============================================================
+     JOURNEY RIBBON
+============================================================ -->
+<section class="ribbon" id="journey">
+  <div class="wrap">
+    <h2>The journey, in six steps</h2>
+    <p class="lede">A first-read map. Each step links to its full chapter in the docs site.</p>
+    <div class="ribbon-track">
+      <a class="step" href="docs/journey/01-frame/">
+        <span class="num">1</span>
+        <h3>Frame</h3>
+        <p>The ten-prompt design worksheet, two focus groups, and the figures that anchored every decision.</p>
+      </a>
+      <a class="step" href="docs/journey/02-map/">
+        <span class="num">2</span>
+        <h3>Map</h3>
+        <p>Thirty-plus anchor APIs picked from across state, tribal, federal, academic, and citizen-science sources.</p>
+      </a>
+      <a class="step" href="docs/journey/03-mcps/">
+        <span class="num">3</span>
+        <h3>Build MCPs</h3>
+        <p>Eleven FastMCP servers, scaffolded from one template, all testable offline.</p>
+      </a>
+      <a class="step" href="docs/journey/04-store/">
+        <span class="num">4</span>
+        <h3>Store</h3>
+        <p>DuckLake-on-Postgres for web/analytics, MongoDB for mobile writes, one property-graph schema.</p>
+      </a>
+      <a class="step" href="docs/journey/05-orchestrate/">
+        <span class="num">5</span>
+        <h3>Orchestrate</h3>
+        <p>Eight Pydantic agents behind FastAPI, gated by a privacy contract encoded in code.</p>
+      </a>
+      <a class="step" href="docs/journey/06-app/">
+        <span class="num">6</span>
+        <h3>Ship the app</h3>
+        <p>Next.js 16, anonymous-first, EXIF-stripped, with profile enrichment and a personal dashboard.</p>
+      </a>
     </div>
-  </a>
-  <a class="card" href="dashboard/index.html" style="--c: #1F3A93">
-    <h3>Agency dashboard (ADHS / MCDPH / AZGFD / Coconino)</h3>
-    <p>Four-audience read-only analyst workspace. Status cards, Cluster Detection Agent feed, MapLibre embed, sparkline case-count tables, and a SQL preview that round-trips to <code>knowledge-graph-mcp</code>. Implements Scenario D from <code>plan/04-data-flows</code>.</p>
-    <div class="badges">
-      <span class="badge">analyst</span>
-      <span class="badge">read-only</span>
-      <span class="badge">phase-3</span>
+  </div>
+</section>
+
+<!-- ============================================================
+     SYSTEM DIAGRAM
+============================================================ -->
+<section class="diagram" id="system">
+  <div class="wrap">
+    <h2>How the pieces fit</h2>
+    <p class="lede">Four loosely-coupled tiers behind one origin. A mobile report enters the top and lands in the store at the bottom; advisories ride back up the same path.</p>
+    <div class="arch">
+      <div class="tier client">
+        <h3>Client tier</h3>
+        <div class="row">
+          <a class="chip" href="app/">📱 Next.js mobile/web app</a>
+          <a class="chip" href="dashboard/">🖥 Agency dashboard</a>
+          <a class="chip" href="today/">🌎 Public "Today" view</a>
+          <a class="chip" href="map/">🗺 MapLibre map</a>
+          <a class="chip" href="graph/">🧬 Pathogen graph</a>
+          <a class="chip" href="query/">🦆 DuckDB-WASM query</a>
+        </div>
+      </div>
+      <div class="arrow">↕ <code>X-Client-Channel: mobile | web</code></div>
+      <div class="tier agent">
+        <h3>Agent tier — FastAPI orchestrator</h3>
+        <div class="row">
+          <span class="chip">Intake</span>
+          <span class="chip">Geo</span>
+          <span class="chip">Validation</span>
+          <span class="chip">Triage</span>
+          <span class="chip">Enrichment</span>
+          <span class="chip">Notification</span>
+          <span class="chip">Cluster</span>
+          <span class="chip">KnowledgeUpdate</span>
+        </div>
+      </div>
+      <div class="arrow">↓ per-prefix dispatch (<code>vectorsurv_*</code>, <code>kg_*</code>, …)</div>
+      <div class="tier mcp">
+        <h3>MCP tier — 11 FastMCP servers</h3>
+        <div class="row">
+          <a class="chip vbd"  href="mcp/vectorsurv-mcp/README.html">vectorsurv</a>
+          <a class="chip"      href="mcp/knowledge-graph-mcp/README.html">knowledge-graph</a>
+          <a class="chip heat" href="mcp/nws-heatrisk-mcp/README.html">nws-heatrisk</a>
+          <a class="chip heat" href="mcp/mag-hrn-mcp/README.html">mag-hrn</a>
+          <a class="chip"      href="mcp/adhs-mcp/README.html">adhs</a>
+          <a class="chip heat" href="mcp/211-az-mcp/README.html">211-az</a>
+          <a class="chip vbd"  href="mcp/whispers-mcp/README.html">whispers</a>
+          <a class="chip vbd"  href="mcp/inaturalist-mcp/README.html">inaturalist</a>
+          <a class="chip vbd"  href="mcp/great-az-tick-check-mcp/README.html">great-az-tick-check</a>
+          <a class="chip"      href="mcp/sms-entry-mcp/README.html">sms-entry</a>
+          <a class="chip heat" href="mcp/wearable-mcp/README.html">wearable</a>
+        </div>
+      </div>
+      <div class="arrow">↓ writes</div>
+      <div class="tier store">
+        <h3>Storage tier</h3>
+        <div class="row">
+          <span class="chip">📚 MongoDB · mobile writes</span>
+          <span class="chip">🏞 DuckLake (Parquet) · web + analytics</span>
+          <span class="chip">🐘 Postgres · DuckLake catalog</span>
+          <span class="chip">⏱ 5-min Mongo → DuckLake sync</span>
+        </div>
+      </div>
     </div>
-  </a>
-</div>
+  </div>
+</section>
 
-<h2>Reporting app (Phase 0 + 1)</h2>
-<div class="section-grid">
-  <a class="card" href="app/index.html" style="--c: #1F3A93">
-    <h3>AZ One Health Sentinel &mdash; reporting app</h3>
-    <p>Next.js&nbsp;16 + React&nbsp;19 + TypeScript + Tailwind, typed against the
-       <a href="api/openapi.yaml">OpenAPI spec</a>. Anonymous-first
-       Human / Animal / Environmental reporting, EXIF-stripped photos,
-       ZIP / 1&nbsp;km coarsening, never-diagnose triage, an offline retry
-       queue, and an <code>X-Client-Channel</code> header routing mobile
-       writes to MongoDB and web writes to DuckLake. See
-       <a href="plan/06-mobile-app.html">plan&nbsp;06</a> +
-       <a href="plan/09-mobile-datastore.html">plan&nbsp;09</a>.</p>
-    <div class="badges">
-      <span class="badge">vbd</span>
-      <span class="badge">heat</span>
-      <span class="badge">env</span>
-      <span class="badge">react</span>
-      <span class="badge">offline</span>
-      <span class="badge">mongo</span>
+<!-- ============================================================
+     READ THE DOCS
+============================================================ -->
+<section class="read">
+  <div class="wrap">
+    <h2>Read the docs</h2>
+    <p class="lede">A full MkDocs Material site under <code>/docs/</code> — journey, architecture, MCP reference, knowledge-graph schema, deploy walkthroughs, and the "how we vibe-coded this" history.</p>
+    <div class="read-grid">
+      <a class="read-card" href="docs/journey/">
+        <h3>The journey</h3>
+        <p>Seven pages walking from problem-framing through agents, MCPs, store, and the app. Includes the
+          <strong>vibe-coding history</strong>: how the whole stack got made with Claude Code.</p>
+        <div class="meta">→ docs/journey/</div>
+      </a>
+      <a class="read-card accent-red" href="docs/architecture/overview/">
+        <h3>Architecture</h3>
+        <p>System diagrams, the load-bearing privacy contract, the four worked data flows (A/B/C/D), and the eight-agent topology.</p>
+        <div class="meta">→ docs/architecture/</div>
+      </a>
+      <a class="read-card accent-green" href="docs/mcps/">
+        <h3>MCP reference</h3>
+        <p>One page per FastMCP server: tool inventory, example call, env-var matrix, and a link to the offline test suite.</p>
+        <div class="meta">→ docs/mcps/</div>
+      </a>
+      <a class="read-card" href="docs/kg/schema/">
+        <h3>Knowledge graph</h3>
+        <p>Property-graph schema (<code>kg.node</code> / <code>kg.edge</code> / <code>kg.property</code>), seed-load order, and example DuckDB queries.</p>
+        <div class="meta">→ docs/kg/</div>
+      </a>
+      <a class="read-card accent-red" href="docs/deploy/ansible/">
+        <h3>Deploy from scratch</h3>
+        <p>The Ansible playbook that targets a fresh Jetstream2 VM — Postgres catalog, DuckLake, Mongo, agents, all 11 MCPs, the app, nginx.</p>
+        <div class="meta">→ docs/deploy/</div>
+      </a>
+      <a class="read-card accent-green" href="docs/about/citation/">
+        <h3>Cite &amp; reuse</h3>
+        <p>How to cite this archive, the governance model, the security disclosure policy, and the contributor checklist that PRs walked.</p>
+        <div class="meta">→ docs/about/</div>
+      </a>
     </div>
-  </a>
-  <a class="card" href="app/legacy/index.html" style="--c: #C0392B">
-    <h3>Phase&nbsp;0/1 vanilla flows &mdash; archive</h3>
-    <p>The original vanilla-HTML prototype: tick mail-in (VBD) plus
-       three heat flows (CHW check-in, anonymous self-report, "where
-       can I cool off?"). Read-only archive while each flow is ported
-       into the React app.</p>
-    <div class="badges">
-      <span class="badge">vbd</span>
-      <span class="badge">heat</span>
-      <span class="badge">legacy</span>
+  </div>
+</section>
+
+<!-- ============================================================
+     BROWSE EVERYTHING (collapsed)
+============================================================ -->
+<section class="browse-wrap">
+  <div class="wrap">
+    <h2>Browse the raw artifacts</h2>
+    <p class="lede">The original card grid, demoted into a single panel. Use the docs site above for narrative; use this for direct file links.</p>
+
+    <details class="browse">
+      <summary>Open the full artifact index</summary>
+      <div class="body">
+
+        <h4>Reference frameworks</h4>
+        <div class="browse-grid">
+          <a href="figures/index.html#fig-01">Figure 1 — Purpose <small>mission statement</small></a>
+          <a href="figures/index.html#fig-02">Figure 2 — Minimum Dataset <small>53 parameters / 8 classes</small></a>
+          <a href="figures/index.html#fig-03">Figure 3 — Timeliness Metrics <small>11 outbreak milestones</small></a>
+          <a href="figures/index.html#fig-04">Figure 4 — Design Lifecycle <small>12-step process</small></a>
+          <a href="figures/index.html#fig-05">Figure 5 — Design Worksheet <small>10-prompt template</small></a>
+        </div>
+
+        <h4>Focus groups</h4>
+        <div class="browse-grid">
+          <a href="wildlife/index.html">Wildlife &amp; Vector-Borne Diseases <small>4 questions · 30+ resources</small></a>
+          <a href="heat/index.html">Heat <small>cooling centers · equity · vulnerable pops</small></a>
+        </div>
+
+        <h4>Application plan</h4>
+        <div class="browse-grid">
+          <a href="plan/index.html">AZ One Health Sentinel — 9-part plan <small>parameter mapping → roadmap</small></a>
+          <a href="plan/10-archival-and-docs.html">Plan 10 — archival &amp; docs site <small>this rewrite + MkDocs</small></a>
+          <a href="plan/ANSIBLE-AUDIT-2026-05-23.html">Ansible audit (2026-05-23) <small>RED/YELLOW/GREEN per role</small></a>
+        </div>
+
+        <h4>Public dashboards (Phase 3)</h4>
+        <div class="browse-grid">
+          <a href="today/index.html">AZ One Health Today <small>citizen-facing aggregated view</small></a>
+          <a href="dashboard/index.html">Agency dashboard <small>ADHS / MCDPH / AZGFD / Coconino</small></a>
+        </div>
+
+        <h4>Reporting app (Phase 0 + 1)</h4>
+        <div class="browse-grid">
+          <a href="app/index.html">AZ One Health Sentinel app <small>Next.js · TypeScript · Tailwind</small></a>
+          <a href="app/legacy/index.html">Phase 0/1 vanilla flows <small>read-only archive</small></a>
+        </div>
+
+        <h4>MCP servers (11)</h4>
+        <div class="browse-grid">
+          <a href="mcp/vectorsurv-mcp/README.html">vectorsurv-mcp <small>VBD · 13 tools</small></a>
+          <a href="mcp/knowledge-graph-mcp/README.html">knowledge-graph-mcp <small>both · 12 tools</small></a>
+          <a href="mcp/great-az-tick-check-mcp/README.html">great-az-tick-check-mcp <small>VBD · 5 tools</small></a>
+          <a href="mcp/nws-heatrisk-mcp/README.html">nws-heatrisk-mcp <small>heat · 7 tools</small></a>
+          <a href="mcp/mag-hrn-mcp/README.html">mag-hrn-mcp <small>heat · 5 tools</small></a>
+          <a href="mcp/adhs-mcp/README.html">adhs-mcp <small>both · 6 tools</small></a>
+          <a href="mcp/211-az-mcp/README.html">211-az-mcp <small>heat · 6 tools</small></a>
+          <a href="mcp/whispers-mcp/README.html">whispers-mcp <small>VBD · 6 tools</small></a>
+          <a href="mcp/inaturalist-mcp/README.html">inaturalist-mcp <small>VBD · 6 tools</small></a>
+          <a href="mcp/sms-entry-mcp/README.html">sms-entry-mcp <small>both · 6 tools</small></a>
+          <a href="mcp/wearable-mcp/README.html">wearable-mcp <small>heat · 4 tools</small></a>
+        </div>
+
+        <h4>Interactive visualizations</h4>
+        <div class="browse-grid">
+          <a href="map/index.html">Arizona map <small>MapLibre GL · 15 counties · 22 tribes</small></a>
+          <a href="graph/index.html">Pathogen knowledge graph <small>Cytoscape · 16 pathogens</small></a>
+          <a href="query/index.html">DuckDB query console <small>DuckDB-WASM · in-browser SQL</small></a>
+        </div>
+
+        <h4>Design worksheets &amp; World Café</h4>
+        <div class="browse-grid">
+          <a href="worksheets/01-animal-health-events.html">Unusual Animal Health Events <small>early-warning worksheet</small></a>
+          <a href="worksheets/02-desert-wildlife-interface.html">Desert Urban Wildlife &amp; Hobby-Farm Interface</a>
+          <a href="notes/world-cafe/q4-heat.html">World Café Q4 — Heat <small>pink card</small></a>
+          <a href="notes/world-cafe/q4-unhoused.html">World Café Q4 — Unhoused <small>blue card</small></a>
+          <a href="notes/world-cafe/q4-information-flow.html">World Café Q4 — Information Flow <small>yellow card</small></a>
+        </div>
+
+        <h4>Knowledge-graph SQL seeds</h4>
+        <div class="browse-grid">
+          <a href="schema/knowledge_graph.sql"><code>schema/knowledge_graph.sql</code> <small>nodes / edges / properties</small></a>
+          <a href="schema/system_designs.sql"><code>schema/system_designs.sql</code> <small>worksheet, focus areas, designs</small></a>
+          <a href="schema/world_cafe.sql"><code>schema/world_cafe.sql</code> <small>Q4 engagement examples</small></a>
+          <a href="schema/wildlife_vectors.sql"><code>schema/wildlife_vectors.sql</code></a>
+          <a href="schema/heat.sql"><code>schema/heat.sql</code></a>
+          <a href="schema/deep/"><code>schema/deep/</code> <small>counties · tribes · pathogens · outbreaks</small></a>
+        </div>
+
+      </div>
+    </details>
+  </div>
+</section>
+
+<!-- ============================================================
+     FOOTER
+============================================================ -->
+<footer class="foot">
+  <div class="wrap">
+    <div>
+      <h4>EpiHack Arizona 2026 archive</h4>
+      <p class="cite">A working knowledge framework for the
+        <a href="https://endingpandemicsacademy.arizona.edu/trainings-events/epihack-arizona">EpiHack Arizona</a>
+        event — frozen at v1.0-archive (2026-05-23).</p>
+      <p class="cite">Ending Pandemics Academy &middot; University of Arizona Mel &amp; Enid Zuckerman College of Public Health &middot; Global Health Institute.</p>
     </div>
-  </a>
-</div>
-
-<h2>MCP servers (LLM tooling)</h2>
-<div class="section-grid">
-  <a class="card" href="mcp/vectorsurv-mcp/README.html" style="--c: #2C5F2D">
-    <h3>vectorsurv-mcp</h3>
-    <p>Wraps the VectorSurv mosquito and tick surveillance API
-       (sites, collections, pools, abundance, infection rate, vector
-       index) &mdash; 13 tools, spec-aligned to v1.0.44.</p>
-    <div class="badges"><span class="badge">vbd</span><span class="badge">shipped</span></div>
-  </a>
-  <a class="card" href="mcp/knowledge-graph-mcp/README.html" style="--c: #1F3A93">
-    <h3>knowledge-graph-mcp</h3>
-    <p>Read-only DuckDB query MCP over the EpiHack knowledge graph
-       (572 nodes / 791 edges / 1027 properties). 12 tools incl.
-       <code>kg_node_lookup</code>, <code>kg_path</code>,
-       <code>kg_pathogens_by_vector</code>, plus a SELECT-only SQL
-       escape-hatch.</p>
-    <div class="badges"><span class="badge">both</span><span class="badge">shipped</span></div>
-  </a>
-  <a class="card" href="mcp/great-az-tick-check-mcp/README.html" style="--c: #6A1B9A">
-    <h3>great-az-tick-check-mcp</h3>
-    <p>Mock submission tracking for the Great Arizona Tick Check
-       (UA Cooperative Extension / Walker lab). 5 tools incl.
-       mailing-label generation.</p>
-    <div class="badges"><span class="badge">vbd</span><span class="badge">shipped</span></div>
-  </a>
-  <a class="card" href="mcp/nws-heatrisk-mcp/README.html" style="--c: #E84A2B">
-    <h3>nws-heatrisk-mcp</h3>
-    <p>NWS HeatRisk + active heat alerts + Rothfusz heat-index
-       calculator. 7 tools.</p>
-    <div class="badges"><span class="badge">heat</span><span class="badge">shipped</span></div>
-  </a>
-  <a class="card" href="mcp/mag-hrn-mcp/README.html" style="--c: #E84A2B">
-    <h3>mag-hrn-mcp</h3>
-    <p>MAG Heat Relief Network &mdash; cooling-center search,
-       open-now / pets-ok filters, supply-status stub. 5 tools, 12
-       canned Phoenix-metro centers, ArcGIS Feature Service
-       env-overridable.</p>
-    <div class="badges"><span class="badge">heat</span><span class="badge">shipped</span></div>
-  </a>
-  <a class="card" href="mcp/adhs-mcp/README.html" style="--c: #C0392B">
-    <h3>adhs-mcp</h3>
-    <p>ADHS public surveillance summaries: heat mortality,
-       arbovirus, recent cases by pathogen, reportable conditions
-       with ICD-10 / SNOMED. 6 tools, mock-by-default with a clean
-       swap-in path.</p>
-    <div class="badges"><span class="badge">both</span><span class="badge">shipped</span></div>
-  </a>
-  <a class="card" href="mcp/211-az-mcp/README.html" style="--c: #4CAF50">
-    <h3>211-az-mcp</h3>
-    <p>211 Arizona referrals: transport to cooling center, utility
-       assistance, crisis lines. 6 tools, in-memory dispatch
-       tracking, English + Spanish + indigenous-language pathways.</p>
-    <div class="badges"><span class="badge">heat</span><span class="badge">shipped</span></div>
-  </a>
-  <a class="card" href="mcp/whispers-mcp/README.html" style="--c: #2C3E50">
-    <h3>whispers-mcp</h3>
-    <p>USGS WHISPers wildlife mortality / morbidity events &mdash;
-       AZ event listings, bbox queries, species / diagnosis filters.
-       6 tools, 15 tests, 10 canned events including Four Corners
-       hantavirus and the 2025 Coconino plague.</p>
-    <div class="badges"><span class="badge">vbd</span><span class="badge">shipped</span></div>
-  </a>
-  <a class="card" href="mcp/inaturalist-mcp/README.html" style="--c: #4CAF50">
-    <h3>inaturalist-mcp</h3>
-    <p>iNaturalist citizen-science observations &mdash; tick
-       observations, vector + rodent records, taxonomy resolution.
-       6 tools, 21 canned AZ observations, place_id=53.</p>
-    <div class="badges"><span class="badge">vbd</span><span class="badge">shipped</span></div>
-  </a>
-  <a class="card" href="mcp/sms-entry-mcp/README.html" style="--c: #00897B">
-    <h3>sms-entry-mcp</h3>
-    <p>SMS-only intake adapter for feature-phone reporting &mdash; Twilio
-       HMAC-SHA1 signature verification, message normalisation, and
-       intent parsing. 6 tools, mock-by-default.</p>
-    <div class="badges"><span class="badge">both</span><span class="badge">shipped</span></div>
-  </a>
-  <a class="card" href="mcp/wearable-mcp/README.html" style="--c: #E6A038">
-    <h3>wearable-mcp</h3>
-    <p>HealthKit / Health Connect readings (skin temp, HRV, sweat rate,
-       heart rate) for heat-strain signals. On-device-only privacy
-       posture; 4 tools, mock-by-default.</p>
-    <div class="badges"><span class="badge">heat</span><span class="badge">shipped</span></div>
-  </a>
-</div>
-
-<h2>Interactive visualizations</h2>
-<div class="section-grid">
-  <a class="card" href="map/index.html" style="--c: #1F6FB0">
-    <h3>Arizona map <span style="font-weight:400;font-size:.85em;color:#888">(MapLibre GL)</span></h3>
-    <p>All 15 counties, 22 tribal nations, NEON sites, agency HQs,
-       federal-land units, and historical-outbreak locations from the
-       knowledge graph &mdash; each pin links back to its
-       <code>kg_node_id</code>.</p>
-    <div class="badges">
-      <span class="badge">geospatial</span>
-      <span class="badge">maplibre</span>
+    <div>
+      <h4>Documentation</h4>
+      <ul>
+        <li><a href="docs/">Docs home</a></li>
+        <li><a href="docs/journey/">Journey</a></li>
+        <li><a href="docs/architecture/overview/">Architecture</a></li>
+        <li><a href="docs/mcps/">MCP reference</a></li>
+        <li><a href="docs/deploy/ansible/">Deploy / Ansible</a></li>
+      </ul>
     </div>
-  </a>
-  <a class="card" href="graph/index.html" style="--c: #C0392B">
-    <h3>Pathogen knowledge graph <span style="font-weight:400;font-size:.85em;color:#888">(Cytoscape)</span></h3>
-    <p>16 pathogens with their vectors, reservoirs, surveilling agencies,
-       and focus areas as an interactive node-edge graph. Filter by
-       pathogen class; switch layouts; click a node to see its
-       neighborhood.</p>
-    <div class="badges">
-      <span class="badge">knowledge-graph</span>
-      <span class="badge">cytoscape</span>
+    <div>
+      <h4>Source &amp; cite</h4>
+      <ul>
+        <li><a href="https://github.com/tyson-swetnam/epihack-2026">GitHub repo</a></li>
+        <li><a href="README.html">README</a></li>
+        <li><a href="docs/about/governance/">Governance</a></li>
+        <li><a href="docs/about/security/">Security</a></li>
+        <li><a href="docs/about/citation/">Cite this archive</a></li>
+      </ul>
     </div>
-  </a>
-  <a class="card" href="query/index.html" style="--c: #FBBF24">
-    <h3>DuckDB query console <span style="font-weight:400;font-size:.85em;color:#888">(DuckDB-WASM)</span></h3>
-    <p>Run SQL against the public reference knowledge graph
-       (<code>kg.node</code> / <code>kg.edge</code> / <code>kg.property</code>)
-       entirely in your browser &mdash; the same property graph the
-       <code>knowledge-graph-mcp</code> serves. Sixteen pre-written queries
-       (notifiable pathogens, pathogen&nbsp;&rarr;&nbsp;vector, outbreaks,
-       counties, datasets/APIs, standards crosswalk) plus a SELECT-only
-       editor and CSV export. No server round-trip.</p>
-    <div class="badges">
-      <span class="badge">duckdb-wasm</span>
-      <span class="badge">sql</span>
-    </div>
-  </a>
-</div>
-
-<h2>Design worksheets (completed)</h2>
-<div class="section-grid">
-  <a class="card" href="worksheets/01-animal-health-events.html" style="--c: #C2185B">
-    <h3>Unusual Animal Health Events as Early Warning Signal</h3>
-    <p>Animal owners and caretakers reporting unusual events as a human-health early-warning signal.</p>
-  </a>
-  <a class="card" href="worksheets/02-desert-wildlife-interface.html" style="--c: #6A1B9A">
-    <h3>Desert Urban Wildlife &amp; Hobby-Farm Interface</h3>
-    <p>Hobby farmers and observers at the desert urban-wildlife interface.</p>
-  </a>
-</div>
-
-<h2>World Café &mdash; Q4: Successful direct public engagement</h2>
-<div class="section-grid">
-  <a class="card" href="notes/world-cafe/q4-heat.html" style="--c: #E84A7A">
-    <h3>Heat (pink card)</h3>
-    <p>Community events, train-the-trainer (Region 9), media syndication, CHW heat-risk assessments.</p>
-  </a>
-  <a class="card" href="notes/world-cafe/q4-unhoused.html" style="--c: #5BA3D0">
-    <h3>Unhoused (blue card)</h3>
-    <p>Healthy Companions Program, Heat Surveillance, Shelter App.</p>
-  </a>
-  <a class="card" href="notes/world-cafe/q4-information-flow.html" style="--c: #E6C36A">
-    <h3>Information Flow (yellow card)</h3>
-    <p>Face-to-face, SMS, geo-alerts, Epic/TMC EMR, dating apps &harr; STI.</p>
-  </a>
-</div>
-
-<h2>Knowledge graph</h2>
-<p>The structured content above is mirrored in SQL seeds for a property
-graph encoded in <strong>DuckLake</strong> (with <strong>Postgres</strong> as
-the catalog) and queried via <strong>DuckDB</strong>. DuckLake is the
-<strong>web + analytics store</strong>; the mobile app writes to
-<strong>MongoDB</strong>, synced back into DuckLake so the agents, MCP
-servers, and cluster detection see one dataset
-(<a href="plan/09-mobile-datastore.html">plan&nbsp;09</a>):</p>
-<ul>
-  <li><a href="schema/knowledge_graph.sql"><code>schema/knowledge_graph.sql</code></a> &mdash; core nodes, edges, properties from Figures 1&ndash;4.</li>
-  <li><a href="schema/system_designs.sql"><code>schema/system_designs.sql</code></a> &mdash; worksheet template, focus areas, completed designs.</li>
-  <li><a href="schema/world_cafe.sql"><code>schema/world_cafe.sql</code></a> &mdash; World Café Q4 engagement examples and tactics.</li>
-  <li><a href="schema/wildlife_vectors.sql"><code>schema/wildlife_vectors.sql</code></a> &mdash; wildlife / vector-borne focus group, four questions, and 30+ anchor resources across state, county, tribal, federal, academic, and citizen-science jurisdictions.</li>
-  <li><a href="schema/heat.sql"><code>schema/heat.sql</code></a> &mdash; Heat focus group, four questions, vulnerable populations, and 30+ heat-specific resources (ADHS BRACE, MAG HRN, Phoenix OHRM, NWS HeatRisk, UA Heat Resilience Initiative, CLIMAS, 211 Arizona).</li>
-  <li><a href="schema/deep/"><code>schema/deep/</code></a> &mdash; deep-research seeds: all 15 AZ counties, all 22 tribes, pathogens, historical outbreaks, datasets &amp; APIs, interop standards, MCP servers.</li>
-</ul>
-<p>See the <a href="schema/index.html">schema landing page</a> for the
-   full file index, bootstrap commands, and example queries, or the
-   <a href="README.html">README</a> for the project-wide walk-through.</p>
-
-<footer>
-  Source: Ending Pandemics Academy &middot; University of Arizona Mel &amp;
-  Enid Zuckerman College of Public Health &middot; Global Health Institute.
+  </div>
 </footer>
 
 </body>
