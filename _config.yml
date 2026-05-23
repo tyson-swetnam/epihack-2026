@@ -56,6 +56,15 @@ exclude:
   - docs
   - mkdocs.yml
   - site
+  # Ansible role docs are operator-facing; they live on GitHub but
+  # are NOT part of the Jekyll website. Excluding the directory
+  # also keeps any Jinja2 template syntax in role files (e.g.
+  # `{% else %}` inside `claude.json.j2`) from tripping Jekyll's
+  # Liquid pre-processor when the CHANGELOG quotes it back.
+  - ansible
+  - scripts
+  - synthetic_dataset
+  - generate_dataset.py
 
 defaults:
   - scope:

@@ -43,9 +43,12 @@ to green.
   `NWS_USER_AGENT` env line for `nws-heatrisk-mcp` (the server's
   `.env.example` documents it as required).
 - **`mcp/wearable-mcp/.env.example`** — added (was the only server
-  without one). The empty file path was previously handled by the
-  template's `{% else %}` fallback; now there's a clean per-server
-  documented template.
+  without one). The empty-file path was previously handled by the
+  template's default-branch fallback; now there's a clean per-server
+  documented template. (Note: the prior phrasing here used literal
+  Jinja `else`-tag syntax in backticks, which Jekyll's Liquid
+  pre-processor parsed as a real tag and broke `deploy-jekyll.yml`
+  on the post-EpiHack merge — see the hot-fix two commits down.)
 
 - **`roles/ducklake`** + **`scripts/load_synthetic_observations.py`** —
   promoted the on-VM `/tmp/gen_synth.py` into the repo at
