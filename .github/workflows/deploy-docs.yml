@@ -1,0 +1,56 @@
+# Build the MkDocs Material site at docs/ and publish to gh-pages/docs/.
+#
+# Pairs with deploy-jekyll.yml (root, gh-pages/) and deploy-app.yml
+# (gh-pages/app/). All three use keep_files: true so the three trees
+# coexist on a single gh-pages branch without clobbering each other.
+
+name: Build + deploy MkDocs site
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/**'
+      - 'mkdocs.yml'
+      - 'docs/requirements.txt'
+      - '.github/workflows/deploy-docs.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-docs
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: docs/requirements.txt
+
+      - name: Install MkDocs + plugins
+        run: pip install -r docs/requirements.txt
+
+      - name: Build MkDocs site
+        # Not --strict on purpose: includes pull in upstream READMEs that
+        # contain relative links to repo paths outside docs/. See the
+        # `validation:` block in mkdocs.yml.
+        run: mkdocs build
+
+      - name: Publish to gh-pages/docs/
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: ./site
+          destination_dir: docs
+          keep_files: true
+          commit_message: 'docs: deploy ${{ github.sha }}'

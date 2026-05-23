@@ -1,0 +1,194 @@
+# MkDocs configuration for the EpiHack Arizona 2026 archive site.
+#
+# Publishes to gh-pages/docs/ alongside the Jekyll root and the Next.js
+# app (see .github/workflows/deploy-docs.yml). The Jekyll _config.yml
+# excludes "docs" and "mkdocs.yml" so the two static generators don't
+# fight over Markdown files.
+
+site_name: EpiHack Arizona 2026
+site_description: >
+  The AZ One Health Sentinel — a mobile-first participatory surveillance
+  stack built at EpiHack Arizona 2026. Archived journey, architecture,
+  and reference documentation.
+site_url: https://tyson-swetnam.github.io/epihack-2026/docs/
+site_author: Ending Pandemics Academy & University of Arizona collaborators
+repo_url: https://github.com/tyson-swetnam/epihack-2026
+repo_name: tyson-swetnam/epihack-2026
+edit_uri: edit/main/docs/
+copyright: >
+  Ending Pandemics Academy · University of Arizona Mel & Enid Zuckerman
+  College of Public Health · Global Health Institute · 2026
+
+docs_dir: docs
+site_dir: site
+
+# Many docs pages include verbatim Markdown from outside docs/ (root
+# READMEs, mcp/<server>/README.md, etc.). Those files contain links to
+# other repo paths (plan/*, schema/*, ansible/*) that aren't part of the
+# MkDocs site tree — they resolve correctly on GitHub but MkDocs can't
+# verify them locally. Downgrade those warnings to info so a fresh build
+# stays green.
+validation:
+  omitted_files: warn
+  absolute_links: warn
+  unrecognized_links: info
+  anchors: info
+
+theme:
+  name: material
+  language: en
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: deep orange
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: deep orange
+      toggle:
+        icon: material/weather-night
+        name: Switch to light mode
+  font:
+    text: Inter
+    code: JetBrains Mono
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - navigation.path
+    - navigation.indexes
+    - toc.follow
+    - search.suggest
+    - search.highlight
+    - search.share
+    - content.code.copy
+    - content.code.annotate
+    - content.tabs.link
+    - content.tooltips
+    - content.action.edit
+  icon:
+    repo: fontawesome/brands/github
+    edit: material/pencil
+
+extra_css:
+  - stylesheets/extra.css
+
+extra:
+  generator: false
+  status:
+    archive: Archived 2026-05 — read-only reference
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/tyson-swetnam/epihack-2026
+    - icon: fontawesome/solid/globe
+      link: https://endingpandemicsacademy.arizona.edu/trainings-events/epihack-arizona
+
+markdown_extensions:
+  - abbr
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+      title: On this page
+  - pymdownx.betterem
+  - pymdownx.caret
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.keys
+  - pymdownx.mark
+  - pymdownx.smartsymbols
+  - pymdownx.snippets:
+      base_path:
+        - .
+        - docs
+      check_paths: true
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.tilde
+
+plugins:
+  - search
+  - glightbox:
+      touchNavigation: true
+      loop: false
+      effect: zoom
+      width: 100%
+      height: auto
+      zoomable: true
+      draggable: true
+  - mermaid2
+  - include-markdown
+
+nav:
+  - Home: index.md
+  - Journey:
+      - Overview: journey/index.md
+      - 01 · Frame the problem: journey/01-frame.md
+      - 02 · Map the data sources: journey/02-map.md
+      - 03 · Build the MCPs: journey/03-mcps.md
+      - 04 · Stand up the store: journey/04-store.md
+      - 05 · Orchestrate the agents: journey/05-orchestrate.md
+      - 06 · Ship the app: journey/06-app.md
+      - 07 · Vibe-coding history: journey/07-vibe-coding.md
+  - Architecture:
+      - System overview: architecture/overview.md
+      - Privacy contract: architecture/privacy.md
+      - Data flows (A/B/C/D): architecture/data-flows.md
+      - Eight-agent topology: architecture/agents.md
+  - MCP servers:
+      - Overview: mcps/index.md
+      - vectorsurv-mcp: mcps/vectorsurv.md
+      - knowledge-graph-mcp: mcps/knowledge-graph.md
+      - nws-heatrisk-mcp: mcps/nws-heatrisk.md
+      - mag-hrn-mcp: mcps/mag-hrn.md
+      - adhs-mcp: mcps/adhs.md
+      - 211-az-mcp: mcps/211-az.md
+      - whispers-mcp: mcps/whispers.md
+      - inaturalist-mcp: mcps/inaturalist.md
+      - great-az-tick-check-mcp: mcps/great-az-tick-check.md
+      - sms-entry-mcp: mcps/sms-entry.md
+      - wearable-mcp: mcps/wearable.md
+  - App:
+      - Pages tour: app/pages.md
+      - Privacy & EXIF stripping: app/privacy.md
+      - Offline retry queue: app/offline.md
+  - Knowledge graph:
+      - Schema reference: kg/schema.md
+      - Seed load order: kg/seeds.md
+      - Example queries: kg/queries.md
+  - Deploy:
+      - Local development: deploy/local.md
+      - Ansible / Jetstream2: deploy/ansible.md
+      - GitHub Pages: deploy/gh-pages.md
+  - Reference:
+      - OpenAPI spec: reference/openapi.md
+      - MCP tool inventory: reference/mcp-tools.md
+      - Test matrix: reference/test-matrix.md
+      - Glossary: reference/glossary.md
+  - About:
+      - Governance: about/governance.md
+      - Security: about/security.md
+      - Contributing: about/contributing.md
+      - Changelog: about/changelog.md
+      - Citation: about/citation.md

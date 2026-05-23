@@ -1,0 +1,8 @@
+# Pinned for reproducible builds of the archived docs site.
+# Bump only with a corresponding PR; never silently in CI.
+mkdocs==1.6.1
+mkdocs-material==9.5.49
+mkdocs-glightbox==0.4.0
+mkdocs-mermaid2-plugin==1.2.1
+mkdocs-include-markdown-plugin==7.1.2
+pymdown-extensions==10.13

@@ -12,7 +12,10 @@ on:
     paths-ignore:
       - 'app/**'
       - 'api/**'
+      - 'docs/**'
+      - 'mkdocs.yml'
       - '.github/workflows/deploy-app.yml'
+      - '.github/workflows/deploy-docs.yml'
   workflow_dispatch:
 
 concurrency:

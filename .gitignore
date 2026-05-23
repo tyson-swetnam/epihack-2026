@@ -56,6 +56,13 @@ _site/
 .jekyll-cache/
 .sass-cache/
 
+# MkDocs build output (Pages publishes from source; never commit site/)
+/site/
+
+# Backups created by Claude during the archival rewrite (Phase 1).
+# Original is in git history; we don't need a sibling .bak file too.
+*.bak
+
 # Local data
 *.duckdb
 *.duckdb.wal
