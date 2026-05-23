@@ -133,6 +133,16 @@ app_api_base:          "https://{{ onehealth_fqdn }}/api"
 app_supabase_url:      ""
 app_supabase_anon_key: ""
 
+# Baked into the static export as NEXT_PUBLIC_CLIENT_CHANNEL; the api-client
+# sends it on every POST /v1/reports as the X-Client-Channel header. The
+# FastAPI reports route (agents/src/onehealth_agents/api/routes/reports.py)
+# uses it to route writes: "mobile" -> MongoDB, "web" (or anything else) ->
+# DuckLake. Default "web" is correct for this VM (which serves the web build);
+# a Capacitor mobile bundle off the same playbook MUST override to "mobile"
+# or it will silently mis-route writes. See plan/09-mobile-datastore.md +
+# plan/ANSIBLE-AUDIT-2026-05-23.md (Role 11 — RED).
+app_client_channel:    "web"
+
 # --- TLS ----------------------------------------------------------------------
 # Set to true to issue + auto-renew a Let's Encrypt cert after DNS resolves.
 tls_enabled:           false

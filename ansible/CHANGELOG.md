@@ -11,6 +11,27 @@ DuckDB/DuckLake knowledge-graph backend end-to-end. A run now completes with
 DuckLake with time-travel versioning, and all eleven MCP servers respond to an
 MCP `initialize` handshake.
 
+## post-EpiHack archive refresh — 2026-05-23
+
+Tightening pass after the 2026-05-20 datastore split (Mongo for mobile,
+DuckLake for web/analytics) and the profile-enrichment + personal-dashboard
+landing. Drives the **RED** finding in
+[`plan/ANSIBLE-AUDIT-2026-05-23.md`](../plan/ANSIBLE-AUDIT-2026-05-23.md)
+to green; YELLOW items remain as tracked follow-ups (Phase 7b/c in
+`plan/10-archival-and-docs.md`).
+
+### Changes
+
+- **`roles/app`** + **`group_vars/all.yml`** — added
+  `NEXT_PUBLIC_CLIENT_CHANNEL` to both the build env (`tasks/main.yml`)
+  and `app.env.local.j2`, driven by a new `app_client_channel` group
+  var (defaults to `"web"`). The Next.js api-client reads it at build
+  time and sends it on every `POST /v1/reports` as the
+  `X-Client-Channel` header; the FastAPI route uses that header to route
+  `mobile` writes to MongoDB and `web` writes to DuckLake. Default
+  `"web"` is correct for the VM, but a Capacitor mobile bundle off the
+  same playbook MUST override or it will silently mis-route writes.
+
 ## New components
 
 - **`roles/ducklake/`** — new role (runs after `mcp_servers`, before
