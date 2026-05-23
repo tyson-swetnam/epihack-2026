@@ -61,6 +61,11 @@ _site/
 *.duckdb.wal
 ducklake-data/
 
+# Generated synthetic-report artifacts (markdown + images for offline demo);
+# the durable DuckLake batch is the source of truth, see scripts/export_signals.py.
+/synthetic_dataset/
+/generate_dataset.py
+
 # Logs
 *.log
 
