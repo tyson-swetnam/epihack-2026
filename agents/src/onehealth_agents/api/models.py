@@ -120,6 +120,13 @@ class ReportPayload(BaseModel):
 class TriageOutcome(BaseModel):
     next_action: NextAction
     urgency: Optional[Literal["none", "routine", "urgent", "emergent"]] = None
+    # FIXME(archive 2026-05-23): the field name `copy` shadows
+    # pydantic.BaseModel.copy(). Pydantic v2 emits a deprecation warning;
+    # under Pydantic 3.x it becomes a hard error. Rename to something like
+    # `triage_copy` or `display_copy` on revival — the change cascades
+    # through api/openapi.yaml (CitedSource sibling) and the generated
+    # app/src/lib/api-types.ts. Left in place here so the archived schema
+    # contract stays stable.
     copy: Optional[str] = Field(default=None, max_length=600)
     sources: list[CitedSource]
 

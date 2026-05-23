@@ -79,6 +79,14 @@ tags:
       that lets a previously anonymous report be linked to an
       authenticated account.
 
+# This API is anonymous-first by design (see the privacy boundary block
+# at the top of this file). The empty `security: []` declares that
+# default explicitly — no per-operation auth is required by the spec.
+# Authenticated /v1/account endpoints add their own `security:` blocks
+# when wired up; until then, an empty top-level keeps redocly clean
+# and signals "no auth needed" to generated clients.
+security: []
+
 paths:
 
   # -------------------------------------------------------------------------

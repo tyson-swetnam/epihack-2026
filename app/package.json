@@ -7,7 +7,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "echo 'lint disabled for archive (Next 16 dropped next lint and the repo never adopted eslint flat config). Use npm run typecheck.'",
     "typecheck": "tsc --noEmit",
     "gen:api": "openapi-typescript ../api/openapi.yaml -o src/lib/api-types.ts"
   },
