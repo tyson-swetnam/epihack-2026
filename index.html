@@ -40,7 +40,13 @@
   }
   .card:hover { background: #f6f8fc; }
   .card h3 { margin: 0 0 .3rem 0; font-size: 1.05rem; }
+  .card h3 a { color: inherit; text-decoration: none; }
+  .card h3 a:hover { text-decoration: underline; }
+  /* Cards that hold inner links are <div>s, not <a>s (nested anchors are
+     invalid HTML and split the card DOM); style their body links visibly. */
+  div.card p a { color: var(--c, #1F3A93); text-decoration: underline; }
   .card p { margin: 0; color: #555; font-size: .9rem; }
+  .card p + p { margin-top: .5rem; }
   .badges { margin-top: .6rem; }
   .badge {
     display: inline-block;
@@ -70,6 +76,13 @@
        style="color:#fff;font-weight:700;text-decoration:underline">
       ▶ Try the live reporting app</a>
     <span style="opacity:.85">&mdash; running on a Jetstream2 VM</span></p>
+  <p style="margin-top:.75rem;font-size:.95rem">
+    <a href="README.html"
+       style="color:#fff;text-decoration:underline;margin-right:1.25rem">
+      📖 Project documentation</a>
+    <a href="https://github.com/tyson-swetnam/epihack-2026"
+       style="color:#fff;text-decoration:underline">
+      ⌥ Source on GitHub</a></p>
 </div>
 
 <h2>Reference frameworks</h2>
@@ -161,8 +174,8 @@
 
 <h2>Reporting app (Phase 0 + 1)</h2>
 <div class="section-grid">
-  <a class="card" href="app/index.html" style="--c: #1F3A93">
-    <h3>AZ One Health Sentinel &mdash; reporting app</h3>
+  <div class="card" style="--c: #1F3A93">
+    <h3><a href="app/index.html">AZ One Health Sentinel &mdash; reporting app</a></h3>
     <p>Next.js&nbsp;16 + React&nbsp;19 + TypeScript + Tailwind, typed against the
        <a href="api/openapi.yaml">OpenAPI spec</a>. Anonymous-first
        Human / Animal / Environmental reporting, EXIF-stripped photos,
@@ -190,7 +203,7 @@
       <span class="badge">mongo</span>
       <span class="badge">live-demo</span>
     </div>
-  </a>
+  </div>
   <a class="card" href="app/legacy/index.html" style="--c: #C0392B">
     <h3>Phase&nbsp;0/1 vanilla flows &mdash; archive</h3>
     <p>The original vanilla-HTML prototype: tick mail-in (VBD) plus
