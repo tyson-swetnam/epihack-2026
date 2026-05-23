@@ -77,3 +77,26 @@
 - name: Report DuckLake seed result
   ansible.builtin.debug:
     msg: "{{ ducklake_seed.stdout_lines }}"
+
+# --- Optional: synthetic demo observations -----------------------------------
+# Loads the 4,395-observation demo cohort under `source_fig='synthetic-load'`
+# from scripts/load_synthetic_observations.py (idempotent — re-running deletes
+# the prior batch first). Off by default; flip the toggle in host/group vars
+# to seed the dashboard/signals/ page on a fresh provision. See
+# plan/ANSIBLE-AUDIT-2026-05-23.md role 8 + plan/10-archival-and-docs.md
+# Phase 7c.
+- name: Load the synthetic demo observation cohort
+  when: ducklake_load_synthetic_demo | bool
+  become_user: "{{ onehealth_user }}"
+  ansible.builtin.command:
+    cmd: "{{ agents_venv_python | default(onehealth_repo_path + '/agents/.venv/bin/python') }} {{ onehealth_repo_path }}/scripts/load_synthetic_observations.py"
+  environment:
+    KG_DUCKLAKE_URI: "{{ ducklake_uri }}"
+    KG_DUCKLAKE_DATA_PATH: "{{ ducklake_data_path }}"
+  register: synthetic_load
+  changed_when: "'persisted:' in synthetic_load.stdout"
+
+- name: Report synthetic-cohort load result
+  when: ducklake_load_synthetic_demo | bool
+  ansible.builtin.debug:
+    msg: "{{ synthetic_load.stdout_lines | default([]) }}"

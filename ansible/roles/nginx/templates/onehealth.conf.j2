@@ -62,6 +62,20 @@ server {
     }
 {% endif %}
 
+{% if serve_dashboard | default(true) %}
+    # ---- Signal-monitor dashboard (browser-side) --------------------------
+    # Static Jekyll page at {{ onehealth_repo_path }}/dashboard/, including
+    # dashboard/signals/index.html + dashboard/shared/signal-monitor.js +
+    # dashboard/data/signals.json (refreshed by scripts/export_signals.py).
+    # On GitHub Pages this is served from gh-pages; this block makes it
+    # reachable on the live VM too. More specific than `location /`, so it wins.
+    location /dashboard/ {
+        alias {{ onehealth_repo_path }}/dashboard/;
+        index index.html;
+        try_files $uri $uri/ =404;
+    }
+{% endif %}
+
 {% for srv in mcp_http_servers | default([]) %}
     # ---- {{ srv.name }}-mcp remote endpoint (Claude.ai custom connector) ---
     # FastMCP streamable-HTTP server on 127.0.0.1:{{ srv.port }}, serving its

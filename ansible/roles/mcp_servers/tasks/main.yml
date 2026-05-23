@@ -40,3 +40,13 @@
 - name: Report registered MCP servers
   ansible.builtin.debug:
     msg: "{{ mcp_list.stdout_lines }}"
+
+# --- Claude.ai custom-connector path (streamable-HTTP) -----------------------
+# If `mcp_http_servers` lists any entries, render and start a systemd unit
+# per entry. Off by default. The nginx role wires the matching reverse-proxy
+# routes; combined, you get the documented Claude.ai connector path. See
+# plan/ANSIBLE-AUDIT-2026-05-23.md role 7 + plan/10-archival-and-docs.md
+# Phase 7b.
+- name: Install streamable-HTTP systemd units for any `mcp_http_servers` entries
+  ansible.builtin.include_tasks: http_units.yml
+  when: (mcp_http_servers | default([])) | length > 0

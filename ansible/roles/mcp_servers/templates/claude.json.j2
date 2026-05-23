@@ -21,13 +21,15 @@
             "AZ211_API_KEY": "{{ vault_az211_api_key }}"
 {% elif name == 'sms-entry-mcp' %}
             "SMS_TWILIO_AUTH_TOKEN": "{{ vault_sms_twilio_auth_token }}",
-            "SMS_MODE": "mock"
+            "SMS_MODE": "{{ sms_mode }}"
 {% elif name == 'knowledge-graph-mcp' %}
             "KG_DUCKLAKE_URI": "{{ ducklake_uri }}",
             "KG_DUCKLAKE_DATA_PATH": "{{ ducklake_data_path }}",
             "KG_SCHEMA_PATH": "{{ onehealth_repo_path }}/schema"
 {% elif name == 'inaturalist-mcp' %}
             "INAT_USER_AGENT": "{{ inat_user_agent }}"
+{% elif name == 'nws-heatrisk-mcp' %}
+            "NWS_USER_AGENT": "{{ nws_user_agent }}"
 {% else %}
             "PYTHONUNBUFFERED": "1"
 {% endif %}
