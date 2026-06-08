@@ -174,6 +174,7 @@ ansible-playbook <span class="nt">-i</span> inventory.yml playbook.yml <span cla
   <li><code class="language-plaintext highlighter-rouge">claude</code> on the deploy user’s <code class="language-plaintext highlighter-rouge">$PATH</code>, with all eleven MCP servers
 registered (<code class="language-plaintext highlighter-rouge">claude mcp list</code> shows them).</li>
   <li><code class="language-plaintext highlighter-rouge">https://&lt;your-domain&gt;/</code> serving the Next.js app.</li>
+  <li><code class="language-plaintext highlighter-rouge">https://&lt;your-domain&gt;/docs/</code> serving the MkDocs documentation site.</li>
   <li><code class="language-plaintext highlighter-rouge">https://&lt;your-domain&gt;/api/v1/healthz</code> returning <code class="language-plaintext highlighter-rouge">{"status":"ok"}</code>.</li>
   <li><code class="language-plaintext highlighter-rouge">psql -U onehealth epihack</code> working.</li>
   <li>All four <code class="language-plaintext highlighter-rouge">systemd</code> units enabled: <code class="language-plaintext highlighter-rouge">onehealth-api</code>, <code class="language-plaintext highlighter-rouge">nginx</code>,
@@ -228,8 +229,12 @@ long-lived streamable-http transport is enabled).</li>
       <td><code class="language-plaintext highlighter-rouge">npm ci &amp;&amp; npm run gen:api &amp;&amp; npm run build</code> in <code class="language-plaintext highlighter-rouge">app/</code>. Static export lands in <code class="language-plaintext highlighter-rouge">app/out/</code>.</td>
     </tr>
     <tr>
+      <td><code class="language-plaintext highlighter-rouge">docs</code></td>
+      <td>Builds the MkDocs Material site (<code class="language-plaintext highlighter-rouge">docs/</code> + <code class="language-plaintext highlighter-rouge">mkdocs.yml</code>) into <code class="language-plaintext highlighter-rouge">site/</code> with the pinned <code class="language-plaintext highlighter-rouge">docs/requirements.txt</code> toolchain, so nginx can serve it at <code class="language-plaintext highlighter-rouge">/docs/</code>. The same tree GitHub Pages publishes to <code class="language-plaintext highlighter-rouge">gh-pages/docs/</code>. Skip with <code class="language-plaintext highlighter-rouge">serve_docs: false</code>.</td>
+    </tr>
+    <tr>
       <td><code class="language-plaintext highlighter-rouge">nginx</code></td>
-      <td>nginx reverse-proxies <code class="language-plaintext highlighter-rouge">/api/</code> → <code class="language-plaintext highlighter-rouge">127.0.0.1:8000</code>, serves <code class="language-plaintext highlighter-rouge">/</code> from the static export. Lets-Encrypt-ready via <code class="language-plaintext highlighter-rouge">certbot --nginx</code>.</td>
+      <td>nginx reverse-proxies <code class="language-plaintext highlighter-rouge">/api/</code> → <code class="language-plaintext highlighter-rouge">127.0.0.1:8000</code>, serves <code class="language-plaintext highlighter-rouge">/</code> from the static export, and serves <code class="language-plaintext highlighter-rouge">/docs/</code> (MkDocs), <code class="language-plaintext highlighter-rouge">/dashboard/</code>, <code class="language-plaintext highlighter-rouge">/query/</code> from the repo. Lets-Encrypt-ready via <code class="language-plaintext highlighter-rouge">certbot --nginx</code>.</td>
     </tr>
   </tbody>
 </table>
@@ -298,8 +303,8 @@ one as a PR.</p>
 <p>If you’d rather provision by hand, every step in the playbook is a
 documented Ansible task. Read <a href="../ansible/"><code class="language-plaintext highlighter-rouge">../ansible/roles/&lt;name&gt;/tasks/main.yml</code></a>
 in order: <code class="language-plaintext highlighter-rouge">common → node → python → postgres → repo → claude_code →
-mcp_servers → fastapi → app → nginx</code>. Each task corresponds to one
-shell command on the VM.</p>
+mcp_servers → ducklake → mongodb → fastapi → app → docs → nginx</code>. Each
+task corresponds to one shell command on the VM.</p>
 
 <h2 id="operations">Operations</h2>
 
