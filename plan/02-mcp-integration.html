@@ -118,6 +118,12 @@ server, not by negotiating bilateral integrations.</p>
       <td>Federation with Boston Children’s <a href="https://outbreaksnearme.org/us/en-US">Outbreaks Near Me</a> symptom-cluster platform (successor to Flu Near You). OBNM is the canonical human-symptom-side participatory-surveillance platform; this MCP would let the AZ agents pull symptom-cluster context for a user’s ZIP and contribute Sentinel reports back upstream. Gated on a partnership with the HealthMap team.</td>
       <td>Both</td>
     </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">medsis-mcp</code></td>
+      <td>🔭 future / blocked</td>
+      <td>AZDHS <strong>MEDSIS</strong> communicable-disease surveillance — no public read API (PHI behind <code class="language-plaintext highlighter-rouge">connect.azdhs.gov</code>); only feasible as an <em>outbound</em> HL7/ELR reporting connector. See the <a href="#medsis-azdhs-disease-surveillance--integration-assessment">MEDSIS assessment</a> below.</td>
+      <td>Both</td>
+    </tr>
   </tbody>
 </table>
 
@@ -369,6 +375,69 @@ exposes aggregated resource availability and <em>not</em> caller PII.</li>
 client unless the user explicitly opts into a verified outreach
 contact. Default flows are anonymous + ZIP-coarse.</li>
 </ul>
+
+<h2 id="medsis-azdhs-disease-surveillance--integration-assessment">MEDSIS (AZDHS disease surveillance) — integration assessment</h2>
+
+<p><strong>MEDSIS</strong> is the <strong>Medical/Disease Surveillance Information System</strong>, the
+Arizona Department of Health Services’ official communicable-disease
+surveillance system of record (clinicians, labs, and county health
+departments report reportable conditions into it).</p>
+
+<ul>
+  <li><strong>Access:</strong> role-based login at <code class="language-plaintext highlighter-rouge">https://connect.azdhs.gov/</code>, registered
+users only. Holds <strong>PHI</strong> — case reports, conditions, lab results, patient
+demographics. Help desk: <code class="language-plaintext highlighter-rouge">medsishelpdesk@siren.az.gov</code>.</li>
+  <li><strong>Machine interfaces are inbound to ADHS only:</strong>
+    <ul>
+      <li><strong>AZ ELR</strong> (Electronic Laboratory Reporting) feeds lab results <em>into</em>
+MEDSIS using <strong>HL7 v2.5.1 ELR2PH</strong> (US Realm). It is a monitored,
+<strong>unidirectional daily batch</strong>; senders onboard with the ADHS
+implementation team and pass HL7 validation. &gt;50% of lab results now
+arrive via ELR.</li>
+      <li><strong>AZ Syndromic Surveillance (AZSSIG)</strong> ingests ED/urgent-care HL7 ADT.</li>
+      <li>Otherwise reporting is manual MEDSIS data entry or fax.</li>
+    </ul>
+  </li>
+  <li><strong>No public/REST read API and no documented outbound export.</strong> (Confirmed
+against the MEDSIS User Guide and the AZ ELR Implementation Guide v1.3.)</li>
+</ul>
+
+<h3 id="can-we-build-a-medsis-mcp">Can we build a <code class="language-plaintext highlighter-rouge">medsis-mcp</code>?</h3>
+
+<p><strong>Not as a read-only data source — today this is blocked.</strong> Unlike
+<code class="language-plaintext highlighter-rouge">vectorsurv-mcp</code> (open OpenAPI) or <code class="language-plaintext highlighter-rouge">adhs-mcp</code> (ADHS <em>open</em> data), MEDSIS
+exposes no public query API; all access is credentialed PHI behind
+<code class="language-plaintext highlighter-rouge">connect.azdhs.gov</code>. A read MCP would require an AZDHS data-sharing agreement
+plus MEDSIS service credentials, and would be returning PHI — incompatible
+with this project’s anonymous, ZIP-coarse privacy contract.</p>
+
+<p><strong>The only feasible direction is <em>outbound reporting</em></strong> — a connector that
+formats Sentinel signals as <strong>HL7 v2.5.1 ELR2PH / case-report</strong> messages for
+submission to ADHS, making the Sentinel a <em>reporting source</em> rather than a
+data consumer. This is gated on:</p>
+
+<ol>
+  <li>a formal <strong>AZDHS partnership</strong> + ELR sender enrollment + HL7 validation; and</li>
+  <li>a <strong>privacy reconciliation</strong> — MEDSIS case/lab reports are <em>identified</em>
+PHI, whereas Sentinel reports are anonymous and coarsened. Anonymous,
+ZIP-coarse observations are <strong>not</strong> reportable case reports, so any feed
+would be aggregate / syndromic-style signal counts agreed with ADHS,
+<strong>never row-level PII</strong>. The Validation Agent’s suppression rules and the
+<a href="#auth--data-sovereignty-notes">Auth + data-sovereignty notes</a> apply.</li>
+</ol>
+
+<p><strong>Recommendation:</strong> keep <code class="language-plaintext highlighter-rouge">adhs-mcp</code> (ADHS <em>open</em> data) as the near-term ADHS
+integration. Treat <code class="language-plaintext highlighter-rouge">medsis-mcp</code> as a <strong>future, partnership-gated outbound
+reporting connector</strong>, tracked as 🔭 future / blocked in the inventory — not a
+Phase-1 data source. If a partnership lands, build it from the
+<a href="#mcp-server-spec-template-for-each-new-server">spec template</a> with an HL7
+v2.5.1 ELR2PH message builder + a <code class="language-plaintext highlighter-rouge">MEDSIS_*</code> credential set, and add a
+sunset / MOU-renewal clause per <code class="language-plaintext highlighter-rouge">GOVERNANCE.md</code> (as with tribal-data servers).</p>
+
+<p><em>Sources: AZDHS <a href="https://www.azdhs.gov/opioid/documents/medsis-user-guide-training.pdf">MEDSIS User Guide</a>;
+<a href="https://www.azdhs.gov/documents/preparedness/epidemiology-disease-control/pi/az-emr-implementation-guide.pdf">AZ ELR Implementation Guide v1.3</a>
+(HL7 v2.5.1 ELR2PH); <a href="https://www.azdhs.gov/documents/preparedness/epidemiology-disease-control/pi/syndromic-surveillance/az-ss-implementation-guide.pdf">AZ Syndromic Surveillance Implementation Guide</a>;
+<a href="https://azdhs.gov/medsis/">AZDHS MEDSIS / Infectious Disease Services</a>.</em></p>
 
 
   <footer>
