@@ -76,6 +76,21 @@ server {
     }
 {% endif %}
 
+{% if serve_docs | default(true) %}
+    # ---- MkDocs documentation site (static) -------------------------------
+    # Built by the `docs` role to {{ onehealth_repo_path }}/site via
+    # `mkdocs build` (mkdocs.yml site_dir: site). On GitHub Pages this same
+    # tree is published to gh-pages/docs/ by deploy-docs.yml; this block makes
+    # it reachable on the live VM too. MkDocs emits relative internal links, so
+    # one build serves correctly at both /epihack-2026/docs/ (Pages) and /docs/
+    # (here). More specific than `location /`, so it wins.
+    location /docs/ {
+        alias {{ onehealth_repo_path }}/site/;
+        index index.html;
+        try_files $uri $uri/ =404;
+    }
+{% endif %}
+
 {% for srv in mcp_http_servers | default([]) %}
     # ---- {{ srv.name }}-mcp remote endpoint (Claude.ai custom connector) ---
     # FastMCP streamable-HTTP server on 127.0.0.1:{{ srv.port }}, serving its

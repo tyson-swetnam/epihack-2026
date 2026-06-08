@@ -35,6 +35,7 @@
       --exclude='__pycache__/'
       --exclude='.next/'
       --exclude='app/out/'
+      --exclude='site/'
       --exclude='*.duckdb'
       --exclude='ansible/'
       {{ repo_local_src }}/ {{ onehealth_repo_path }}/

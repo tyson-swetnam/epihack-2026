@@ -14,7 +14,10 @@ ansible-playbook -i inventory.yml playbook.yml --ask-vault-pass
 ```
 
 Roles applied in order: `common → node → python → postgres → repo →
-claude_code → mcp_servers → ducklake → mongodb → fastapi → app → nginx`.
+claude_code → mcp_servers → ducklake → mongodb → fastapi → app → docs →
+nginx`. The `docs` role builds this very MkDocs site on the VM (into
+`site/`) so nginx serves it at `/docs/` — the self-hosted twin of the
+GitHub Pages `gh-pages/docs/` tree. Skip it with `serve_docs: false`.
 
 See the [audit](https://github.com/tyson-swetnam/epihack-2026/blob/main/plan/ANSIBLE-AUDIT-2026-05-23.md)
 for the post-EpiHack tightening pass.

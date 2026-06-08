@@ -74,6 +74,17 @@ serve_query_console: true
 # false to omit the nginx alias on app-only deploys.
 serve_dashboard: true
 
+# --- MkDocs documentation site (static) --------------------------------------
+# The /docs/ page is the MkDocs Material site built from docs/ + mkdocs.yml.
+# .github/workflows/deploy-docs.yml publishes it to gh-pages/docs/; the `docs`
+# role builds the same tree on the VM (into {{ onehealth_repo_path }}/site) and
+# the `nginx` role serves it at /docs/, so the self-hosted box matches Pages.
+# Set false to skip the build + omit the nginx alias (e.g. app-only deploys).
+serve_docs: true
+# Dedicated venv for the pinned MkDocs toolchain (docs/requirements.txt). Lives
+# OUTSIDE the repo tree so the repo role's `rsync --delete` never wipes it.
+docs_venv: "{{ onehealth_root }}/docs-venv"
+
 # --- MCP remote connectors (Claude.ai custom connectors) ---------------------
 # Each entry adds an nginx `location <path>` proxying https://<fqdn><path> to a
 # locally-running FastMCP streamable-HTTP server on 127.0.0.1:<port>. Multiple

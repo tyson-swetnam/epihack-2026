@@ -57,7 +57,7 @@ ansible-playbook -i inventory.yml playbook.yml
 ansible/
   ansible.cfg               Inventory pointer + roles_path + vault prompt
   inventory.example.yml     Host + ssh user; copy → inventory.yml
-  playbook.yml              The entry-point; one play, eleven roles in order
+  playbook.yml              The entry-point; one play, twelve roles in order
   requirements.yml          Ansible Galaxy collections (community.postgresql, …)
   group_vars/
     all.yml                 Non-secret defaults — edit in place is fine
@@ -73,7 +73,8 @@ ansible/
     ducklake/               seed the DuckLake catalog (Postgres + local Parquet) from schema/
     fastapi/                uvicorn systemd unit for onehealth_agents.api:app
     app/                    npm install + npm run gen:api + npm run build (static export)
-    nginx/                  reverse-proxy /api/ → :8000, serve /app/ → static export
+    docs/                   build the MkDocs site (docs/ + mkdocs.yml) → site/ for nginx /docs/
+    nginx/                  reverse-proxy /api/ → :8000, serve / (app), /docs/ (MkDocs), /dashboard/, /query/
 ```
 
 ## Roles in order
@@ -95,7 +96,8 @@ the services without touching anything else.
 | 8 | ducklake | `ducklake`, `kg`, `db` |
 | 9 | fastapi | `fastapi`, `api` |
 | 10 | app | `app`, `frontend` |
-| 11 | nginx | `nginx`, `web` |
+| 11 | docs | `docs`, `web` |
+| 12 | nginx | `nginx`, `web` |
 
 Tag a subset to run just one step, e.g.:
 

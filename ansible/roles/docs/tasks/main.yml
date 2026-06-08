@@ -1,0 +1,50 @@
+---
+# Build the MkDocs Material documentation site on the VM so nginx can serve
+# it at /docs/ — the self-hosted twin of the gh-pages/docs/ tree that
+# .github/workflows/deploy-docs.yml publishes. Same source (docs/ + mkdocs.yml),
+# same pinned toolchain (docs/requirements.txt), same build output (site/);
+# the only difference is the URL prefix, which MkDocs' relative links handle.
+#
+# Skipped entirely when serve_docs is false (e.g. app-only deploys).
+
+- name: Create the MkDocs build venv ({{ docs_venv }})
+  when: serve_docs | bool
+  become_user: "{{ onehealth_user }}"
+  ansible.builtin.command:
+    cmd: "uv venv --python {{ python_version }} {{ docs_venv }}"
+    creates: "{{ docs_venv }}/bin/python"
+  environment:
+    PATH: "/usr/local/bin:/usr/bin:/bin"
+
+- name: Install the pinned MkDocs requirements
+  when: serve_docs | bool
+  become_user: "{{ onehealth_user }}"
+  ansible.builtin.command:
+    cmd: >
+      uv pip install --python {{ docs_venv }}/bin/python
+      -r {{ onehealth_repo_path }}/docs/requirements.txt
+    chdir: "{{ onehealth_repo_path }}"
+  register: docs_pip
+  changed_when: "'Installed' in docs_pip.stderr or 'Prepared' in docs_pip.stderr"
+  environment:
+    PATH: "/usr/local/bin:/usr/bin:/bin"
+
+# `mkdocs build` writes to {{ onehealth_repo_path }}/site (site_dir: site in
+# mkdocs.yml). Not --strict, matching deploy-docs.yml: included upstream
+# READMEs carry relative links to repo paths outside docs/. --clean drops any
+# stale pages from a previous build so renamed/removed docs don't linger.
+- name: Build the MkDocs site to {{ onehealth_repo_path }}/site
+  when: serve_docs | bool
+  become_user: "{{ onehealth_user }}"
+  ansible.builtin.command:
+    cmd: "{{ docs_venv }}/bin/mkdocs build --clean"
+    chdir: "{{ onehealth_repo_path }}"
+  register: docs_build
+  changed_when: true
+
+- name: Confirm site/index.html exists
+  when: serve_docs | bool
+  ansible.builtin.stat:
+    path: "{{ onehealth_repo_path }}/site/index.html"
+  register: docs_index
+  failed_when: not docs_index.stat.exists
