@@ -1712,7 +1712,10 @@ ansible-vault encrypt group_vars/all.vault.yml
 ansible-galaxy install -r requirements.yml
 ansible-playbook -i inventory.yml playbook.yml --ask-vault-pass</code></p>
 <p>Roles applied in order: <code>common → node → python → postgres → repo →
-claude_code → mcp_servers → ducklake → mongodb → fastapi → app → nginx</code>.</p>
+claude_code → mcp_servers → ducklake → mongodb → fastapi → app → docs →
+nginx</code>. The <code>docs</code> role builds this very MkDocs site on the VM (into
+<code>site/</code>) so nginx serves it at <code>/docs/</code> — the self-hosted twin of the
+GitHub Pages <code>gh-pages/docs/</code> tree. Skip it with <code>serve_docs: false</code>.</p>
 <p>See the <a href="https://github.com/tyson-swetnam/epihack-2026/blob/main/plan/ANSIBLE-AUDIT-2026-05-23.md">audit</a>
 for the post-EpiHack tightening pass.</p>
 
