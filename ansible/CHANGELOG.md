@@ -11,6 +11,35 @@ DuckDB/DuckLake knowledge-graph backend end-to-end. A run now completes with
 DuckLake with time-travel versioning, and all eleven MCP servers respond to an
 MCP `initialize` handshake.
 
+## docs site self-hosting fix — 2026-06-08
+
+The MkDocs documentation site was published to GitHub Pages
+(`gh-pages/docs/` via `.github/workflows/deploy-docs.yml`) but was never
+built or served on the self-hosted Jetstream2 VM: nginx had no `/docs/`
+location and no role ran `mkdocs build`, so `/docs/…` fell through to the
+Next.js SPA fallback (`/index.html`) and the docs pages appeared down.
+
+### Changes
+
+- **`roles/docs`** (new) — builds the MkDocs Material site from `docs/` +
+  `mkdocs.yml` into `{{ onehealth_repo_path }}/site` using a dedicated venv
+  (`{{ docs_venv }}`, default `/srv/onehealth/docs-venv`) seeded with the
+  pinned `docs/requirements.txt`. Mirrors `deploy-docs.yml`: same source,
+  same toolchain, same `site/` output, non-`--strict` build. Gated by the
+  new `serve_docs` var. Runs between the `app` and `nginx` roles.
+- **`roles/nginx`** — added a `location /docs/` block (gated by
+  `serve_docs`) aliasing `{{ onehealth_repo_path }}/site/`, alongside the
+  existing `/dashboard/` and `/query/` self-hosting blocks. MkDocs' relative
+  links let one build serve at both `/epihack-2026/docs/` (Pages) and
+  `/docs/` (VM).
+- **`roles/repo`** — added `--exclude='site/'` to the local-mode
+  `rsync --delete` so a rebuilt `site/` survives re-deploys (mirrors the
+  existing `app/out/` exclude).
+- **`group_vars/all.yml`** — new `serve_docs: true` toggle and `docs_venv`
+  path.
+- **`playbook.yml`** — registered the `docs` role (tags `docs`, `web`) and
+  added the `/docs/` URL to the endpoint summary.
+
 ## post-EpiHack archive refresh — 2026-05-23
 
 Tightening pass after the 2026-05-20 datastore split (Mongo for mobile,

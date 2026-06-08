@@ -52,13 +52,15 @@
     - { role: mongodb,      tags: [mongodb, db] }
     - { role: fastapi,      tags: [fastapi, api] }
     - { role: app,          tags: [app, frontend] }
+    - { role: docs,         tags: [docs, web] }
     - { role: nginx,        tags: [nginx, web] }
 
   post_tasks:
     - name: Summarise endpoints
       ansible.builtin.debug:
         msg:
-          - "Site:  https://{{ onehealth_fqdn }}/"
-          - "API:   https://{{ onehealth_fqdn }}/api/v1/healthz"
-          - "Docs:  https://{{ onehealth_fqdn }}/api/v1/docs"
-          - "SSH:   ssh {{ onehealth_user }}@{{ ansible_host }}"
+          - "Site:     https://{{ onehealth_fqdn }}/"
+          - "API:      https://{{ onehealth_fqdn }}/api/v1/healthz"
+          - "API docs: https://{{ onehealth_fqdn }}/api/v1/docs"
+          - "Docs:     https://{{ onehealth_fqdn }}/docs/{{ '' if serve_docs | bool else ' (disabled: serve_docs=false)' }}"
+          - "SSH:      ssh {{ onehealth_user }}@{{ ansible_host }}"

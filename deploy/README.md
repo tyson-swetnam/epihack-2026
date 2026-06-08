@@ -93,6 +93,7 @@ About 10–15 minutes later, the VM has:
 - `claude` on the deploy user's `$PATH`, with all eleven MCP servers
   registered (`claude mcp list` shows them).
 - `https://<your-domain>/` serving the Next.js app.
+- `https://<your-domain>/docs/` serving the MkDocs documentation site.
 - `https://<your-domain>/api/v1/healthz` returning `{"status":"ok"}`.
 - `psql -U onehealth epihack` working.
 - All four `systemd` units enabled: `onehealth-api`, `nginx`,
@@ -112,7 +113,8 @@ About 10–15 minutes later, the VM has:
 | `mcp_servers` | `uv sync` each `mcp/<name>-mcp/`. Writes a `~/.claude.json` snippet registering each server via stdio. Optional: `systemd` units for streamable-http mode. |
 | `fastapi` | uvicorn `systemd` unit running `onehealth_agents.api:app` on `127.0.0.1:8000`. Reads `SUPABASE_URL` / JWT-validation config from the vault. |
 | `app` | `npm ci && npm run gen:api && npm run build` in `app/`. Static export lands in `app/out/`. |
-| `nginx` | nginx reverse-proxies `/api/` → `127.0.0.1:8000`, serves `/` from the static export. Lets-Encrypt-ready via `certbot --nginx`. |
+| `docs` | Builds the MkDocs Material site (`docs/` + `mkdocs.yml`) into `site/` with the pinned `docs/requirements.txt` toolchain, so nginx can serve it at `/docs/`. The same tree GitHub Pages publishes to `gh-pages/docs/`. Skip with `serve_docs: false`. |
+| `nginx` | nginx reverse-proxies `/api/` → `127.0.0.1:8000`, serves `/` from the static export, and serves `/docs/` (MkDocs), `/dashboard/`, `/query/` from the repo. Lets-Encrypt-ready via `certbot --nginx`. |
 
 ## DNS + TLS
 
@@ -150,8 +152,8 @@ one as a PR.
 If you'd rather provision by hand, every step in the playbook is a
 documented Ansible task. Read [`../ansible/roles/<name>/tasks/main.yml`](../ansible/)
 in order: `common → node → python → postgres → repo → claude_code →
-mcp_servers → fastapi → app → nginx`. Each task corresponds to one
-shell command on the VM.
+mcp_servers → ducklake → mongodb → fastapi → app → docs → nginx`. Each
+task corresponds to one shell command on the VM.
 
 ## Operations
 
