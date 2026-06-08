@@ -41,6 +41,18 @@ ducklake_uri: "ducklake:postgres:dbname={{ postgres_db_name }} host=127.0.0.1 us
 # seed through it — exact version match with the runtime, no extra download.
 kg_mcp_venv_python: "{{ onehealth_repo_path }}/mcp/knowledge-graph-mcp/.venv/bin/python"
 
+# --- MongoDB (mobile-channel store, plan/09) ---------------------------------
+# Self-hosted MongoDB CE, bound to loopback, auth enabled. The FastAPI
+# mobile-channel write-path (mongo_writer.py) + the Mongo->DuckLake sync use it.
+mongodb_version:   "8.0"
+mongodb_bind:      "127.0.0.1"
+mongodb_db_name:   onehealth
+mongodb_app_user:  onehealth
+# Secret: vault_mongodb_password. authSource=admin (user created on admin db).
+mongodb_uri: "mongodb://{{ mongodb_app_user }}:{{ vault_mongodb_password }}@127.0.0.1:27017/{{ mongodb_db_name }}?authSource=admin"
+# How often the Mongo -> DuckLake sync timer fires (plan/09 Phase C).
+mongo_sync_interval: "5min"
+
 # --- Claude Code --------------------------------------------------------------
 claude_code_npm_package: "@anthropic-ai/claude-code"
 # Set in the vault: vault_anthropic_api_key

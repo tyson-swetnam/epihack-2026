@@ -71,3 +71,20 @@
   retries: 12
   delay: 2
   until: api_health.status == 200
+
+# --- Mongo -> DuckLake sync (plan/09 Phase C) --------------------------------
+- name: Install the Mongo->DuckLake sync service + timer
+  ansible.builtin.template:
+    src: "onehealth-mongo-sync.{{ item }}.j2"
+    dest: "/etc/systemd/system/onehealth-mongo-sync.{{ item }}"
+    mode: "0644"
+  loop:
+    - service
+    - timer
+
+- name: Enable + start the Mongo->DuckLake sync timer
+  ansible.builtin.systemd:
+    name: onehealth-mongo-sync.timer
+    daemon_reload: true
+    enabled: true
+    state: started

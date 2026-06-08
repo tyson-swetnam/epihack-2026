@@ -25,6 +25,11 @@ export type ReportType = 'human' | 'animal' | 'environmental';
 
 const BASE = process.env.NEXT_PUBLIC_API_BASE ?? 'mock';
 
+// Which client this build is. The Capacitor mobile build sets
+// NEXT_PUBLIC_CLIENT_CHANNEL=mobile so the API routes its writes to MongoDB;
+// the web build leaves it 'web' (DuckLake). See plan/09-mobile-datastore.md.
+const CLIENT_CHANNEL = process.env.NEXT_PUBLIC_CLIENT_CHANNEL ?? 'web';
+
 function isMock(): boolean {
   return BASE === 'mock';
 }
@@ -41,14 +46,16 @@ async function loadMock<T>(key: string): Promise<T> {
 }
 
 /**
- * Submit a new anonymous report.
+ * Submit a report. Throws on network failure or a non-2xx response — used
+ * directly by the offline-queue flush. Most callers want `createReport`,
+ * which adds offline queueing on top.
  *
  * The caller is responsible for:
  *   - stripping EXIF GPS from `photo` (see lib/exif-stripper.ts);
  *   - coarsening any precise lat/lon to ZIP / 1 km cell before
  *     building `payload.coarse_location`.
  */
-export async function createReport(
+export async function createReportRaw(
   payload: ReportPayload,
   photo?: Blob | null,
   opts: { signal?: AbortSignal } = {}
@@ -70,11 +77,40 @@ export async function createReport(
   if (photo) form.append('photo', photo, 'report.jpg');
   const res = await fetch(`${BASE}/v1/reports`, {
     method: 'POST',
+    headers: { 'X-Client-Channel': CLIENT_CHANNEL },
     body: form,
     signal: opts.signal,
   });
   if (!res.ok) throw new ApiError(res.status, await res.text());
   return (await res.json()) as ReportAck;
+}
+
+/**
+ * Submit a report, queueing it for later if the device is offline. A network
+ * failure (no response — distinct from an HTTP error) parks the JSON payload
+ * in the offline queue and returns a `queued` ack; the queue is replayed on
+ * the next load / when the browser comes back online. HTTP errors (4xx/5xx)
+ * still throw so the UI can surface a real validation problem.
+ */
+export async function createReport(
+  payload: ReportPayload,
+  photo?: Blob | null,
+  opts: { signal?: AbortSignal } = {}
+): Promise<ReportAck> {
+  try {
+    return await createReportRaw(payload, photo, opts);
+  } catch (err) {
+    if (err instanceof ApiError) throw err; // real server-side rejection
+    // Network/offline error: queue the payload (photo is dropped on retry).
+    const { enqueueReport } = await import('./offline-queue');
+    const q = enqueueReport(payload);
+    return {
+      observation_id: q.id,
+      claim_token: '',
+      status_url: `/v1/reports/${q.id}`,
+      queued: true,
+    };
+  }
 }
 
 export async function getReportStatus(

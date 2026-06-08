@@ -18,6 +18,11 @@ vault_anthropic_api_key: ""
 # Generate with: openssl rand -base64 32
 vault_postgres_password: ""
 
+# --- MongoDB (mobile-channel store, plan/09) ---------------------------------
+# Password for the onehealth MongoDB app user. Required when the mongodb role
+# runs. Generate with: openssl rand -base64 32
+vault_mongodb_password: ""
+
 # --- Supabase Auth (plan/07) --------------------------------------------------
 # JWT secret OR the public JWKS URL — the FastAPI backend uses one to
 # verify Supabase-issued tokens. JWKS is recommended (rotates without

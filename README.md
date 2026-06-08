@@ -41,6 +41,42 @@ What makes it *living* rather than a static snapshot:
   [pathogen graph](./graph/) carries a `kg_node_id` that round-trips
   to the SQL graph. Click a feature, get the canonical node back.
 
+## System architecture
+
+Alongside the knowledge graph, the repo ships a working
+participatory-surveillance application. Four loosely-coupled components
+share one origin:
+
+| Component | Stack | Role |
+|---|---|---|
+| [`app/`](./app/) | Next.js 16 + React 19 + TypeScript + Tailwind | Mobile-first anonymous reporting app (tick / heat / cool-off), typed against `api/openapi.yaml`. Static-exported to `/epihack-2026/app/`. |
+| [`agents/`](./agents/) | Python 3.11 + FastAPI + Pydantic v2 + `anthropic` + `mcp` | The HTTP backend + eight-agent orchestrator (Intake → Geo → Validation → Triage → Enrichment → Notification + Cluster + KnowledgeUpdate). Serves `api/openapi.yaml`. |
+| [`mcp/`](./mcp/) | FastMCP + httpx + Pydantic v2 | **Eleven** MCP servers wrapping live (and, where no upstream API exists, mock) agency data sources. |
+| [`dashboard/`](./dashboard/), [`today/`](./today/), [`map/`](./map/), [`graph/`](./graph/) | Vanilla HTML + ES modules | Agency analyst workspace, public citizen view, and the two knowledge-graph viewers. |
+
+### Two stores, one privacy contract
+
+As of [`plan/09`](./plan/09-mobile-datastore.md) the write path is
+**dual-sink**: the **mobile app persists to MongoDB**, while the **web
+build and all analytics stay on DuckLake**. Both channels POST to the
+same `/v1/reports` endpoint and run the *same* privacy enforcement
+(coarsen location, strip/reject EXIF GPS, never-diagnose triage guard,
+SHA-256 audit digests) **before** the sink is chosen by an
+`X-Client-Channel` header — so the contract lives in one place
+(`agents/.../api/routes/reports.py`). Mobile documents are then replayed
+into DuckLake by a watermarked, idempotent `mongo_to_ducklake` sync, so
+the agents, MCP servers, and cluster detection all see one unified
+dataset.
+
+```
+  web build  ─┐                            ┌─► DuckLake  (kg_writer) ──────────────┐
+              ├─ POST /v1/reports · FastAPI ┤                                       ├─► knowledge graph
+  mobile app ─┘   + X-Client-Channel        └─► MongoDB (mongo_writer) ─ sync ──────┘   (agents · MCP ·
+                                                                                         cluster scan)
+   privacy enforcement (validate · coarsen · EXIF check · triage-guard · SHA-256 digests)
+   runs inside FastAPI BEFORE the sink is chosen — one contract for both channels
+```
+
 ## Site roadmap
 
 Everything in this repository is also a page on the published site at
@@ -59,11 +95,13 @@ Everything in this repository is also a page on the published site at
 - [Pathogen knowledge graph](./graph/) &mdash; Cytoscape.js node-edge viewer for the 16 pathogens with their vectors, reservoirs, focus areas, and surveilling agencies. Color- and shape-coded; filter by pathogen class; switch layouts.
 
 ### Application plan
-- [AZ One Health Sentinel — plan](./plan/) &mdash; five-document plan for a mobile-first participatory-surveillance app spanning Vector-Borne Disease and Heat. Covers Figure 2 parameter mapping by vertical, the MCP integration topology, the eight-agent architecture, four worked end-to-end data flows, and a phased roadmap tied to the [Figure 3 timeliness milestones](./figures/03-outbreak-timeliness-metrics.md).
+- [AZ One Health Sentinel — plan](./plan/) &mdash; the multi-document plan (`01`–`09` plus cluster-calibration, evaluation, and federation notes) for a mobile-first participatory-surveillance app spanning Vector-Borne Disease and Heat. Covers Figure 2 parameter mapping by vertical, the MCP integration topology, the eight-agent architecture, four worked end-to-end data flows, the [auth model](./plan/07-auth.md), the [mobile UX revamp](./plan/08-mobile-ux-revamp.md), the [dual MongoDB/DuckLake datastore](./plan/09-mobile-datastore.md), and a phased roadmap tied to the [Figure 3 timeliness milestones](./figures/03-outbreak-timeliness-metrics.md).
 
 ### MCP servers (live data ingestion for LLMs)
-- [`vectorsurv-mcp`](./mcp/vectorsurv-mcp/) &mdash; Wraps the [VectorSurv](https://vectorsurv.org/) API (spec v1.0.44). 13 tools.
-- [`knowledge-graph-mcp`](./mcp/knowledge-graph-mcp/) &mdash; Read-only DuckDB query MCP over the kg (572 nodes / 791 edges / 1027 properties). 12 tools + SQL escape-hatch.
+Eleven servers ship today; see [`mcp/README.md`](./mcp/README.md) for the
+full index (tool tables, auth posture, test counts).
+- [`vectorsurv-mcp`](./mcp/vectorsurv-mcp/) &mdash; VectorSurv national mosquito + tick surveillance API (spec v1.0.44). 13 tools.
+- [`knowledge-graph-mcp`](./mcp/knowledge-graph-mcp/) &mdash; Read-only DuckDB query MCP over the kg (572 nodes / 791 edges / 1027 properties). 12 tools + SELECT-only SQL escape-hatch.
 - [`great-az-tick-check-mcp`](./mcp/great-az-tick-check-mcp/) &mdash; Mock submission tracking for the UA Cooperative Extension tick program. 5 tools.
 - [`nws-heatrisk-mcp`](./mcp/nws-heatrisk-mcp/) &mdash; NWS HeatRisk + alerts + heat-index. 7 tools.
 - [`mag-hrn-mcp`](./mcp/mag-hrn-mcp/) &mdash; MAG Heat Relief Network cooling-center search. 5 tools.
@@ -71,11 +109,16 @@ Everything in this repository is also a page on the published site at
 - [`211-az-mcp`](./mcp/211-az-mcp/) &mdash; 211 Arizona referrals + transport dispatch. 6 tools.
 - [`whispers-mcp`](./mcp/whispers-mcp/) &mdash; USGS WHISPers wildlife mortality events. 6 tools.
 - [`inaturalist-mcp`](./mcp/inaturalist-mcp/) &mdash; iNaturalist citizen-science observations. 6 tools.
+- [`sms-entry-mcp`](./mcp/sms-entry-mcp/) &mdash; SMS-only intake adapter; Twilio HMAC-SHA1 signature check, normalisation, intent parsing. 6 tools.
+- [`wearable-mcp`](./mcp/wearable-mcp/) &mdash; HealthKit / Health Connect readings (skin temp, HRV, sweat rate, heart rate); on-device-only posture, mock-by-default. 4 tools.
 
-### Application (Phase 0 + 1)
-- [`app/`](./app/) &mdash; Vanilla HTML+JS+CSS prototype. Four flows: tick mail-in (VBD), CHW heat check-in, anonymous heat self-report, "where can I cool off?". Mobile-first; Spanish bundle.
-- [`agents/`](./agents/) &mdash; 8-agent pipeline (Intake → Geo-Enrichment → Validation → Triage → Enrichment → Notification → Cluster Detection → Knowledge Update). 29 tests; Scenarios A and C run end-to-end against shipped MCP-tool names.
-- See [`plan/EXECUTION-STATUS.md`](./plan/EXECUTION-STATUS.md) and [`plan/EXECUTION-STATUS-PHASE-1-2.md`](./plan/EXECUTION-STATUS-PHASE-1-2.md) for the verification matrix.
+### Reporting app + backend
+- [`app/`](./app/) &mdash; Mobile-first reporting app: **Next.js 16 + React 19 + TypeScript + Tailwind**, typed against `api/openapi.yaml`. Anonymous Human / Animal / Environmental flows (tick mail-in, heat check-in, anonymous heat self-report, "where can I cool off?"), client-side EXIF strip + ZIP / 1&nbsp;km coarsening, a localStorage offline retry queue, and an `X-Client-Channel` header that routes the write to MongoDB (mobile) or DuckLake (web). The original vanilla-HTML flows live on as a read-only archive at [`app/legacy/`](./app/legacy/).
+- [`agents/`](./agents/) &mdash; The FastAPI backend + 8-agent pipeline (Intake → Geo-Enrichment → Validation → Triage → Enrichment → Notification → Cluster Detection → Knowledge Update). Two write sinks (`kg_writer` → DuckLake, `mongo_writer` → MongoDB) behind one privacy-enforcing endpoint, plus the `mongo_to_ducklake` sync. Offline test suite; Scenarios A and C run end-to-end against shipped MCP-tool names.
+- See [`plan/EXECUTION-STATUS.md`](./plan/EXECUTION-STATUS.md), [`plan/EXECUTION-STATUS-PHASE-1-2.md`](./plan/EXECUTION-STATUS-PHASE-1-2.md), and [`plan/EXECUTION-STATUS-PHASE-4.md`](./plan/EXECUTION-STATUS-PHASE-4.md) for the verification matrix.
+
+### Public dashboard (Phase 3)
+- [`today/`](./today/) &mdash; *AZ One Health Today*: a citizen-facing aggregated view (today's HeatRisk, WNV pool positivity, recent wildlife signals, and a five-number statewide snapshot). Auto-detects county, no login, no PII — renders only pre-aggregated kg fields.
 
 ### Agency dashboard (Phase 3)
 - [`dashboard/`](./dashboard/) &mdash; Read-only analyst workspace for ADHS Vector-Borne &amp; Zoonotic Diseases, Maricopa County DPH Heat Surveillance, AZ Game &amp; Fish Wildlife Health Program, and Coconino HHS. Four-audience landing pages, status cards, Cluster Detection Agent feed, lazy-loaded MapLibre embed, sparkline case-count tables, and a SQL preview that round-trips to `knowledge-graph-mcp`. Implements Scenario D from [`plan/04-data-flows.md`](./plan/04-data-flows.md).
@@ -91,71 +134,61 @@ Everything in this repository is also a page on the published site at
 ## Contents
 
 ```
+README.md       Project overview (this file)
 index.html      Top-level site landing page (linked from GitHub Pages)
-map/            MapLibre GL map of AZ pinning counties, tribes, NEON
-                sites, agency HQs, federal lands, and outbreaks; each
-                feature carries a kg_node_id round-trippable to the
-                DuckLake graph.
-graph/          Cytoscape.js pathogen knowledge graph (16 pathogens with
-                their vectors, reservoirs, focus areas, and surveilling
-                agencies).
-mcp/
-  └── vectorsurv-mcp/   Model Context Protocol server wrapping the VectorSurv
-                        vector-borne disease surveillance API (sites,
-                        collections, pools, abundance, infection rate,
-                        vector index).
-figures/        Structured transcriptions of the EpiHack reference figures
-  ├── 01-purpose-one-health-participatory-system.md
-  ├── 02-minimum-key-data-parameters.md
-  ├── 03-outbreak-timeliness-metrics.md
-  ├── 04-designing-launching-participatory-surveillance.md
-  ├── 05-design-worksheet-template.md      -- breakout-session worksheet
-  └── index.html                            -- combined HTML rendering
-wildlife/       Focus group 1 -- Wildlife & Vector-Borne Diseases
-  ├── 01-wildlife-tracking.md
-  ├── 02-zoonotic-surveillance.md
-  ├── 03-surveillance-technologies.md
-  ├── 04-participatory-surveillance.md
-  ├── resources.md                          -- 30+ AZ resources catalog
-  └── index.html
-heat/           Focus group 2 -- Heat
-  ├── 01-public-awareness-cooling-centers.md
-  ├── 02-real-time-resource-sharing.md
-  ├── 03-heat-safety-education.md
-  ├── 04-vulnerable-populations.md
-  ├── resources.md                          -- 30+ AZ heat-resource catalog
-  └── index.html
+CLAUDE.md       Repo guide for Claude Code / contributors
+api/
+  └── openapi.yaml   Source of truth for the app ⇄ backend HTTP contract
+
+app/            Next.js 16 + React 19 + TypeScript + Tailwind reporting app
+  ├── src/app/         -- routes: home, report/[type], account, profile, sign-in, auth
+  ├── src/lib/         -- api-client, coarse-geo, exif-stripper, offline-queue,
+  │                       api-types.ts (generated from openapi.yaml — do not hand-edit)
+  ├── src/components/  -- ReportFlow, AppShell, OfflineFlusher, ProfileForm
+  └── legacy/          -- original vanilla-HTML flows (read-only archive)
+
+agents/         FastAPI backend + 8-agent orchestrator (Python 3.11)
+  └── src/onehealth_agents/
+      ├── api/             -- FastAPI app + routes (reports, profile, auth, context)
+      ├── orchestrator.py  -- runs the 8 agents below
+      ├── intake.py geo.py validation.py triage.py enrichment.py
+      │                       notification.py cluster.py update.py   -- the 8 agents
+      ├── kg_writer.py     -- DuckLake sink (web channel)
+      ├── mongo_writer.py  -- MongoDB sink (mobile channel)
+      ├── sync/            -- mongo_to_ducklake watermarked, idempotent ETL
+      └── mcp_client.py audit.py contracts.py ...
+
+mcp/            Eleven MCP servers, one uv workspace each -- see mcp/README.md
+  ├── vectorsurv-mcp/ knowledge-graph-mcp/ great-az-tick-check-mcp/
+  ├── nws-heatrisk-mcp/ mag-hrn-mcp/ adhs-mcp/ 211-az-mcp/
+  └── whispers-mcp/ inaturalist-mcp/ sms-entry-mcp/ wearable-mcp/
+
+map/            MapLibre GL map of AZ (counties, tribes, NEON sites, agency
+                HQs, federal lands, outbreaks); each pin carries a kg_node_id.
+graph/          Cytoscape.js pathogen knowledge graph (16 pathogens).
 dashboard/      Phase-3 agency-side read-only analyst workspace
-  ├── index.html                            -- four-audience landing page
-  ├── adhs/                                 -- ADHS VBZD: statewide arbovirus + heat-mortality
-  ├── mcdph/                                -- Maricopa heat surveillance + WNV vector index
-  ├── azgfd/                                -- WHISPers + AZGFD mortality + iNaturalist
-  ├── coconino/                             -- plague + hantavirus + Grand-Canyon NPS
-  ├── shared/                               -- style.css, kg-client.js, cluster-feed.js, map-embed.js, sparkline.js, auth-stub.js
-  └── mock/                                 -- canned cluster / arbovirus / heat / wildlife JSON
-worksheets/     Completed design worksheets from EpiHack breakouts
-  ├── 01-animal-health-events.md
-  └── 02-desert-wildlife-interface.md
-notes/
-  └── world-cafe/             -- World Café breakout cards
-      ├── README.md
-      ├── q4-heat.md
-      ├── q4-unhoused.md
-      └── q4-information-flow.md
-schema/
-  ├── knowledge_graph.sql       -- core graph (frameworks)
-  ├── system_designs.sql        -- worksheet template, focus areas, designs
-  ├── world_cafe.sql            -- World Café Q4 cards + engagement tactics
-  ├── wildlife_vectors.sql      -- focus group 1 questions, resources, design
-  ├── heat.sql                  -- focus group 2 questions, vulnerable pops, resources
-  └── deep/                     -- parallel sub-agent deep-research seeds
-      ├── counties.sql          --   all 15 AZ counties
-      ├── tribes.sql            --   all 22 federally recognized AZ tribes
-      ├── pathogens.sql         --   pathogens with vectors / reservoirs / ICD-10
-      ├── outbreaks.sql         --   historical AZ outbreaks + timeline dates
-      ├── datasets_apis.sql     --   NEON DPs, WHISPers, NWS, GBIF, iNat, etc.
-      ├── standards.sql         --   FHIR, OMOP, ICD-10, Darwin Core, GeoSPARQL
-      └── mcp_servers.sql       --   MCP servers (vectorsurv-mcp + tools)
+                (ADHS / MCDPH / AZGFD / Coconino).
+today/          Phase-3 public citizen-facing aggregated view (no login, no PII).
+figures/        Structured transcriptions of the five EpiHack reference figures.
+wildlife/ heat/ Focus-group materials (4 questions + 30+ resource catalogs each).
+worksheets/     Completed design worksheets from EpiHack breakouts.
+notes/world-cafe/  World Café Q4 breakout cards (heat, unhoused, info-flow).
+evaluation/     Cluster-detector evaluation harness + 2024 baseline.
+
+schema/         Knowledge-graph SQL (property graph: kg.node / edge / property)
+  ├── knowledge_graph.sql  -- core graph (frameworks)
+  ├── system_designs.sql world_cafe.sql wildlife_vectors.sql heat.sql
+  └── deep/                -- parallel sub-agent deep-research seeds
+      ├── standards.sql        -- FHIR/OMOP/ICD-10/Darwin Core (load FIRST)
+      ├── pathogens.sql        -- vectors / reservoirs / ICD-10 (load SECOND)
+      ├── counties.sql tribes.sql outbreaks.sql datasets_apis.sql
+      ├── application.sql followups.sql audit.sql
+      └── cluster_followups.sql outbreaks_near_me.sql mcp_servers.sql
+
+ansible/        One-command VM deploy (Postgres + DuckLake, self-hosted
+                MongoDB + sync timer, MCP servers, FastAPI, app, nginx).
+deploy/         VM sizing, DNS, and the operations runbook.
+plan/           01–09 plan docs + cluster-calibration / evaluation / status.
 ```
 
 The Markdown files use YAML frontmatter and explicit `subject | predicate |
@@ -211,6 +244,12 @@ two:
 | **DuckLake** | Open lakehouse format on top of Parquet, catalog in Postgres. Gives us time travel, branches, and multi-writer concurrency without standing up Iceberg/Hudi infrastructure. |
 | **DuckDB** | Embedded query engine. Reads/writes DuckLake natively; can join Parquet, Postgres, and CSV in a single SQL statement; works on a laptop and at hack-day scale. |
 
+DuckLake is the **web + analytics store**; the mobile app writes to
+**MongoDB**, which is synced back into DuckLake so the agents, MCP
+servers, and cluster detection see one dataset (see
+[System architecture](#system-architecture)). The bootstrap below builds
+the DuckLake side.
+
 ### Bootstrap
 
 ```bash
@@ -236,12 +275,14 @@ USE epihack;
 .read schema/world_cafe.sql
 .read schema/wildlife_vectors.sql   -- focus group 1
 .read schema/heat.sql               -- focus group 2
-.read schema/deep/counties.sql      -- deep seeds (any order)
+.read schema/deep/standards.sql     -- must load first  (SNOMED / ICD-10 FKs)
+.read schema/deep/pathogens.sql     -- must load second (pathogen FKs)
+.read schema/deep/counties.sql
 .read schema/deep/tribes.sql
-.read schema/deep/pathogens.sql
 .read schema/deep/outbreaks.sql
 .read schema/deep/datasets_apis.sql
-.read schema/deep/standards.sql
+.read schema/deep/application.sql
+.read schema/deep/followups.sql
 ```
 
 After loading, the graph is queryable in plain SQL. Examples:
@@ -307,8 +348,10 @@ walks through VM sizing, DNS, and the operations runbook;
 [`ansible/`](./ansible/) is a one-command Ansible playbook that takes
 a fresh Ubuntu 24.04 VM from `apt update` to a running deployment of
 Claude Code, every MCP server in [`mcp/`](./mcp/), the FastAPI backend,
-the Next.js reporting app, Postgres for the DuckLake catalog, and
-nginx with optional Let's Encrypt TLS.
+the Next.js reporting app, Postgres for the DuckLake catalog,
+self-hosted MongoDB for the mobile write-path (bound to `127.0.0.1`,
+auth enabled) with its `mongo_to_ducklake` sync timer, and nginx with
+optional Let's Encrypt TLS.
 
 ```bash
 cd ansible

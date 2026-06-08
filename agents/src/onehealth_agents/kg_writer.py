@@ -191,6 +191,84 @@ class KgWriter:
                 raise
         return observation_id, claim_token
 
+    def persist_synced_observation(self, doc: dict) -> bool:
+        """Write a MongoDB report document into DuckLake, preserving its
+        ``observation_id`` and digests (no new ids minted). Idempotent: skips
+        if the node already exists. Returns True if inserted, False if it was
+        already present. Used by the Mongo -> DuckLake sync (plan/09 Phase C).
+        """
+        observation_id = doc["observation_id"]
+        now = datetime.now(timezone.utc)
+        symptoms = doc.get("symptoms")
+        count = doc.get("count")
+        props: list[tuple[str, Optional[str], Optional[float]]] = [
+            ("report_type", doc.get("report_type"), None),
+            ("event_class", doc.get("event_class"), None),
+            ("coarse_zip", doc.get("coarse_zip"), None),
+            ("coarse_grid_id", doc.get("coarse_grid_id"), None),
+            ("event_date", doc.get("event_date"), None),
+            ("severity", doc.get("severity"), None),
+            ("count", None, float(count) if count is not None else None),
+            ("species", doc.get("species"), None),
+            ("symptoms", ",".join(str(s) for s in symptoms) if symptoms else None, None),
+            ("notes_sha256", doc.get("notes_sha256"), None),
+            ("claim_token_sha256", doc.get("claim_token_sha256"), None),
+            ("attached_user_id", doc.get("attached_user_id"), None),
+            ("intake_at", doc.get("intake_at"), None),
+            ("channel", doc.get("channel", "mobile"), None),
+        ]
+        props = [(k, t, n) for (k, t, n) in props if t is not None or n is not None]
+
+        with self._lock:
+            exists = self._con.execute(
+                "SELECT count(*) FROM kg.node WHERE node_id = ?", (observation_id,)
+            ).fetchone()[0]
+            if exists:
+                return False
+            self._con.execute("BEGIN TRANSACTION;")
+            try:
+                self._con.execute(
+                    "INSERT INTO kg.node (node_id, node_type, label, description, "
+                    "source_fig, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+                    (
+                        observation_id,
+                        "observation",
+                        f"{doc.get('report_type', '')} report",
+                        None,
+                        doc.get("source_fig", "app-intake"),
+                        now,
+                    ),
+                )
+                for key, vtext, vnum in props:
+                    self._con.execute(
+                        "INSERT INTO kg.property (node_id, key, value_text, value_num) "
+                        "VALUES (?, ?, ?, ?)",
+                        (observation_id, key, vtext, vnum),
+                    )
+                self._con.execute(
+                    _AGENT_RUN_INSERT,
+                    (
+                        str(uuid4()),
+                        "mongo-sync",
+                        observation_id,
+                        now,
+                        datetime.now(timezone.utc),
+                        0.0,
+                        None, None, None, None, None,
+                        0.0,
+                        "success",
+                        doc.get("input_digest"),
+                        hash_for_audit({"observation_id": observation_id}),
+                        None,
+                        "mongo-sync",
+                    ),
+                )
+                self._con.execute("COMMIT;")
+            except Exception:
+                self._con.execute("ROLLBACK;")
+                raise
+        return True
+
     def read_status(self, observation_id: str, claim_token: str) -> Optional[str]:
         """Return the observation's state if the claim_token matches.
 

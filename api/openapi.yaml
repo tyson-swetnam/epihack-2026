@@ -110,6 +110,19 @@ paths:
            Notification agent chain (see plan/03).
         6. Return an `observation_id` plus a one-time `claim_token`
            the client can use to attach a profile or check status.
+      parameters:
+        - name: X-Client-Channel
+          in: header
+          required: false
+          schema:
+            type: string
+            enum: [web, mobile]
+            default: web
+          description: |
+            Which client filed the report. `mobile` routes the write to the
+            MongoDB store (synced to DuckLake for analytics); `web` (default)
+            writes straight to the DuckLake knowledge graph. See
+            plan/09-mobile-datastore.md.
       requestBody:
         required: true
         content:
@@ -556,12 +569,15 @@ components:
         - human.rash_or_bite
         - human.exposure_water
         - human.exposure_animal
+        - human.animal_bite_scratch
         # Animal
         - animal.dead_wildlife
         - animal.dead_livestock
         - animal.sick_unusual_behaviour
         - animal.mass_die_off
         - animal.unusual_species_sighting
+        - animal.pet_sick
+        - animal.malnourishment
         # Environmental
         - env.sewage
         - env.smoke_or_burn
@@ -569,6 +585,7 @@ components:
         - env.water_quality
         - env.air_quality
         - env.illegal_dumping
+        - env.food_safety
 
     SeverityIcon:
       type: string
