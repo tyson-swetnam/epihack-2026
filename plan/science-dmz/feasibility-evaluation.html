@@ -1,0 +1,438 @@
+<title>Feasibility Evaluation — UNM CARC × BigByte Science DMZ</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --panel: #ffffff; --ink: #1c2430; --muted: #5c6675;
+    --line: #d7dce4; --zone-line: #b9c2cf;
+    --sci: #1d5fd0; --sci-tint: rgba(29,95,208,.06);
+    --phi: #b23028; --ok: #1a7a4a; --warn: #9a6b15;
+    --halo: #f6f7f9;
+    --b1: #fdeee9; --b2: #f8c9b8; --b3: #ee9678; --b4: #d95f3d; --b5: #b03a20;
+    --b1t: #1c2430; --b2t: #1c2430; --b3t: #2a1008; --b4t: #ffffff; --b5t: #ffffff;
+    --bar: #9db9e8;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f141b; --panel: #171e28; --ink: #e8edf4; --muted: #97a2b1;
+      --line: #2b3442; --zone-line: #3a4556;
+      --sci: #74a8ff; --sci-tint: rgba(116,168,255,.08);
+      --phi: #ff8b7e; --ok: #4fc98a; --warn: #e0a83d;
+      --halo: #0f141b;
+      --b1: #33180f; --b2: #57271a; --b3: #7c3a22; --b4: #a84e2e; --b5: #d4693f;
+      --b1t: #d8c4bc; --b2t: #f0ddd6; --b3t: #fbeae3; --b4t: #fff5f0; --b5t: #241008;
+      --bar: #3d5a8a;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0f141b; --panel: #171e28; --ink: #e8edf4; --muted: #97a2b1;
+    --line: #2b3442; --zone-line: #3a4556;
+    --sci: #74a8ff; --sci-tint: rgba(116,168,255,.08);
+    --phi: #ff8b7e; --ok: #4fc98a; --warn: #e0a83d;
+    --halo: #0f141b;
+    --b1: #33180f; --b2: #57271a; --b3: #7c3a22; --b4: #a84e2e; --b5: #d4693f;
+    --b1t: #d8c4bc; --b2t: #f0ddd6; --b3t: #fbeae3; --b4t: #fff5f0; --b5t: #241008;
+    --bar: #3d5a8a;
+  }
+  :root[data-theme="light"] {
+    --bg: #f6f7f9; --panel: #ffffff; --ink: #1c2430; --muted: #5c6675;
+    --line: #d7dce4; --zone-line: #b9c2cf;
+    --sci: #1d5fd0; --sci-tint: rgba(29,95,208,.06);
+    --phi: #b23028; --ok: #1a7a4a; --warn: #9a6b15;
+    --halo: #f6f7f9;
+    --b1: #fdeee9; --b2: #f8c9b8; --b3: #ee9678; --b4: #d95f3d; --b5: #b03a20;
+    --b1t: #1c2430; --b2t: #1c2430; --b3t: #2a1008; --b4t: #ffffff; --b5t: #ffffff;
+    --bar: #9db9e8;
+  }
+
+  body { background: var(--bg); color: var(--ink); margin: 0; padding: 40px 24px 80px;
+    font-family: -apple-system, "Segoe UI", "Helvetica Neue", Arial, sans-serif; line-height: 1.55; }
+  .wrap { max-width: 1160px; margin: 0 auto; }
+  .eyebrow { font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); font-weight: 600; margin: 0 0 10px; }
+  h1 { font-family: "Avenir Next", "Segoe UI", sans-serif; font-size: clamp(24px,3.2vw,33px); font-weight: 650; letter-spacing: -.015em; margin: 0 0 12px; text-wrap: balance; }
+  h2 { font-family: "Avenir Next", "Segoe UI", sans-serif; font-size: 19px; font-weight: 650; margin: 48px 0 6px; letter-spacing: -.01em; }
+  h2 .no { color: var(--muted); font-weight: 500; margin-right: 8px; }
+  h3 { font-size: 14.5px; font-weight: 650; margin: 26px 0 8px; }
+  p { max-width: 78ch; }
+  .lede { color: var(--muted); font-size: 15.5px; max-width: 74ch; margin: 0 0 26px; }
+  .sectionlede { color: var(--muted); font-size: 13.5px; max-width: 78ch; margin: 0 0 14px; }
+
+  .verdict { display: flex; flex-wrap: wrap; gap: 14px; align-items: stretch; margin: 24px 0 8px; }
+  .tile { flex: 1 1 200px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); padding: 14px 18px; }
+  .tile .k { font-size: 11px; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); font-weight: 600; margin-bottom: 6px; }
+  .tile .v { font-family: "Avenir Next","Segoe UI",sans-serif; font-size: 21px; font-weight: 650; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+  .tile .s { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .tile.hero { border-color: var(--warn); }
+  .tile.hero .v { color: var(--warn); font-size: 19px; }
+
+  .panel { border: 1px solid var(--line); border-radius: 10px; background: var(--panel); padding: 18px 22px; margin: 14px 0; }
+  .panel.flag { border-left: 3px solid var(--phi); }
+  .panel.good { border-left: 3px solid var(--ok); }
+
+  ul.tight { margin: 8px 0; padding-left: 20px; }
+  ul.tight li { margin-bottom: 7px; font-size: 13.5px; }
+  ul.tight li strong { font-weight: 650; }
+  ol.tight { margin: 8px 0; padding-left: 22px; }
+  ol.tight li { margin-bottom: 7px; font-size: 13.5px; }
+
+  .tablewrap { border: 1px solid var(--line); border-radius: 10px; background: var(--panel); overflow-x: auto; margin: 14px 0; }
+  table { border-collapse: collapse; width: 100%; font-size: 12.8px; min-width: 760px; }
+  caption { text-align: left; font: 600 13.5px "Avenir Next","Segoe UI",sans-serif; padding: 14px 18px 4px; }
+  th, td { text-align: left; padding: 9px 14px; border-top: 1px solid var(--line); vertical-align: top; }
+  th { font-size: 10.5px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); border-top: none; padding-top: 12px; white-space: nowrap; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  td.mono { font-family: ui-monospace,"SF Mono",Menlo,monospace; font-size: 11.5px; white-space: nowrap; }
+  td .note { display: block; color: var(--muted); font-size: 11.5px; margin-top: 3px; max-width: 52ch; }
+  tr.subtotal td, tr.total td { font-weight: 650; background: var(--sci-tint); }
+  tr.total td { border-top: 2px solid var(--zone-line); }
+  .rangebar { position: relative; height: 6px; border-radius: 3px; background: var(--line); min-width: 120px; margin-top: 5px; }
+  .rangebar span { position: absolute; top: 0; height: 6px; border-radius: 3px; background: var(--bar); }
+  .flagcell { color: var(--phi); font-weight: 650; }
+
+  /* risk matrix */
+  .matrix { display: grid; grid-template-columns: 90px repeat(5, 1fr); gap: 4px; margin: 14px 0 6px; min-width: 640px; }
+  .matrixwrap { overflow-x: auto; }
+  .mcell { border-radius: 6px; min-height: 64px; padding: 7px 9px; font-size: 11px; }
+  .mhead { display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; min-height: 0; }
+  .maxis { display: flex; align-items: center; justify-content: flex-end; text-align: right; padding-right: 10px; font-size: 11px; color: var(--muted); font-weight: 600; }
+  .mscore { font-family: ui-monospace,"SF Mono",Menlo,monospace; font-size: 10px; opacity: .75; display: block; margin-bottom: 3px; }
+  .mids { font-family: ui-monospace,"SF Mono",Menlo,monospace; font-size: 11px; font-weight: 600; line-height: 1.5; }
+  .band1 { background: var(--b1); color: var(--b1t); }
+  .band2 { background: var(--b2); color: var(--b2t); }
+  .band3 { background: var(--b3); color: var(--b3t); }
+  .band4 { background: var(--b4); color: var(--b4t); }
+  .band5 { background: var(--b5); color: var(--b5t); }
+  .bandlegend { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 12px; color: var(--muted); margin: 8px 0 0; }
+  .bandlegend .bi { display: inline-flex; align-items: center; gap: 6px; }
+  .bandlegend .sw { width: 14px; height: 14px; border-radius: 4px; display: inline-block; }
+
+  /* swot */
+  .swot { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; margin: 14px 0; }
+  .squad { border: 1px solid var(--line); border-radius: 10px; background: var(--panel); padding: 16px 20px; }
+  .squad h3 { margin: 0 0 10px; display: flex; gap: 8px; align-items: center; }
+  .squad .dot { width: 10px; height: 10px; border-radius: 50%; }
+  .squad ul { margin: 0; padding-left: 18px; }
+  .squad li { margin-bottom: 9px; font-size: 13px; }
+  .squad li strong { display: block; font-weight: 650; font-size: 13px; }
+  .squad li span { color: var(--muted); font-size: 12.5px; }
+
+  .pill { display: inline-block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; border-radius: 20px; padding: 2px 9px; vertical-align: middle; }
+  .pill.new { background: var(--sci-tint); color: var(--sci); border: 1px solid var(--sci); }
+
+  .footnote { margin-top: 30px; font-size: 12.5px; color: var(--muted); max-width: 84ch; }
+  .footnote strong { color: var(--ink); }
+  a { color: var(--sci); }
+</style>
+
+<div class="wrap">
+  <p class="eyebrow">UNM CARC · Science DMZ planning · deep-research feasibility evaluation · July 2026</p>
+  <h1>Feasibility Evaluation: the BigByte Science DMZ concept</h1>
+  <p class="lede">
+    A 20-agent research evaluation of the proposed UNM CARC × BigByte × HSC Science DMZ: six sourced research sweeps
+    (hardware pricing, circuits, staffing, funding precedents, HIPAA, UNM-specific facts), each adversarially fact-checked,
+    then synthesized into a risk register, SWOT, cost model, staffing model, and verdict — with a completeness critique
+    and follow-up research on the two critical gaps it found.
+  </p>
+
+  <div class="verdict">
+    <div class="tile hero">
+      <div class="k">Verdict</div>
+      <div class="v">Feasible — with conditions</div>
+      <div class="s">Engineering is sound &amp; precedented; funding, fiber, and staffing gate everything</div>
+    </div>
+    <div class="tile">
+      <div class="k">Networking capex</div>
+      <div class="v">$615K – $1.13M</div>
+      <div class="s">Corrected BOM incl. campus MACsec terminator; edu discount 16–35%, not 40–60%</div>
+    </div>
+    <div class="tile">
+      <div class="k">Non-staff opex</div>
+      <div class="v">$100K – $315K / yr</div>
+      <div class="s">Not CC*-fundable; several items still unpriced (Globus, pen tests, SIEM ingest)</div>
+    </div>
+    <div class="tile">
+      <div class="k">UNM steady-state staffing</div>
+      <div class="v">≈ 3.85 FTE</div>
+      <div class="s">CARC 2.1 · Central IT 0.75 · HSC 1.0 — incl. <strong>2 genuinely new hires</strong></div>
+    </div>
+  </div>
+
+  <h2><span class="no">01</span>What verification overturned</h2>
+  <p class="sectionlede">Adversarial fact-checking corrected six load-bearing assumptions in the concept. These corrections are baked into every number below and should be fixed in the concept document before external use.</p>
+  <div class="panel flag">
+    <ul class="tight">
+      <li><strong>"LoboNet at BigByte" is not UNM fiber — refuted.</strong> The "LoboNet" on BigByte's carrier roster is Lobo Internet Services Ltd. (lobo.net, AS11996), a commercial Albuquerque ISP/WISP founded 1996. No evidence of UNM-owned strands at 123 Central Ave NW was found. The 2×100G dual-VRF metro span must be budgeted as a <em>new</em> dark-fiber lease (≈$500–2,500/mo per pair + $2–10K NRC, 14–22 weeks provisioning; UPN, Zayo, and Lumen are on-net candidates).</li>
+      <li><strong>"Rio Grande GigaPoP" does not exist.</strong> The facility is the <strong>Albuquerque GigaPoP (ABQG)</strong>, operated by UNM IT itself, with downtown presence at/near the H5 carrier hotel at 505 Marquette — 3–5 blocks from BigByte. Internet2's next-gen 400G node in Albuquerque sits upstream.</li>
+      <li><strong>UNM's WAN is already 100G — the bottleneck was mislocated.</strong> UNM has existing 100G links to ESnet and the Western Regional Network via ABQG. The actual constraint is <strong>CARC's ~10G campus Science-DMZ segment</strong> (2014 CC*IIE vintage). The campus-side 100G upgrade must be an explicit costed work package or the "HPC reads S3 at line rate" premise fails.</li>
+      <li><strong>Education discounts are 16–35%, not 40–60%.</strong> Arista's own Texas DIR cooperative-contract sheet discloses 16.00% off list. Deeper discounts require negotiated deal registration and cannot be assumed in a grant budget. This alone raises the credible capex floor by ~$125K.</li>
+      <li><strong>The $10K/yr OSN fee is unverified</strong> — it appears in no public OSN document (checked twice independently). Pod usable capacity is ~1.4 PB (not 1.5 PB), 7U, 4.1 kW, with a 6-month deactivation-notice clause in OSN's hosting guidelines. Get the fee and host obligations in writing.</li>
+      <li><strong>There is no open NSF CC* solicitation as of July 2026.</strong> NSF 24-530's deadlines passed in 2024; June-2026 award announcements trace to the FY2024 cycle. The named funding vehicle currently has no submission window — the single largest external schedule risk.</li>
+      <li><strong>BigByte's resilience claims are self-declared.</strong> "Tier III-compliant" carries no Uptime Institute certification; public listings describe a <em>single</em> 8,000-gallon generator; the earlier "2N+1 UPS" claim is unverified (the concept itself says N+1). SOC 2 Type 2 report and one-line power diagrams are required diligence before contract.</li>
+    </ul>
+  </div>
+
+  <h2><span class="no">02</span>Networking hardware cost estimate</h2>
+  <p class="sectionlede">Corrected BOM at 16–35% off list. Excludes the OSN pod (~$90K, externally funded), the CyVerse K8s cluster (CyVerse-funded), and all salaries. Includes the campus-side MACsec terminator the original design was missing — without it the HIPAA VRF is unbuildable as drawn (MACsec is hop-by-hop; the 7050X3-class extension switch cannot terminate it).</p>
+  <div class="tablewrap">
+    <table>
+      <caption>Capital expenditure (2026 USD, edu pricing at 16–35% off list)</caption>
+      <thead><tr><th>Item</th><th class="num">Qty</th><th class="num">Line low</th><th class="num">Line high</th><th>Range</th><th>Basis</th></tr></thead>
+      <tbody>
+        <tr><td>Border router pair, deep-buffer + MACsec (Arista 7280CR3MK-32D4S class) at BigByte</td><td class="num">2</td><td class="num">$132,000</td><td class="num">$174,000</td><td><div class="rangebar"><span style="left:11%;width:4%"></span></div></td><td><span class="note">List $100.8–103K each (Terabit MSRP; TX DIR sheet). Collapses border BGP + deep-buffer fabric + MACsec into one platform. Single-router variant saves ~$66–87K but loses N+1 on the core.</span></td></tr>
+        <tr><td>DMZ aggregation switch at BigByte (7280SR3-48YC8 class, deep-buffer)</td><td class="num">1</td><td class="num">$15,000</td><td class="num">$25,000</td><td><div class="rangebar"><span style="left:1.3%;width:0.9%"></span></div></td><td><span class="note">Street ~$18K. Deep buffers non-negotiable: ESnet documents 0.0046% loss collapsing wide-area TCP.</span></td></tr>
+        <tr><td>CARC campus DMZ extension switch (7050X3 class)</td><td class="num">1</td><td class="num">$12,000</td><td class="num">$20,000</td><td><div class="rangebar"><span style="left:1%;width:0.8%"></span></div></td><td><span class="note">Refurb anchors $5–6.5K; $12–20K new. Open-VRF only — cannot terminate MACsec (see next line).</span></td></tr>
+        <tr><td>Campus-side MACsec terminator (3rd 7280CR3MK-32P4S) <span class="pill new">added by critique</span></td><td class="num">1</td><td class="num">$67,000</td><td class="num">$87,000</td><td><div class="rangebar"><span style="left:5.9%;width:1.8%"></span></div></td><td><span class="note">Gap found by completeness critic: both MACsec routers were at BigByte, leaving no campus-side termination. GCM-AES-XPN-256 wire-speed at 100G confirmed on Arista's 7280R3-MACsec datasheet. Alternative: 7280SR3M-48YC8 pair $52–100K net, offset by deleting the 7050X3 line.</span></td></tr>
+        <tr><td>MACsec enablement licenses (LIC-FIX-x-MACSEC, per device × 3)</td><td class="num">3</td><td class="num">$12,000</td><td class="num">$54,000</td><td><div class="rangebar"><span style="left:1%;width:3.7%"></span></div></td><td><span class="note">Arista's licensing framework requires a perpetual license to enable MACsec; SKUs are quote-only (est. $4–18K net/device). Replaces the earlier "$0–48K contingency" line.</span></td></tr>
+        <tr><td>100G gray optics (CWDM4 $209 / LR4 $399), all links + ~20% spares</td><td class="num">30</td><td class="num">$6,270</td><td class="num">$11,970</td><td><div class="rangebar"><span style="left:0.5%;width:0.5%"></span></div></td><td><span class="note">FS.com verified pricing. Covers metro span both ends, ABQG handoff, DTN/Zeek/perfSONAR/firewall ports.</span></td></tr>
+        <tr><td>100G DWDM QSFP28 contingency (only if fiber pairs are scarce)</td><td class="num">4</td><td class="num">$12,000</td><td class="num">$26,200</td><td><div class="rangebar"><span style="left:1%;width:1.3%"></span></div></td><td><span class="note">$3.0–6.6K/module. Drop this line if two dark-fiber pairs are secured. Passive mux/OADM hardware would add further — currently unpriced.</span></td></tr>
+        <tr><td>Data Transfer Nodes (EPYC + NVMe + ConnectX-7 100G, Globus)</td><td class="num">3</td><td class="num">$90,000</td><td class="num">$189,000</td><td><div class="rangebar"><span style="left:7.9%;width:8.8%"></span></div></td><td><span class="note">ESnet reference DTN ≈$63K (May 2026); cost-optimized ≈$30–35K. NSF guidance caps DTNs at &lt;15% of a CC* budget (~$105K at $700K) — grant-funded nodes must be the lean build.</span></td></tr>
+        <tr><td>perfSONAR nodes, 100G-capable (BigByte + CARC)</td><td class="num">2</td><td class="num">$10,000</td><td class="num">$16,000</td><td><div class="rangebar"><span style="left:0.9%;width:0.5%"></span></div></td><td><span class="note">ESnet 100G reference ≈$4K (2021); $5–8K each in 2026 with optics. The only instrument that catches soft failures.</span></td></tr>
+        <tr><td>Zeek IDS worker servers (flow-shunting architecture)</td><td class="num">3</td><td class="num">$45,000</td><td class="num">$90,000</td><td><div class="rangebar"><span style="left:4%;width:4%"></span></div></td><td><span class="note">Naive 100G inspection needs 4,000+ cores; shunting + 2–3 workers is the standard design (WLCG SOC WG).</span></td></tr>
+        <tr><td>100G capture NICs (Napatech NT200A02 class + license)</td><td class="num">3</td><td class="num">$24,000</td><td class="num">$45,000</td><td><div class="rangebar"><span style="left:2.1%;width:1.9%"></span></div></td><td><span class="note">Quote-only new; $8–15K/card estimated. Get firm quotes at proposal time (30% contingency advised).</span></td></tr>
+        <tr><td>Passive optical taps or packet broker feeding Zeek</td><td class="num">1</td><td class="num">$3,000</td><td class="num">$24,000</td><td><div class="rangebar"><span style="left:0.3%;width:1.9%"></span></div></td><td><span class="note">Taps est. $1–3K/link; Gigamon HC1 from ~$23K (but 1/10G — 100G broker ports need HC3-class or used Arista TapAgg).</span></td></tr>
+        <tr><td>HIPAA enclave firewalls — HSC enclave + BigByte cage (FG-1800F / PA-5410 class)</td><td class="num">2</td><td class="num">$80,000</td><td class="num">$160,000</td><td><div class="rangebar"><span style="left:7%;width:7.1%"></span></div></td><td><span class="note">FG-1800F $40K street (CDWG, verified — check end-of-order status; 2019-gen box). Natural HSC-funded line, held outside any CC* budget. Note: 10–40G threat throughput vs the 100G VRF is an unacknowledged design decision — size to HSC's real PHI workload.</span></td></tr>
+        <tr><td>Out-of-band management (Opengear console servers + LTE, both sites)</td><td class="num">2</td><td class="num">$7,600</td><td class="num">$10,000</td><td><div class="rangebar"><span style="left:0.7%;width:0.2%"></span></div></td><td><span class="note">OM2216-L $4,278 / CM8148 $3,782 (CDW, verified).</span></td></tr>
+        <tr><td>Racks, PDUs, cabling at BigByte (3 racks: network+DTN, OSN host, measurement)</td><td class="num">3</td><td class="num">$19,500</td><td class="num">$27,000</td><td><div class="rangebar"><span style="left:1.7%;width:0.7%"></span></div></td><td><span class="note">APC 42U ≈$2.1K + dual 17.3 kW 3-phase PDUs ≈$4.4K per rack + cabling.</span></td></tr>
+        <tr class="subtotal"><td>Hardware subtotal</td><td class="num"></td><td class="num">$535,400</td><td class="num">$959,200</td><td></td><td></td></tr>
+        <tr><td>Spares pool (~10%): optics, PSUs, fans, cold-spare switch, spare NIC</td><td class="num">1</td><td class="num">$53,500</td><td class="num">$96,000</td><td><div class="rangebar"><span style="left:4.7%;width:3.8%"></span></div></td><td><span class="note">Justified by 2026 supply conditions: optics demand ~30% over supply, 12-month lead times, ~15% premiums.</span></td></tr>
+        <tr><td>Integration, install &amp; turn-up professional services</td><td class="num">1</td><td class="num">$25,000</td><td class="num">$75,000</td><td><div class="rangebar"><span style="left:2.2%;width:4.4%"></span></div></td><td><span class="note">5–8% planning factor (assumption, not corpus-priced). Deployment only — NSF 24-530 discourages consulting for production ops; use EPOC (no-cost) for tuning.</span></td></tr>
+        <tr class="total"><td>Total capex</td><td class="num"></td><td class="num">≈ $614,000</td><td class="num">≈ $1,130,000</td><td></td><td><span class="note">Pre-critique baseline was $526K–$1.03M; the campus MACsec terminator + licenses add ~$80–145K.</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="tablewrap">
+    <table>
+      <caption>Annual recurring (non-staff), 2026 USD</caption>
+      <thead><tr><th>Item</th><th class="num">Low / yr</th><th class="num">High / yr</th><th>Basis</th></tr></thead>
+      <tbody>
+        <tr><td>Internet2 membership / port delta</td><td class="num">$0</td><td class="num">$0</td><td><span class="note">UNM's scale-based Sustaining Contribution (2025 cap $108,662) is already paid; no separate higher-ed 100G port fee exists.</span></td></tr>
+        <tr><td>ABQG connection / cost-share</td><td class="num">$0</td><td class="num">$10,000</td><td><span class="note">Unverified placeholder — ABQG is UNM-IT-operated; internal cost-share, no published schedule. Get an internal quote.</span></td></tr>
+        <tr><td>Metro dark-fiber lease, BigByte ↔ campus (1–2 pairs)</td><td class="num">$6,000</td><td class="num">$60,000</td><td><span class="note">$500–2,500/mo per pair + $2–10K NRC (one-time). Drops to ~$0 only if UNM fiber is later confirmed on-net.</span></td></tr>
+        <tr><td>Colo cross-connects at BigByte (4–8)</td><td class="num">$2,000</td><td class="num">$11,000</td><td><span class="note">$50–300/mo each + NRC.</span></td></tr>
+        <tr><td>Colo rack + power at BigByte (2–4 racks, 10–20 kW incl. OSN pod)</td><td class="num">$24,000</td><td class="num">$60,000</td><td><span class="note">$150–250/kW/mo planning range; BigByte is quote-only. HSC cage &amp; CyVerse racks billed to their owners.</span></td></tr>
+        <tr><td>Hardware maintenance (10–15% of list, non-firewall fleet)</td><td class="num">$40,000</td><td class="num">$90,000</td><td><span class="note">SmartNet-style norms 8–22%; high end = 24×7×4 on the border pair.</span></td></tr>
+        <tr><td>Firewall security subscriptions + support (20–40% of firewall capex)</td><td class="num">$16,000</td><td class="num">$64,000</td><td><span class="note">Consistent with FG-1800F $40K hw vs $60.8K w/ 1-yr UTP bundle. Natural HSC line.</span></td></tr>
+        <tr><td>OSN participation fee + pod disk replacements</td><td class="num">$10,500</td><td class="num">$12,000</td><td><span class="note">Fee unverified — confirm in writing. Disks: ~100-drive pod at 1–2% AFR, $400–980/drive in the 2026 HDD shortage.</span></td></tr>
+        <tr><td>Optics/misc refresh + OOB LTE service</td><td class="num">$3,000</td><td class="num">$7,000</td><td><span class="note">LTE ~$50/mo/site; failed-optic replacement; remote-hands overage $100–200/hr assumed low.</span></td></tr>
+        <tr class="total"><td>Total modeled opex (non-staff)</td><td class="num">≈ $102,000</td><td class="num">≈ $314,000</td><td></td></tr>
+        <tr><td class="flagcell">Known unpriced items</td><td class="num" colspan="2">+ TBD</td><td><span class="note">Globus subscription tier for the S3 connector (typically tens of $K/yr — check whether OSN's covers UNM-operated endpoints); annual pen test + semi-annual vuln scans for the PHI scope ($15–50K/yr); Zeek log storage node + central-SIEM ingest licensing; the ABQG↔BigByte 2×100G span itself (cross-connects at 505 Marquette, any DWDM mux); campus inside-plant fiber from the metro demarc to CARC and to HSC's MACsec endpoint; DDoS mitigation via ABQG/Internet2 (RTBH/flowspec).</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="panel">
+    <strong>Funding-fit reality check.</strong> Both capex ends bracket the NSF CC* Area-1 ceiling ($700K/2 yr, verified from NSF 24-530). Even stripping the HSC tier (firewalls, MACsec licenses) leaves ≈$790K+ at worst-case 16%-off pricing — <em>phasing has not yet been demonstrated numerically</em>. The realistic funding architecture is a stack: CC* successor solicitation for the open-DMZ core, HSC institutional funds for the HIPAA tier (held outside the grant budget — 24-530 prohibits voluntary cost sharing), RIO-NM EPSCoR ($8M, UNM-led, has a Cyberinfrastructure Core) as bridge/partner, and a signed multi-year institutional O&amp;M commitment. A regional framing with NMSU/NM Tech would unlock the $1.4M ceiling and strengthen the novel colo-siting argument.
+  </div>
+
+  <h2><span class="no">03</span>FTE staffing estimate — CARC, HSC, Central Campus IT</h2>
+  <p class="sectionlede">Steady-state (year 2+) fractions dedicated to this infrastructure; build-phase (year 0–1) runs ~25% hotter (≈4.8–5.25 FTE — the two figures in the model disagree by ~0.45 FTE and need reconciling). Salaries are full-time annual, NM higher-ed market; fringe 46.79% main campus FY26 (rising to ~48.6% by FY28), ~40% HSC (verify against the HSC fringe memo).</p>
+  <div class="tablewrap">
+    <table>
+      <caption>Steady-state staffing model (loaded cost = FTE × salary × (1 + fringe))</caption>
+      <thead><tr><th>Org</th><th>Role</th><th class="num">FTE</th><th class="num">Salary range</th><th class="num">Loaded cost / yr</th><th>Maps to</th></tr></thead>
+      <tbody>
+        <tr><td>CARC</td><td>IT Manager — service owner, colo/OSN/I2 contracts, NM procurement, grant reporting <span class="note">Build: 0.40 FTE</span></td><td class="num">0.25</td><td class="num">$105–140K</td><td class="num">$39–51K</td><td>IT Manager (open)</td></tr>
+        <tr><td>CARC</td><td class="flagcell">Senior Network Engineer — BGP/ABQG, deep-buffer fabric, MACsec CAK/MKA rollover, perfSONAR <span class="note">Build: 1.0 FTE. UNM Grade-14 band ($58.5–83.7K) is 20–45% under ABQ market ($105.5K avg) — reclass/market exception required or this hire fails.</span></td><td class="num">0.75</td><td class="num">$95–130K</td><td class="num">$105–143K</td><td class="flagcell">NEW HIRE</td></tr>
+        <tr><td>CARC</td><td>HPC Engineer — DTN pool + Globus, extension switch, HPC↔S3 path <span class="note">Build: 0.75 FTE; remainder stays on general CARC HPC duties.</span></td><td class="num">0.50</td><td class="num">$100–135K</td><td class="num">$73–99K</td><td>HPC Engineer (open)</td></tr>
+        <tr><td>CARC</td><td>DevOps/Security — Zeek shunting + triage, DMZ ACL change management</td><td class="num">0.50</td><td class="num">$85–115K</td><td class="num">$62–84K</td><td>DevOps/Sec split (open)</td></tr>
+        <tr><td>CARC</td><td>Operations technician — BigByte remote-hands coordination, OSN disk swaps, cabinet custody</td><td class="num">0.10</td><td class="num">$58.5–84K</td><td class="num">$7–11K</td><td>Existing staff</td></tr>
+        <tr><td>Central IT</td><td>DevOps/Security — SOC integration of Zeek alerts, campus IR process, vuln management <span class="note">⚠ Double-count risk: the concept defines ONE split role; booking 0.5 FTE here + 0.5 at CARC assumes net-new Central IT effort that was never committed. Resolve in the MOU.</span></td><td class="num">0.50</td><td class="num">$85–115K</td><td class="num">$62–84K</td><td>DevOps/Sec split (open)</td></tr>
+        <tr><td>Central IT</td><td>Network engineer (ABQG / UNM IT) — GigaPoP handoff, dark-fiber procurement &amp; acceptance, demarcation <span class="note">Build: 0.5 FTE (new fiber lease engineering — LoboNet assumption refuted).</span></td><td class="num">0.25</td><td class="num">$85–120K</td><td class="num">$31–44K</td><td>Existing staff</td></tr>
+        <tr><td>HSC</td><td class="flagcell">Secure-enclave systems/firewall engineer — HIPAA VRF MACsec endpoint, NGFW pair, encrypted scratch, cage hardware <span class="note">Build: 1.0 FTE. Anchored to UNM HSC's own HPC Cloud Engineer posting ($102–150K). HSC-funded.</span></td><td class="num">0.75</td><td class="num">$102–150K</td><td class="num">$107–158K</td><td class="flagcell">NEW HIRE (HSC)</td></tr>
+        <tr><td>HSC</td><td>HIPAA compliance analyst — risk analysis, access reviews, 6-yr log retention, BAA lifecycle <span class="note">Steps up to ~0.5 FTE when the delayed HIPAA Security Rule NPRM finalizes (anticipated Jul 2027) — currently unfunded.</span></td><td class="num">0.25</td><td class="num">$85–115K</td><td class="num">$30–40K</td><td>Existing staff (pooled)</td></tr>
+        <tr class="total"><td>UNM total</td><td>Steady state (build ≈ 4.8–5.25 FTE)</td><td class="num">3.85</td><td class="num"></td><td class="num">≈ $515–715K</td><td>2 new hires required</td></tr>
+        <tr><td colspan="6"><span class="note">Context rows, not UNM payroll: CyVerse RSE team (2 hired FTE + 4–6 grant-funded) operates the K8s cluster — soft-money continuity risk; a lapse strands an orphaned tenant in UNM's footprint. OSN DevOps operates the Ceph pod remotely (~0.1 FTE equivalent; UNM's obligation is the ops-technician row).</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="panel flag">
+    <strong>Coverage gaps the plan must own honestly.</strong>
+    <ul class="tight">
+      <li><strong>The three open roles are not sufficient.</strong> Two genuinely new hires are required: the CARC Senior Network Engineer and the HSC secure-enclave engineer. Incremental loaded cost of the new hires: ≈ <strong>$212–301K/yr</strong>.</li>
+      <li><strong>24/7 is mathematically unstaffable.</strong> Google SRE on-call math needs ≥8 engineers in rotation; this model fields ~2.6 open-side FTE across 4–5 people. Declare a business-hours SLO from day one — a Friday-evening optic failure on a national-facing OSN endpoint can strand other institutions' transfers for 60+ hours, and that must be a stated, accepted service tier, not a surprise.</li>
+      <li><strong>Bus factor 1</strong> on border BGP + MACsec rollover, and on Globus/DTN internals. Cross-training and EPOC are mitigations, not depth.</li>
+      <li><strong>Recruiting is the single most likely failure mode:</strong> UNM's classified band is 20–45% under ABQ market for the network engineer. Secure the reclass/market exception before the grant is submitted.</li>
+      <li><strong>Security monitoring is thin for a no-firewall design:</strong> 1.0 FTE split across two orgs covers business-hours Zeek triage only. Route alerts into Central IT's 24/7 SOC even if response is next-business-day.</li>
+      <li><strong>HSC compliance is under-water from 2027:</strong> the NPRM's scan/pen-test/inventory cadences roughly double the 0.25 FTE; the step-up and external pen-test procurement are acknowledged nowhere in any budget.</li>
+      <li><strong>Soft-money dependencies:</strong> EPOC (offsets ~0.25 FTE of tuning) and CyVerse's 4–6 grant RSEs are both grant-contingent; the colo agreement should define the orphaned-tenant failure mode.</li>
+    </ul>
+  </div>
+
+  <h2><span class="no">04</span>Risk register</h2>
+  <p class="sectionlede">23 risks: 22 from synthesis plus R-23 added by the completeness critique. Scored likelihood × impact on 1–5 scales. Every cell prints its score band and member IDs, so the color tint is redundant encoding.</p>
+
+  <div class="matrixwrap">
+  <div class="matrix">
+    <div class="mcell maxis"></div>
+    <div class="mcell mhead">Impact 1</div><div class="mcell mhead">Impact 2</div><div class="mcell mhead">Impact 3</div><div class="mcell mhead">Impact 4</div><div class="mcell mhead">Impact 5</div>
+    <div class="mcell maxis">Likelihood 5</div>
+    <div class="mcell band2"><span class="mscore">5</span></div>
+    <div class="mcell band3"><span class="mscore">10</span></div>
+    <div class="mcell band4"><span class="mscore">15</span><span class="mids">R-13</span></div>
+    <div class="mcell band5"><span class="mscore">20</span><span class="mids">R-01</span></div>
+    <div class="mcell band5"><span class="mscore">25</span></div>
+    <div class="mcell maxis">Likelihood 4</div>
+    <div class="mcell band1"><span class="mscore">4</span></div>
+    <div class="mcell band2"><span class="mscore">8</span></div>
+    <div class="mcell band3"><span class="mscore">12</span><span class="mids">R-09 R-11 R-16 R-20</span></div>
+    <div class="mcell band4"><span class="mscore">16</span><span class="mids">R-02 R-08 R-12 R-21 R-23</span></div>
+    <div class="mcell band5"><span class="mscore">20</span></div>
+    <div class="mcell maxis">Likelihood 3</div>
+    <div class="mcell band1"><span class="mscore">3</span></div>
+    <div class="mcell band2"><span class="mscore">6</span><span class="mids">R-07 R-22</span></div>
+    <div class="mcell band2"><span class="mscore">9</span><span class="mids">R-03 R-10 R-14 R-19</span></div>
+    <div class="mcell band3"><span class="mscore">12</span><span class="mids">R-18</span></div>
+    <div class="mcell band4"><span class="mscore">15</span><span class="mids">R-15</span></div>
+    <div class="mcell maxis">Likelihood 2</div>
+    <div class="mcell band1"><span class="mscore">2</span></div>
+    <div class="mcell band1"><span class="mscore">4</span></div>
+    <div class="mcell band2"><span class="mscore">6</span><span class="mids">R-04</span></div>
+    <div class="mcell band2"><span class="mscore">8</span><span class="mids">R-05 R-06</span></div>
+    <div class="mcell band3"><span class="mscore">10</span><span class="mids">R-17</span></div>
+    <div class="mcell maxis">Likelihood 1</div>
+    <div class="mcell band1"><span class="mscore">1</span></div>
+    <div class="mcell band1"><span class="mscore">2</span></div>
+    <div class="mcell band1"><span class="mscore">3</span></div>
+    <div class="mcell band1"><span class="mscore">4</span></div>
+    <div class="mcell band2"><span class="mscore">5</span></div>
+  </div>
+  </div>
+  <div class="bandlegend">
+    <span class="bi"><span class="sw band1"></span>1–4 low</span>
+    <span class="bi"><span class="sw band2"></span>5–9 moderate</span>
+    <span class="bi"><span class="sw band3"></span>10–14 high</span>
+    <span class="bi"><span class="sw band4"></span>15–19 severe</span>
+    <span class="bi"><span class="sw band5"></span>20–25 critical</span>
+  </div>
+
+  <div class="tablewrap">
+    <table>
+      <caption>Full register (sorted by score). L = likelihood, I = impact, S = L×I.</caption>
+      <thead><tr><th>ID</th><th>Category</th><th>Risk &amp; mitigation</th><th class="num">L</th><th class="num">I</th><th class="num">S</th><th>Owner</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">R-01</td><td>network</td><td><strong>"LoboNet at BigByte" is not UNM fiber</strong> — it is Lobo Internet Services (commercial ISP, AS11996); the 2×100G dual-VRF metro link must be leased/built new (+cost, +14–22 wks).<span class="note">Mitigate: written confirmation from BigByte + UNM IT within 30 days; budget a UPN/Zayo/Lumen dark-fiber pair ($500–2,500/mo + NRC); start the lease RFP in month 1 of award.</span></td><td class="num">5</td><td class="num">4</td><td class="num">20</td><td>Central IT</td></tr>
+        <tr><td class="mono">R-02</td><td>network</td><td><strong>CARC's ~10G campus segment voids the line-rate premise</strong> — UNM WAN is already 100G; the bottleneck is CARC's 2014-vintage DMZ segment. A 100G DTN feeding a 10G path causes counterproductive congestion (ESnet).<span class="note">Mitigate: make the campus 100G upgrade an explicit costed work package sequenced before/with the BigByte build; validate end-to-end with perfSONAR before declaring service.</span></td><td class="num">4</td><td class="num">4</td><td class="num">16</td><td>Joint</td></tr>
+        <tr><td class="mono">R-08</td><td>funding</td><td><strong>No open CC* solicitation exists</strong> (24-530 deadlines passed 2024; no successor as of Jul 2026) — the primary funding vehicle has no submission window.<span class="note">Mitigate: monthly NSF OAC watch; hold a submission-ready proposal; pursue the stack (RIO-NM EPSCoR CI Core, HSC capital, institutional funds); ask the program officer about successor timing and colo fundability.</span></td><td class="num">4</td><td class="num">4</td><td class="num">16</td><td>CARC</td></tr>
+        <tr><td class="mono">R-12</td><td>staffing</td><td><strong>UNM pay bands can't recruit 100G-DMZ talent</strong> — Grade 14 ($58.5–83.7K) vs ABQ market ~$105.5K; the only competitive anchor ($102–150K) is an HSC posting.<span class="note">Mitigate: reclass/market-exception the network-engineer position before recruiting; budget at market × 1.468 fringe; grant-funded years 1–2 with written institutional pickup.</span></td><td class="num">4</td><td class="num">4</td><td class="num">16</td><td>CARC</td></tr>
+        <tr><td class="mono">R-21</td><td>governance</td><td><strong>Three-org seams (CARC/HSC/Central IT) + two external operators with no operating agreement</strong> — border config ownership, MACsec key custody, change authority, invoices, 2 a.m. escalation all undefined.<span class="note">Mitigate: execute a three-party MOU (device-class RACI, key custody, change management, cost allocation) before equipment is ordered; stand up a small governance board (Arizona Soteria pattern); put CyVerse/OSN interfaces in written annexes.</span></td><td class="num">4</td><td class="num">4</td><td class="num">16</td><td>Joint</td></tr>
+        <tr><td class="mono">R-23</td><td>security</td><td><strong>CyVerse K8s on the firewall-free fabric contradicts the "minimized DTN attack surface" argument</strong> <span class="pill new">added by critique</span> — ESnet's ACL-only model works because the DMZ hosts a small set of well-understood transfer tools; a multi-tenant K8s cluster running arbitrary researcher containers is the opposite. Peer practice (NRP/Nautilus) never runs "naked": it relocates the firewall into the cluster (Calico GlobalNetworkPolicy on host interfaces, default-deny + egress allowlists, namespace RBAC, no privileged pods, Falco runtime detection).<span class="note">Mitigate: sever CyVerse from the DTN argument — own VRF/VLAN + dedicated ACL policy; require the NRP-style in-cluster enforcement plane with egress restricted to OSN S3 + approved registries; admission control (signed/pinned images, restricted PSS); Falco → campus SOC; NIST 800-53 compensating-controls package (SC-7, AC-4, SI-4); tenancy/decommission clause covering the orphaned-tenant case.</span></td><td class="num">4</td><td class="num">4</td><td class="num">16</td><td>Joint (CARC + CyVerse)</td></tr>
+        <tr><td class="mono">R-13</td><td>staffing</td><td><strong>3-person team cannot provide 24/7</strong> — SRE math needs ≥8 in rotation; CC* effectively bars purchased NOC coverage.<span class="note">Mitigate: declare business-hours SLO in service definition and tenant agreements; after-hours facility pages go to BigByte remote hands with runbooks; if HSC needs 24/7, HSC funds it institutionally.</span></td><td class="num">5</td><td class="num">3</td><td class="num">15</td><td>IT Manager</td></tr>
+        <tr><td class="mono">R-15</td><td>compliance</td><td><strong>No PHI at BigByte before an executed BAA</strong> — the conduit exception is closed; university BAA negotiation runs 6–8+ weeks; a small colo's appetite for university BAA terms is untested. Gates the entire HIPAA workstream.<span class="note">Mitigate: start BAA negotiation in parallel with diligence using HSC's template; make "executed BAA + reviewed SOC 2" a hard gate; sequence the open DMZ first.</span></td><td class="num">3</td><td class="num">5</td><td class="num">15</td><td>HSC</td></tr>
+        <tr><td class="mono">R-09</td><td>funding</td><td><strong>BOM likely exceeds the CC* Area-1 ceiling</strong> — $614K–$1.13M vs $700K cap; 16–35% real discounts; DTNs capped &lt;15% of budget.<span class="note">Mitigate: phase the buy — CC* funds the open-DMZ core; HSC institutionally funds the HIPAA tier outside the grant; prefer FG-1800F over PA-5410 unless throughput demands otherwise; demonstrate the phased budget numerically (still unproven).</span></td><td class="num">4</td><td class="num">3</td><td class="num">12</td><td>Joint</td></tr>
+        <tr><td class="mono">R-11</td><td>funding</td><td><strong>Recurring costs are not CC*-fundable</strong> — reconciled envelope is ~$102–314K/yr non-staff (the register's earlier "$60–120K" under-asked by up to ~$200K/yr), plus incremental staff. Unfunded mandate by year 3 without a signed commitment.<span class="note">Mitigate: obtain a written multi-year CIO + HSC O&amp;M commitment covering the full reconciled figure (opex + net-new staff ≈ $315–615K/yr) inside the mandatory Campus CI Plan.</span></td><td class="num">4</td><td class="num">3</td><td class="num">12</td><td>Joint</td></tr>
+        <tr><td class="mono">R-16</td><td>compliance</td><td><strong>HIPAA Security Rule NPRM makes addressable controls mandatory</strong> (final action anticipated Jul 2027): encryption, MFA, segmentation, 6-mo vuln scans, annual pen tests, 72-h restoration — landing mid-lifecycle.<span class="note">Mitigate: design to the NPRM now (already mostly aligned); budget the recurring cadences into HSC's staffing and security budget from year one.</span></td><td class="num">4</td><td class="num">3</td><td class="num">12</td><td>HSC</td></tr>
+        <tr><td class="mono">R-20</td><td>schedule</td><td><strong>Stacked lead times → 12–18 months to service</strong> — NM procurement (formal competition &gt;$60K, 3–6 mo), optics/switch lead times 6–12 mo, fiber 14–22 wks, BAA 6–8+ wks, inside a 2-year award window.<span class="note">Mitigate: fiber + switch/optics RFPs in month 1; use cooperative contracts; order long-lead optics with the router order plus spares; parallel-track BAA and diligence; hold 10–15% price contingency.</span></td><td class="num">4</td><td class="num">3</td><td class="num">12</td><td>IT Manager</td></tr>
+        <tr><td class="mono">R-18</td><td>security</td><td><strong>CISO/HSC-ISO veto of the no-inline-firewall design</strong> — a stateful-firewall mandate destroys the performance rationale.<span class="note">Mitigate: engage both offices before costing; present the peer-reviewed Medical Science DMZ (JAMIA 25(3):267-274; production at Indiana, Harvard, U Chicago) + NIST 800-66r2 risk-based framing + the documented compensating-controls stack; obtain written sign-off as a proposal artifact. Note: R-23 must be resolved for this argument to hold.</span></td><td class="num">3</td><td class="num">4</td><td class="num">12</td><td>Joint</td></tr>
+        <tr><td class="mono">R-17</td><td>compliance</td><td><strong>Hybrid-entity mis-designation / enclave isolation failure</strong> — the UMass Amherst pattern ($650K settlement: undesignated research component, no firewall separation). A leaked route between VRFs is a violation independent of any breach.<span class="note">Mitigate: formal covered-component designation of cage + VRF + enclave before go-live; technically enforce no-route (separate VRF tables, default-deny, no leaked prefixes); independent pen test + quarterly config audits; include the path in HSC's enterprise-wide risk analysis; 6-year documentation retention.</span></td><td class="num">2</td><td class="num">5</td><td class="num">10</td><td>HSC</td></tr>
+        <tr><td class="mono">R-03</td><td>network</td><td><strong>Soft failures silently destroy throughput</strong> — ESnet's canonical 1-in-22,000-packet loss (0.0046%) collapsed wide-area TCP while costing ~450 Kbps locally.<span class="note">Mitigate: perfSONAR at both ends from day one with scheduled meshes + regression alerting; deep-buffer switching end to end; enroll in EPOC Roadside Assistance at award.</span></td><td class="num">3</td><td class="num">3</td><td class="num">9</td><td>CARC</td></tr>
+        <tr><td class="mono">R-10</td><td>funding</td><td><strong>Commercial-colo siting is a novel CC* reading</strong> — the aggregation language sits in the regional-track context; no prior award cites a commercial colo.<span class="note">Mitigate: argue on merits (ABQG adjacency; UNR/Switch, PNWGP/Westin, FRGP/Denver precedents); cover colo siting in the program-officer conversation; keep a campus-siting fallback; consider regional framing at the $1.4M ceiling.</span></td><td class="num">3</td><td class="num">3</td><td class="num">9</td><td>CARC</td></tr>
+        <tr><td class="mono">R-14</td><td>staffing</td><td><strong>The 50/50 security split erodes</strong> — central-IT incident load reclaims the half-FTE; Zeek triage, MACsec key rotation, vuln management go unstaffed. (Note: the staffing model may also double-count this role — resolve whether Central IT's half is net-new.)<span class="note">Mitigate: signed MOU naming person, %, duties, quarterly utilization review; automate (Zeek → SIEM, scripted key rotation); backfill trigger if effort exceeds 0.5 FTE two consecutive quarters.</span></td><td class="num">3</td><td class="num">3</td><td class="num">9</td><td>Joint</td></tr>
+        <tr><td class="mono">R-19</td><td>security</td><td><strong>Zeek at 100G is only viable with flow shunting</strong> — wrong/unmaintained shunting either blinds the IDS or overwhelms workers; the subsystem is also the least-priced (quote-only NICs/taps).<span class="note">Mitigate: 2–3 workers + NICs + taps with 30% contingency and firm quotes at proposal time; document the shunting policy in the CISO-approved risk analysis; alerts → central SIEM; quarterly rule review.</span></td><td class="num">3</td><td class="num">3</td><td class="num">9</td><td>IT Manager</td></tr>
+        <tr><td class="mono">R-05</td><td>facility</td><td><strong>BigByte resilience unproven</strong> — self-declared Tier III, single 8,000-gal generator in listings, PNM outage durations rising. A long outage takes down DMZ + OSN + CyVerse + HSC cage simultaneously.<span class="note">Mitigate: SOC 2 Type 2 + one-line diagrams + generator maintenance/fuel contracts before signing; SLA credits; document H5/505 Marquette as the DR/relocation option.</span></td><td class="num">2</td><td class="num">4</td><td class="num">8</td><td>Joint</td></tr>
+        <tr><td class="mono">R-06</td><td>vendor</td><td><strong>Single-facility small-business dependency</strong> — 1–10 employees, &lt;$5M revenue; an exit strands everything for months.<span class="note">Mitigate: contract terms — financial disclosure, 12+ months notice of sale/closure, assignment protections, capped escalation, defined remote-hands SLAs; rehearsed lift-and-shift runbook to H5.</span></td><td class="num">2</td><td class="num">4</td><td class="num">8</td><td>IT Manager</td></tr>
+        <tr><td class="mono">R-07</td><td>vendor</td><td><strong>OSN terms partly unverified</strong> — $10K/yr fee in no public document; ~1.4 PB usable (not 1.5); pod ops depend on OSN's NSF funding; 6-month deactivation notice.<span class="note">Mitigate: written agreement (fee, replacement duties, deactivation, support); budget disks $1–2K/yr with shortage buffer; identify fallback (self-run Ceph or ACCESS allocations).</span></td><td class="num">3</td><td class="num">2</td><td class="num">6</td><td>CARC</td></tr>
+        <tr><td class="mono">R-22</td><td>security</td><td><strong>MACsec traps at 100G</strong> — XPN-256 mandatory (packet-number exhaustion), CAK/CKN rollover is recurring auditable work, per-port licenses on careless platform picks (~$41–47K list/port on ASR1000), and MACsec covers the wire only — not at-rest ePHI.<span class="note">Mitigate: platform with MACsec in the PHY (7280CR3MK verified: XPN-256 wire-speed, license required but modest); scripted CAK rollover with logged rotations; at-rest encryption documented as a separate control.</span></td><td class="num">3</td><td class="num">2</td><td class="num">6</td><td>HSC</td></tr>
+        <tr><td class="mono">R-04</td><td>network</td><td><strong>ABQG handoff capacity/cost-share unpriced</strong> — upstream (Internet2 400G node) likely adequate, but the 2×100G handoff, 505-Marquette cross-connects, and any DWDM mux are unbudgeted internal cost-shares.<span class="note">Mitigate: internal negotiation early with the written cost-share in the budget; correct the ABQG name in all documents; brief Internet2/WRN on the 10 PiB/month peak profile.</span></td><td class="num">2</td><td class="num">3</td><td class="num">6</td><td>Central IT</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2><span class="no">05</span>SWOT</h2>
+  <div class="swot">
+    <div class="squad">
+      <h3><span class="dot" style="background:var(--ok)"></span>Strengths</h3>
+      <ul>
+        <li><strong>Proven ESnet + Medical Science DMZ patterns</strong><span>Canonical no-inline-firewall design (100+ universities) and the peer-reviewed HIPAA VRF pattern in production at Indiana, Harvard, U Chicago — citable precedent, not a novel security argument.</span></li>
+        <li><strong>UNM already operates the GigaPoP and 100G WAN</strong><span>ABQG is UNM IT's own facility; 100G to ESnet/WRN exists; Internet2's 400G node is upstream. The 2×100G handoff is incremental, not a leap.</span></li>
+        <li><strong>Repeat CC* awardee</strong><span>~$498K CC*IIE (2014, built the first DMZ, used for Cancer Center genomics), $150K CC*DNI planning, ~$599K SAMPRA.</span></li>
+        <li><strong>Operational load offloaded to OSN and CyVerse</strong><span>OSN runs the pod remotely (~0.1 FTE host duty); CyVerse brings its own RSE team. CARC runs only the network layer.</span></li>
+        <li><strong>HSC cost-share with clean VRF separation</strong><span>The MACsec VRF + enclave design is compliant-by-architecture with the 2027-era NPRM requirements, not just current law.</span></li>
+        <li><strong>Colo tier fits the footprint</strong><span>15,000 sqft raised floor / 3 MW easily covers 2–4 racks + a 7U pod at ~$2–5K/mo — cheaper than building campus power/cooling. (Resilience claims still need diligence — see R-05.)</span></li>
+      </ul>
+    </div>
+    <div class="squad">
+      <h3><span class="dot" style="background:var(--phi)"></span>Weaknesses</h3>
+      <ul>
+        <li><strong>The LoboNet fiber premise was wrong</strong><span>The metro span must be leased new — cost, lead time, and the "flat-rate UNM fiber" story all reset.</span></li>
+        <li><strong>Staffing can't deliver the implied service level</strong><span>3 open roles vs ~3.85 FTE steady-state need incl. 2 new hires; pay bands 20–45% under market; 24/7 needs ≥8 in rotation.</span></li>
+        <li><strong>Capex likely exceeds the CC* ceiling</strong><span>$614K–$1.13M vs $700K, at verified 16–35% discounts; phasing asserted but not yet demonstrated numerically.</span></li>
+        <li><strong>Concept document contains verified errors</strong><span>GigaPoP name, LoboNet, WAN speed, pod capacity, OSN fee — each fixable, collectively a credibility risk in front of reviewers.</span></li>
+        <li><strong>Campus 10G segment undermines the pitch</strong><span>The line-rate S3 promise depends on an undocumented campus-side 100G upgrade.</span></li>
+        <li><strong>High and rising fringe</strong><span>46.79% (FY26) → ~49.5% (FY29): every FTE costs ~1.47× salary, squeezing both budget and sustainability story.</span></li>
+      </ul>
+    </div>
+    <div class="squad">
+      <h3><span class="dot" style="background:var(--sci)"></span>Opportunities</h3>
+      <ul>
+        <li><strong>CC* text invites off-campus aggregation</strong><span>24-530 explicitly permits centralizing the Science DMZ — the hook for BigByte siting; a first-mover regional play could target the $1.4M ceiling.</span></li>
+        <li><strong>RIO-NM EPSCoR ($8M, UNM-led) as funding-stack partner</strong><span>Its Cyberinfrastructure Core aligns directly; regional framing strengthens both proposals.</span></li>
+        <li><strong>EPOC gives free operational depth</strong><span>No-cost Roadside Assistance, Deep Dives, NetSage — offsets ~0.25 FTE of the scarcest skill.</span></li>
+        <li><strong>Strong precedent cluster</strong><span>UNR at Switch Citadel, PNWGP in the Westin Building, FRGP in Denver, ASU's $494K CC* DMZ, LSU HSC's medical-campus DMZ — normalizing every "novel" element.</span></li>
+        <li><strong>Downtown interconnection density</strong><span>BigByte is 3–5 blocks from H5/505 Marquette where ABQG interconnects; ABQIX is on-site; cross-connects run $50–300/mo. H5 doubles as DR option and negotiation lever.</span></li>
+        <li><strong>Internet2 costs are sunk</strong><span>The Sustaining Contribution is already paid; the 400G node has headroom; incremental national-connectivity cost ≈ $0.</span></li>
+      </ul>
+    </div>
+    <div class="squad">
+      <h3><span class="dot" style="background:var(--warn)"></span>Threats</h3>
+      <ul>
+        <li><strong>No open CC* solicitation</strong><span>The named vehicle has no submission window as of July 2026 — the largest external schedule risk.</span></li>
+        <li><strong>BigByte is a fragile single-vendor dependency</strong><span>1–10 employees, one facility, one listed generator, self-declared certifications.</span></li>
+        <li><strong>Supply chain + NM procurement stack to a year-plus</strong><span>Optics 30% over supply / 12-mo lead times; formal competition &gt;$60K; fiber 14–22 wks; BAA 6–8+ wks → 12–18 months to service.</span></li>
+        <li><strong>HIPAA rules tighten ~2027</strong><span>NPRM cadences land mid-lifecycle; OCR enforcement history (UMass $650K, OSU-CHS $875K, URMC $3M) shows how university research-computing failures are punished.</span></li>
+        <li><strong>Real discounts are half the assumption</strong><span>16–35% pushes the BOM toward the high end exactly where the ceiling binds.</span></li>
+        <li><strong>Grid and seismic exposure downtown</strong><span>PNM outage durations rising; Rio Grande rift (57 Quaternary faults, M7.0 scenario) — everything concentrated in one facility with unproven generator redundancy; DR posture unpriced.</span></li>
+      </ul>
+    </div>
+  </div>
+
+  <h2><span class="no">06</span>Verdict, conditions, and critical path</h2>
+  <div class="panel good">
+    <strong>Feasible with conditions.</strong> The engineering is sound and thoroughly precedented — nothing discovered makes it infeasible. But three verified findings gate everything: (1) <strong>funding</strong> — corrected capex straddles the $700K CC* ceiling and there is currently no solicitation to apply to, so the plan only closes as a stack (CC* + HSC institutional funds + RIO-NM + signed O&amp;M commitment); (2) <strong>fiber</strong> — the free-UNM-fiber premise is refuted and the real bottleneck is CARC's own 10G campus segment; (3) <strong>staffing</strong> — the three open roles cannot deliver the stated service; ~3.85 steady-state FTE including two new hires, with a pay-band fix, and an honest business-hours SLO. If the top three conditions can't be satisfied, re-scope (campus or H5 siting, regional framing at $1.4M) rather than push forward on current assumptions.
+  </div>
+
+  <h3>Go/no-go conditions (priority order)</h3>
+  <ol class="tight">
+    <li><strong>Secure the funding stack first:</strong> program-officer conversation on CC* successor timing; HSC institutional funding of the HIPAA tier held outside the grant; RIO-NM alignment. Do not start procurement on a single-source $700K plan the corrected capex cannot fit.</li>
+    <li><strong>Resolve the metro fiber question in writing within 30 days;</strong> absent UNM strands, budget the commercial dark-fiber lease and start its RFP immediately on award.</li>
+    <li><strong>Signed multi-year CIO + HSC O&amp;M and staffing commitment</strong> covering the reconciled recurring figure (~$315–615K/yr incl. net-new staff) in the mandatory Campus CI Plan.</li>
+    <li><strong>Fix staffing before submission:</strong> reclass/market-exception the network engineer; commit both new hires; convert the 50/50 split into a signed MOU; declare the business-hours SLO.</li>
+    <li><strong>Make the CARC campus-side 100G upgrade an explicit costed work package.</strong></li>
+    <li><strong>Gate all PHI work on:</strong> executed BAA, reviewed SOC 2 Type 2 + power diligence, formal hybrid-entity designation, written CISO + HSC ISO sign-off on the compensating-controls analysis.</li>
+    <li><strong>Re-baseline at 16–35% off list;</strong> firm quotes for all quote-only items; OSN fee confirmed in writing.</li>
+    <li><strong>Harden the BigByte contract</strong> against small-vendor risk (disclosure, notice, assignment, SLAs, H5 relocation path).</li>
+    <li><strong>Execute the three-party operating MOU before any equipment is ordered.</strong></li>
+    <li><strong>Correct the concept document's verified errors</strong> (ABQG, fiber, 100G WAN, 1.4 PB) before external use.</li>
+  </ol>
+
+  <h3>Critical path (realistic total: 12–18 months from award to full service)</h3>
+  <ol class="tight">
+    <li>Fiber + CARC uplink confirmation in writing — 2–4 wks</li>
+    <li>NSF OAC program-officer conversation (successor timing, colo siting) — 4–8 wks, start now</li>
+    <li>CISO + HSC ISO engagement on the compensating-controls design — 6–10 wks, parallel</li>
+    <li>Firm quotes + re-baselined budget (Arista cooperative contracts, BigByte, fiber, security monitoring) — 6–8 wks, parallel</li>
+    <li>Executive commitments: O&amp;M MOU, governance MOU, position reclass — 8–12 wks</li>
+    <li>Submission-ready proposal held for the solicitation — 4–6 wks assembly + unknown wait (funding gate)</li>
+    <li>On award, month 1: fiber-lease RFP + switch/optics procurement (3–6 mo competition, then 6–12 mo lead times — order long-lead first, with spares)</li>
+    <li>Parallel: fiber provisioning 14–22 wks; BAA + facility diligence 6–10 wks; recruiting 3–6 mo</li>
+    <li>Open Science DMZ build + CARC 100G segment; perfSONAR mesh validation + EPOC enrollment before declaring service — 2–3 mo after hardware/fiber land</li>
+    <li>HSC HIPAA tier second: cage fit-out, MACsec turn-up (XPN-256 verified), enclave firewalls, designation, pen test — +3–6 mo after BAA</li>
+  </ol>
+
+  <h3>Kill criteria</h3>
+  <ul class="tight">
+    <li>No usable metro fiber path at ≤ ~$5K/mo → re-site to H5/505 Marquette or campus; the BigByte siting loses its rationale.</li>
+    <li>BigByte refuses the BAA, fails SOC 2/power diligence, or shows viability warning signs → kill the HSC cage at BigByte even if the open DMZ proceeds.</li>
+    <li>CISO/HSC ISO require an inline stateful firewall on the science path after reviewing the evidence → redesign or stop; do not build a firewalled "Science DMZ."</li>
+    <li>No CC* successor within ~12 months and no bridge funding → shelve rather than burn diligence against a nonexistent vehicle.</li>
+    <li>CIO/HSC decline the multi-year O&amp;M commitment → stop; cheaper than an unfunded facility degrading by year 3.</li>
+    <li>Network engineer can't be hired at market after two recruiting cycles → do not go live at bus-factor zero.</li>
+    <li>Re-verified capex exceeds ~$1.0M with no phasing path under the $700K ask → rescope regional ($1.4M, NMSU/NM Tech) or shrink to a single-router campus-anchored design.</li>
+    <li>ABQG/Internet2 cannot absorb the 10 PiB/month profile without unbudgeted augmentation → re-scope workload commitments before signing with tenants.</li>
+  </ul>
+
+  <h2><span class="no">07</span>Method &amp; caveats</h2>
+  <p class="sectionlede">
+    20 agents, 540 tool calls: six research sweeps with web access → one adversarial fact-checker per sweep (independent re-verification of the 5–8 most load-bearing figures; verdicts of <em>refuted</em> override the original claim) → four parallel synthesis agents (risk register, SWOT, cost, staffing) → an integrating feasibility verdict → a completeness critic that found 16 gaps (2 critical, both researched and folded in above; 11 important, listed as flags and unpriced items; 3 minor).
+  </p>
+  <p class="footnote">
+    <strong>Caveats.</strong> Quote-only items (capture NICs, taps/broker, BigByte rack rates, ABQG cost-shares, MACsec licenses) are derived estimates flagged in-line. The staffing model's build-phase total has a ~0.45 FTE internal inconsistency (4.8 vs 5.25) to reconcile. The Central-IT half of the security split may be double-counted vs the concept's single split role. HSC's ~40% fringe rate needs verification against the HSC FY26 memo. Enclave firewalls (10–40G) vs the 100G VRF is an unacknowledged sizing decision needing an HSC workload analysis. All figures 2026 USD, no out-year escalation. Key primary sources: ESnet fasterdata (DTN reference ≈$63K May 2026; Science DMZ security model), NSF 24-530 (ceilings, DTN &lt;15%, cost-share prohibition), Arista TX-DIR price sheet + 7280R3-MACsec datasheet, OSN hosting guidelines, HHS OCR enforcement records, NRP/Nautilus admin docs, NSA/CISA Kubernetes Hardening Guide, UNM OSP fringe memos, NMSA 13-1-125.
+  </p>
+</div>

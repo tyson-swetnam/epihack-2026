@@ -1,0 +1,456 @@
+<title>Science DMZ Network Concept — UNM CARC × BigByte × HSC</title>
+<style>
+  :root {
+    --bg: #f6f7f9;
+    --panel: #ffffff;
+    --ink: #1c2430;
+    --muted: #5c6675;
+    --line: #d7dce4;
+    --zone-line: #b9c2cf;
+    --sci: #1d5fd0;
+    --sci-tint: rgba(29, 95, 208, 0.055);
+    --phi: #b23028;
+    --phi-tint: rgba(178, 48, 40, 0.055);
+    --ent: #7a8494;
+    --mon: #0f8a78;
+    --halo: #f6f7f9;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f141b;
+      --panel: #171e28;
+      --ink: #e8edf4;
+      --muted: #97a2b1;
+      --line: #2b3442;
+      --zone-line: #3a4556;
+      --sci: #74a8ff;
+      --sci-tint: rgba(116, 168, 255, 0.07);
+      --phi: #ff8b7e;
+      --phi-tint: rgba(255, 139, 126, 0.07);
+      --ent: #8b96a6;
+      --mon: #45cdb4;
+      --halo: #0f141b;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0f141b;
+    --panel: #171e28;
+    --ink: #e8edf4;
+    --muted: #97a2b1;
+    --line: #2b3442;
+    --zone-line: #3a4556;
+    --sci: #74a8ff;
+    --sci-tint: rgba(116, 168, 255, 0.07);
+    --phi: #ff8b7e;
+    --phi-tint: rgba(255, 139, 126, 0.07);
+    --ent: #8b96a6;
+    --mon: #45cdb4;
+    --halo: #0f141b;
+  }
+  :root[data-theme="light"] {
+    --bg: #f6f7f9;
+    --panel: #ffffff;
+    --ink: #1c2430;
+    --muted: #5c6675;
+    --line: #d7dce4;
+    --zone-line: #b9c2cf;
+    --sci: #1d5fd0;
+    --sci-tint: rgba(29, 95, 208, 0.055);
+    --phi: #b23028;
+    --phi-tint: rgba(178, 48, 40, 0.055);
+    --ent: #7a8494;
+    --mon: #0f8a78;
+    --halo: #f6f7f9;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    line-height: 1.55;
+    margin: 0;
+    padding: 40px 24px 72px;
+  }
+  .wrap { max-width: 1240px; margin: 0 auto; }
+
+  .eyebrow {
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 600;
+    margin: 0 0 10px;
+  }
+  h1 {
+    font-family: "Avenir Next", "Segoe UI", "Helvetica Neue", sans-serif;
+    font-size: clamp(24px, 3.4vw, 34px);
+    font-weight: 650;
+    letter-spacing: -0.015em;
+    margin: 0 0 10px;
+    text-wrap: balance;
+  }
+  .lede {
+    color: var(--muted);
+    max-width: 68ch;
+    margin: 0 0 28px;
+    font-size: 15.5px;
+  }
+
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 26px;
+    align-items: center;
+    padding: 14px 18px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--panel);
+    margin-bottom: 22px;
+    font-size: 13px;
+  }
+  .legend .item { display: flex; align-items: center; gap: 9px; }
+  .legend .swatch { width: 34px; height: 0; border-top: 3px solid; border-radius: 2px; }
+  .legend .sw-sci  { border-color: var(--sci); }
+  .legend .sw-phi  { border-color: var(--phi); }
+  .legend .sw-ent  { border-color: var(--ent); }
+  .legend .sw-mon  { border-color: var(--mon); border-top-style: dashed; }
+  .legend .lbl { color: var(--muted); }
+  .legend .lbl strong { color: var(--ink); font-weight: 600; }
+
+  .diagram {
+    overflow-x: auto;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: var(--panel);
+    padding: 8px;
+  }
+  .diagram svg { display: block; width: 100%; min-width: 1080px; height: auto; }
+
+  /* SVG classes */
+  .site      { fill: none; stroke: var(--zone-line); stroke-width: 1.5; rx: 10; }
+  .zone-sci  { fill: var(--sci-tint); stroke: var(--sci); stroke-width: 1.2; stroke-dasharray: 7 4; }
+  .zone-phi  { fill: var(--phi-tint); stroke: var(--phi); stroke-width: 1.2; stroke-dasharray: 7 4; }
+  .dev       { fill: var(--bg); stroke: var(--line); stroke-width: 1.2; }
+  .dev-sci   { stroke: var(--sci); }
+  .dev-phi   { stroke: var(--phi); }
+
+  .t-site  { font: 600 15px "Avenir Next", "Segoe UI", sans-serif; fill: var(--ink); }
+  .t-sub   { font: 400 11.5px -apple-system, "Segoe UI", sans-serif; fill: var(--muted); }
+  .t-zone  { font: 600 11px -apple-system, "Segoe UI", sans-serif; letter-spacing: 0.1em; }
+  .t-zone.sci { fill: var(--sci); }
+  .t-zone.phi { fill: var(--phi); }
+  .t-dev   { font: 500 12.5px ui-monospace, "SF Mono", "Cascadia Code", Menlo, monospace; fill: var(--ink); }
+  .t-dev2  { font: 400 10.5px ui-monospace, "SF Mono", Menlo, monospace; fill: var(--muted); }
+  .t-link  {
+    font: 600 11.5px -apple-system, "Segoe UI", sans-serif;
+    paint-order: stroke;
+    stroke: var(--halo);
+    stroke-width: 4px;
+    stroke-linejoin: round;
+  }
+  .t-link.sci { fill: var(--sci); }
+  .t-link.phi { fill: var(--phi); }
+  .t-link.ent { fill: var(--ent); }
+  .t-link.mon { fill: var(--mon); }
+  .t-note  { font: italic 400 11.5px -apple-system, "Segoe UI", sans-serif; fill: var(--muted); }
+
+  .lk-sci { stroke: var(--sci); stroke-width: 3.5; fill: none; }
+  .lk-sci-thin { stroke: var(--sci); stroke-width: 2; fill: none; }
+  .lk-phi { stroke: var(--phi); stroke-width: 2.5; fill: none; }
+  .lk-ent { stroke: var(--ent); stroke-width: 2; fill: none; }
+  .lk-mon { stroke: var(--mon); stroke-width: 1.8; stroke-dasharray: 5 4; fill: none; }
+  .lk-int { stroke: var(--zone-line); stroke-width: 1.5; fill: none; }
+
+  /* Notes below */
+  .notes {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 18px;
+    margin-top: 26px;
+  }
+  .note {
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--panel);
+    padding: 18px 20px;
+  }
+  .note h2 {
+    font-family: "Avenir Next", "Segoe UI", sans-serif;
+    font-size: 14px;
+    font-weight: 650;
+    letter-spacing: 0.02em;
+    margin: 0 0 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .note h2 .dot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+  .dot-sci { background: var(--sci); }
+  .dot-phi { background: var(--phi); }
+  .dot-ent { background: var(--ent); }
+  .note ul { margin: 0; padding-left: 18px; font-size: 13.5px; color: var(--muted); }
+  .note li { margin-bottom: 6px; }
+  .note li strong { color: var(--ink); font-weight: 600; }
+
+  .linktable { margin-top: 26px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; min-width: 720px; }
+  caption {
+    text-align: left;
+    font: 600 13px "Avenir Next", "Segoe UI", sans-serif;
+    padding: 14px 18px 4px;
+    color: var(--ink);
+  }
+  th, td { text-align: left; padding: 9px 18px; border-top: 1px solid var(--line); vertical-align: top; }
+  th { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); border-top: none; padding-top: 12px; }
+  td:first-child { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12px; white-space: nowrap; }
+  td { color: var(--muted); }
+  td strong { color: var(--ink); font-weight: 600; }
+  tbody td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+  .footnote { margin-top: 22px; font-size: 12.5px; color: var(--muted); max-width: 80ch; }
+  .footnote strong { color: var(--ink); }
+</style>
+
+<div class="wrap">
+  <p class="eyebrow">UNM CARC · Science DMZ planning · concept v1 · July 2026</p>
+  <h1>BigByte × CARC × HSC — proposed network topology</h1>
+  <p class="lede">
+    Two data planes over shared metro fiber: an open <strong>Science DMZ</strong> (Internet2 → GigaPoP → BigByte, no inline
+    firewall) for the 10 PiB/month OSN + CyVerse workload, and a parallel <strong>Medical Science DMZ</strong> path
+    (encrypted, firewalled, BAA-covered) for HSC PHI moving between the HSC, the CARC secure enclave, and the HSC cage at BigByte.
+  </p>
+
+  <div class="legend">
+    <span class="item"><span class="swatch sw-sci"></span><span class="lbl"><strong>Science / R&amp;E</strong> — line-rate, ACLs + offline IDS, no stateful firewall</span></span>
+    <span class="item"><span class="swatch sw-phi"></span><span class="lbl"><strong>PHI / HIPAA</strong> — MACsec/IPsec encrypted, firewalled both ends, BAA</span></span>
+    <span class="item"><span class="swatch sw-ent"></span><span class="lbl"><strong>Enterprise / commodity</strong> — through campus firewall</span></span>
+    <span class="item"><span class="swatch sw-mon"></span><span class="lbl"><strong>Passive tap / OOB mgmt</strong></span></span>
+  </div>
+
+  <div class="diagram">
+  <svg viewBox="0 0 1240 1500" role="img" aria-label="Network topology diagram: Internet2 and commodity internet connect to the Albuquerque GigaPoP; the GigaPoP connects to the BigByte colocation Science DMZ at 2 by 100 gigabits; BigByte hosts the OSN Ceph S3 pod, a CyVerse Kubernetes cluster, DTNs, perfSONAR, Zeek, and a separate HIPAA cage for HSC servers; leased metro dark fiber carries a Science DMZ VRF to CARC and an encrypted HIPAA VRF to HSC; HSC connects to a secure enclave inside CARC over an encrypted, firewalled path.">
+
+    <!-- ============ national networks ============ -->
+    <rect class="site" x="80" y="40" width="360" height="84" rx="10"/>
+    <text class="t-site" x="100" y="72">Internet2 / ESnet</text>
+    <text class="t-sub" x="100" y="94">National R&amp;E backbone — flat-rate membership</text>
+
+    <rect class="site" x="700" y="40" width="300" height="84" rx="10"/>
+    <text class="t-site" x="720" y="72">Commodity Internet</text>
+    <text class="t-sub" x="720" y="94">Lumen · Cogent · Zayo · Comcast …</text>
+
+    <!-- ============ GigaPoP ============ -->
+    <rect class="site" x="80" y="220" width="360" height="170" rx="10"/>
+    <text class="t-site" x="100" y="252">Albuquerque GigaPoP (ABQG)</text>
+    <text class="t-sub" x="100" y="272">UNM-IT-operated · at/near 505 Marquette</text>
+    <rect class="dev dev-sci" x="100" y="290" width="150" height="46" rx="6"/>
+    <text class="t-dev" x="175" y="310" text-anchor="middle">I2 / R&amp;E router</text>
+    <text class="t-dev2" x="175" y="326" text-anchor="middle">+ perfSONAR</text>
+    <rect class="dev" x="272" y="290" width="148" height="46" rx="6"/>
+    <text class="t-dev" x="346" y="310" text-anchor="middle">commodity</text>
+    <text class="t-dev2" x="346" y="326" text-anchor="middle">transit handoff</text>
+
+    <!-- links: national -> gigapop -->
+    <line class="lk-sci" x1="220" y1="124" x2="220" y2="220"/>
+    <text class="t-link sci" x="232" y="176">100–400G R&amp;E</text>
+    <path class="lk-ent" d="M 850 124 L 850 172 L 390 172 L 390 220"/>
+    <text class="t-link ent" x="620" y="164" text-anchor="middle">commodity transit</text>
+
+    <!-- ============ BigByte ============ -->
+    <rect class="site" x="560" y="220" width="620" height="610" rx="10"/>
+    <text class="t-site" x="584" y="252">BigByte Inc — carrier-neutral colo</text>
+    <text class="t-sub" x="584" y="272">123 Central Ave NW · SOC 2 / NIST 800-53 / HIPAA-HITECH · remote hands 24/7</text>
+
+    <!-- science dmz zone -->
+    <rect class="zone-sci" x="584" y="286" width="572" height="320" rx="8"/>
+    <text class="t-zone sci" x="600" y="312">SCIENCE DMZ — NO INLINE FIREWALL · ROUTER ACLS + OFFLINE IDS</text>
+
+    <rect class="dev dev-sci" x="604" y="330" width="250" height="52" rx="6"/>
+    <text class="t-dev" x="729" y="352" text-anchor="middle">border router</text>
+    <text class="t-dev2" x="729" y="368" text-anchor="middle">deep-buffer DMZ switch</text>
+
+    <rect class="dev dev-sci" x="1020" y="330" width="116" height="52" rx="6"/>
+    <text class="t-dev" x="1078" y="352" text-anchor="middle">Zeek IDS</text>
+    <text class="t-dev2" x="1078" y="368" text-anchor="middle">cluster</text>
+
+    <line class="lk-mon" x1="854" y1="356" x2="1020" y2="356"/>
+    <text class="t-link mon" x="937" y="348" text-anchor="middle">optical tap</text>
+
+    <rect class="dev dev-sci" x="604" y="412" width="180" height="56" rx="6"/>
+    <text class="t-dev" x="694" y="434" text-anchor="middle">DTN pool</text>
+    <text class="t-dev2" x="694" y="450" text-anchor="middle">Globus · tuned TCP</text>
+
+    <rect class="dev dev-sci" x="814" y="412" width="120" height="56" rx="6"/>
+    <text class="t-dev" x="874" y="434" text-anchor="middle">perfSONAR</text>
+    <text class="t-dev2" x="874" y="450" text-anchor="middle">100G test node</text>
+
+    <rect class="dev dev-sci" x="964" y="412" width="172" height="56" rx="6"/>
+    <text class="t-dev" x="1050" y="434" text-anchor="middle">NVMe landing tier</text>
+    <text class="t-dev2" x="1050" y="450" text-anchor="middle">ephemeral job staging</text>
+
+    <rect class="dev dev-sci" x="604" y="498" width="250" height="84" rx="6"/>
+    <text class="t-dev" x="729" y="528" text-anchor="middle">OSN pod — Ceph S3</text>
+    <text class="t-dev2" x="729" y="546" text-anchor="middle">~1.4 PB usable · OSN-operated</text>
+    <text class="t-dev2" x="729" y="562" text-anchor="middle">fee TBC in writing + disks</text>
+
+    <rect class="dev dev-sci" x="884" y="498" width="252" height="84" rx="6"/>
+    <text class="t-dev" x="1010" y="528" text-anchor="middle">CyVerse K8s cluster</text>
+    <text class="t-dev2" x="1010" y="546" text-anchor="middle">pods read/write OSN S3 locally</text>
+    <text class="t-dev2" x="1010" y="562" text-anchor="middle">RSE-run (2 FTE + 4–6 grant)</text>
+
+    <!-- hipaa cage zone -->
+    <rect class="zone-phi" x="584" y="636" width="572" height="170" rx="8"/>
+    <text class="t-zone phi" x="600" y="662">HSC SECURE CAGE — PHI · BAA · ISOLATED VRF · ENCRYPTED AT REST</text>
+
+    <rect class="dev dev-phi" x="604" y="700" width="220" height="52" rx="6"/>
+    <text class="t-dev" x="714" y="722" text-anchor="middle">cage firewall / VPN</text>
+    <text class="t-dev2" x="714" y="738" text-anchor="middle">MACsec endpoint</text>
+
+    <rect class="dev dev-phi" x="854" y="700" width="282" height="52" rx="6"/>
+    <text class="t-dev" x="995" y="722" text-anchor="middle">HSC co-lo servers</text>
+    <text class="t-dev2" x="995" y="738" text-anchor="middle">encrypted storage · audit logging</text>
+
+    <!-- link: gigapop -> bigbyte science dmz -->
+    <line class="lk-sci" x1="440" y1="356" x2="604" y2="356"/>
+    <text class="t-link sci" x="512" y="342" text-anchor="middle">2×100G metro fiber</text>
+    <text class="t-link sci" x="512" y="384" text-anchor="middle">flat-rate · never per-GB</text>
+
+    <!-- ============ campus ============ -->
+    <rect class="site" x="80" y="920" width="1100" height="536" rx="10"/>
+    <text class="t-site" x="104" y="950">UNM Campus</text>
+    <text class="t-sub" x="230" y="950">campus fiber plant</text>
+
+    <!-- UNM IT -->
+    <rect class="site" x="104" y="980" width="300" height="260" rx="8"/>
+    <text class="t-sub" x="124" y="1008" style="font-weight:600; letter-spacing:0.08em;">UNM IT — CENTRAL CAMPUS</text>
+    <rect class="dev" x="124" y="1026" width="260" height="48" rx="6"/>
+    <text class="t-dev" x="254" y="1046" text-anchor="middle">campus border router</text>
+    <text class="t-dev2" x="254" y="1062" text-anchor="middle">enterprise edge</text>
+    <rect class="dev" x="124" y="1092" width="260" height="48" rx="6"/>
+    <text class="t-dev" x="254" y="1112" text-anchor="middle">enterprise firewall</text>
+    <text class="t-dev2" x="254" y="1128" text-anchor="middle">stateful · business traffic only</text>
+    <rect class="dev" x="124" y="1158" width="260" height="48" rx="6"/>
+    <text class="t-dev" x="254" y="1178" text-anchor="middle">campus LAN</text>
+    <text class="t-dev2" x="254" y="1194" text-anchor="middle">business systems · users</text>
+
+    <!-- CARC -->
+    <rect class="site" x="444" y="980" width="340" height="440" rx="8"/>
+    <text class="t-sub" x="464" y="1008" style="font-weight:600; letter-spacing:0.08em;">CARC — RESEARCH COMPUTING</text>
+    <rect class="dev dev-sci" x="464" y="1026" width="300" height="48" rx="6"/>
+    <text class="t-dev" x="614" y="1046" text-anchor="middle">Science-DMZ extension switch</text>
+    <text class="t-dev2" x="614" y="1062" text-anchor="middle">dedicated VRF · ACLs</text>
+    <rect class="dev" x="464" y="1092" width="300" height="48" rx="6"/>
+    <text class="t-dev" x="614" y="1112" text-anchor="middle">CARC DTN + storage</text>
+    <text class="t-dev2" x="614" y="1128" text-anchor="middle">scratch · project filesystems</text>
+    <rect class="dev" x="464" y="1158" width="300" height="48" rx="6"/>
+    <text class="t-dev" x="614" y="1178" text-anchor="middle">HPC clusters</text>
+    <text class="t-dev2" x="614" y="1194" text-anchor="middle">existing + new capacity</text>
+
+    <rect class="zone-phi" x="464" y="1236" width="300" height="150" rx="8"/>
+    <text class="t-zone phi" x="480" y="1262">HSC SECURE ENCLAVE</text>
+    <rect class="dev dev-phi" x="480" y="1278" width="268" height="88" rx="6"/>
+    <text class="t-dev" x="614" y="1304" text-anchor="middle">HSC-funded HPC nodes</text>
+    <text class="t-dev2" x="614" y="1322" text-anchor="middle">enclave firewall · encrypted scratch</text>
+    <text class="t-dev2" x="614" y="1338" text-anchor="middle">no route to open Science DMZ</text>
+
+    <!-- HSC -->
+    <rect class="site" x="824" y="980" width="330" height="440" rx="8"/>
+    <text class="t-sub" x="844" y="1008" style="font-weight:600; letter-spacing:0.08em;">HSC — HEALTH SCIENCES CENTER</text>
+    <rect class="dev dev-phi" x="844" y="1026" width="290" height="48" rx="6"/>
+    <text class="t-dev" x="989" y="1046" text-anchor="middle">HSC firewall</text>
+    <text class="t-dev2" x="989" y="1062" text-anchor="middle">HIPAA security boundary</text>
+    <rect class="dev dev-phi" x="844" y="1092" width="290" height="48" rx="6"/>
+    <text class="t-dev" x="989" y="1112" text-anchor="middle">clinical / EHR systems</text>
+    <text class="t-dev2" x="989" y="1128" text-anchor="middle">PHI sources</text>
+    <rect class="dev" x="844" y="1158" width="290" height="48" rx="6"/>
+    <text class="t-dev" x="989" y="1178" text-anchor="middle">research data staging</text>
+    <text class="t-dev2" x="989" y="1194" text-anchor="middle">de-identification pipeline</text>
+    <text class="t-note" x="989" y="1250" text-anchor="middle">HSC co-funds CARC HPC (enclave)</text>
+    <text class="t-note" x="989" y="1268" text-anchor="middle">and co-locates servers at BigByte</text>
+
+    <!-- link: gigapop -> campus border (enterprise) -->
+    <line class="lk-ent" x1="200" y1="390" x2="200" y2="1026"/>
+    <text class="t-link ent" x="188" y="700" text-anchor="end">campus uplink</text>
+    <text class="t-link ent" x="188" y="716" text-anchor="end">enterprise · firewalled</text>
+
+    <!-- link: bigbyte science dmz -> CARC extension (LoboNet science VRF) -->
+    <path class="lk-sci" d="M 584 460 L 520 460 L 520 1026"/>
+    <text class="t-link sci" x="508" y="684" text-anchor="end">leased metro dark fiber</text>
+    <text class="t-link sci" x="508" y="700" text-anchor="end">Science-DMZ VRF · 100G</text>
+    <text class="t-link sci" x="508" y="716" text-anchor="end">bypasses enterprise firewall</text>
+
+    <!-- link: bigbyte hipaa cage -> HSC (LoboNet hipaa VRF) -->
+    <line class="lk-phi" x1="1000" y1="806" x2="1000" y2="1026"/>
+    <text class="t-link phi" x="1012" y="868">HIPAA VRF · MACsec</text>
+    <text class="t-link phi" x="1012" y="884">same fiber · isolated</text>
+
+    <!-- link: enterprise firewall <-> CARC (mgmt) -->
+    <line class="lk-mon" x1="404" y1="1116" x2="444" y2="1116"/>
+    <text class="t-link mon" x="424" y="1140" text-anchor="middle">mgmt</text>
+
+    <!-- link: HSC <-> CARC enclave (encrypted, bottom route) -->
+    <path class="lk-phi" d="M 614 1386 L 614 1436 L 990 1436 L 990 1420"/>
+    <text class="t-link phi" x="802" y="1428" text-anchor="middle">PHI: MACsec/IPsec encrypted · stateful firewalls both ends</text>
+
+    <!-- internal CARC connectors -->
+    <line class="lk-int" x1="614" y1="1074" x2="614" y2="1092"/>
+    <line class="lk-int" x1="614" y1="1140" x2="614" y2="1158"/>
+    <line class="lk-int" x1="614" y1="1206" x2="614" y2="1236"/>
+  </svg>
+  </div>
+
+  <div class="notes">
+    <div class="note">
+      <h2><span class="dot dot-sci"></span>Open science path (blue)</h2>
+      <ul>
+        <li><strong>Internet2 → GigaPoP → BigByte Science DMZ</strong> at 2×100G — the 10 PiB/month peak workload never touches the campus enterprise network or any per-GB billing.</li>
+        <li><strong>No inline stateful firewall.</strong> Security is line-rate router ACLs plus Zeek IDS on an optical tap — the defining Science-DMZ pattern; a firewall in this path caps throughput far below 100G.</li>
+        <li><strong>A metro-fiber Science-DMZ VRF</strong> extends the DMZ to CARC so HPC jobs read/write OSN S3 at line rate, bypassing the enterprise firewall by design. CARC's current ~10G campus DMZ segment must be upgraded to 100G for this to hold.</li>
+        <li><strong>CyVerse K8s cluster sits beside the OSN pod</strong> — its pods hit S3 over the colo's local fabric, so CyVerse's ephemeral workloads never burn WAN bandwidth.</li>
+        <li><strong>perfSONAR at both ends</strong> (GigaPoP + BigByte) provides continuous loss/throughput evidence for the whole path.</li>
+      </ul>
+    </div>
+    <div class="note">
+      <h2><span class="dot dot-phi"></span>PHI path — Medical Science DMZ (red)</h2>
+      <ul>
+        <li><strong>PHI never enters the open DMZ.</strong> It rides a separate VRF on the same LoboNet fiber, MACsec/IPsec-encrypted end to end, with stateful firewalls at every boundary.</li>
+        <li><strong>Three PHI zones:</strong> HSC systems, the HSC-funded secure enclave inside CARC (encrypted scratch, no route to the open DMZ), and the HSC cage at BigByte (under BigByte's existing HIPAA/HITECH posture + a BAA).</li>
+        <li><strong>De-identified outputs</strong> cross to the open science side only through the HSC staging/de-id pipeline — one controlled, audited crossing point.</li>
+        <li>Follows the ESnet/NIH <strong>"Medical Science DMZ"</strong> design pattern: high-throughput <em>and</em> HIPAA-aligned, by encrypting and segmenting rather than bottlenecking through the enterprise firewall.</li>
+      </ul>
+    </div>
+    <div class="note">
+      <h2><span class="dot dot-ent"></span>Enterprise path &amp; operations (grey)</h2>
+      <ul>
+        <li><strong>Business traffic keeps its existing route:</strong> GigaPoP → campus border → enterprise firewall. Nothing about the DMZ changes campus security posture.</li>
+        <li><strong>Out-of-band management</strong> reaches DMZ gear via a small, separate firewalled path — engineers never depend on the 100G data plane to fix the 100G data plane.</li>
+        <li><strong>Staffing map:</strong> HPC Engineer owns the DMZ/data plane; DevOps-Security (split with UNM IT) owns ACLs, Zeek, and the enterprise boundary; IT Manager owns BigByte/OSN/I2 contracts and the BAA; CyVerse RSEs run their own K8s cluster.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="linktable">
+    <table>
+      <caption>Link budget (planning targets)</caption>
+      <thead>
+        <tr><th>Link</th><th>Media</th><th>Capacity</th><th>Traffic class</th><th>Billing / control</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>I2 ↔ GigaPoP</td><td>R&amp;E backbone</td><td class="num">100–400G</td><td><strong>Science</strong></td><td>Internet2 membership — flat</td></tr>
+        <tr><td>GigaPoP ↔ BigByte</td><td>metro fiber x-connect</td><td class="num">2×100G</td><td><strong>Science DMZ</strong></td><td>flat-rate circuit — <strong>never per-GB</strong></td></tr>
+        <tr><td>BigByte ↔ campus</td><td>leased metro dark fiber</td><td class="num">100G · 2 VRFs</td><td>Science VRF + <strong>HIPAA VRF</strong> (MACsec)</td><td>new lease: UPN/Zayo/Lumen, ~$0.5–2.5K/mo per pair ("LoboNet" at BigByte is a commercial ISP, not UNM fiber)</td></tr>
+        <tr><td>GigaPoP ↔ campus</td><td>existing uplink</td><td class="num">100G (existing)</td><td>Enterprise / commodity</td><td>firewalled — unchanged; CARC's 10G DMZ segment is the real upgrade item</td></tr>
+        <tr><td>HSC ↔ CARC enclave</td><td>campus fiber</td><td class="num">10–40G</td><td><strong>PHI</strong> — encrypted</td><td>firewalled both ends · audited</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p class="footnote">
+    <strong>Planning concept, not as-built — corrected July 2026 after adversarial verification.</strong> "LoboNet" on BigByte's
+    carrier roster is Lobo Internet Services (a commercial ISP), not UNM fiber — the metro span is budgeted as a new dark-fiber
+    lease (14–22 wk provisioning). The GigaPoP is the Albuquerque GigaPoP (ABQG), operated by UNM IT; UNM's WAN is already 100G,
+    and the gating upgrade is CARC's ~10G campus DMZ segment. PHI zones require: executed BAA with BigByte, HSC security review,
+    hybrid-entity designation, and inclusion in HSC's HIPAA risk assessment. Sized for 10 PiB/mo peak downloads ≈ 35 Gbps
+    sustained; 100G floor, 2×100G robust target. Full analysis: see the companion feasibility evaluation artifact.
+  </p>
+</div>
